@@ -1,0 +1,46 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  lineId    String   @unique
+  name      String?
+  phone     String?
+  orders    Order[]
+  createdAt DateTime @default(now())
+}
+
+model InsurancePackage {
+  id          String   @id @default(uuid())
+  name        String
+  company     String
+  logoUrl     String?
+  details     String?
+  repairType  String?
+  coverage    String?
+  fullPrice   Float
+  netPrice    Float
+  discount    Float
+  orders      Order[]
+  createdAt   DateTime @default(now())
+}
+
+model Order {
+  id                String   @id @default(uuid())
+  orderNumber       String   @unique
+  status            String   @default("PENDING")
+  userId            String
+  user              User     @relation(fields: [userId], references: [id])
+  packageId         String
+  pkg               InsurancePackage @relation(fields: [packageId], references: [id])
+  plateNumber       String?
+  trackingNumber    String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}

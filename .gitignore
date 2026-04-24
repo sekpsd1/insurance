@@ -1,0 +1,25 @@
+node_modules/
+.next/
+out/
+coverage/
+dist/
+.cache/
+
+# Environment secrets
+.env
+.env.local
+.env.development
+.env.development.local
+.env.test
+.env.test.local
+.env.production
+
+# Local databases / generated data
+prisma/dev.db
+mysql_data/
+
+# OS / editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
