@@ -17,6 +17,7 @@ dist/
 # Local databases / generated data
 prisma/dev.db
 mysql_data/
+backups/
 
 # OS / editor files
 .DS_Store
