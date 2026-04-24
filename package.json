@@ -10,10 +10,12 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
+    "import:insurance": "tsx scripts/import-insurance.ts",
     "db:backup": "node scripts/db-backup.cjs"
   },
   "dependencies": {
     "@prisma/client": "^6.4.1",
+    "csv-parse": "^5.6.0",
     "next": "^15.1.6",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
@@ -28,6 +30,7 @@
     "postcss": "^8.4.49",
     "prisma": "^6.4.1",
     "tailwindcss": "^3.4.17",
+    "tsx": "^4.21.0",
     "typescript": "^5.6.3"
   }
 }

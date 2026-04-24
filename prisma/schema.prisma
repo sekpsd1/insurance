@@ -20,6 +20,13 @@ model InsurancePackage {
   id          String   @id @default(uuid())
   name        String
   company     String
+  companyCode String?
+  campaignCode String?
+  campaignName String?
+  brand       String?
+  model       String?
+  year        Int?
+  rawData     Json?
   logoUrl     String?
   details     String?
   repairType  String?
@@ -29,6 +36,9 @@ model InsurancePackage {
   discount    Float
   orders      Order[]
   createdAt   DateTime @default(now())
+
+  @@index([companyCode, campaignCode])
+  @@index([brand, model, year])
 }
 
 model Order {

@@ -2,6 +2,10 @@
 
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
+import {
+  deleteInsuranceCampaignByCode,
+  importInsuranceCampaignFromCsv
+} from '@/lib/insurance-import';
 
 export type OrderStatus = 'PENDING' | 'REVIEWING' | 'APPROVED' | 'REJECTED';
 
@@ -61,5 +65,41 @@ export async function updateInsurancePackage(formData: FormData): Promise<void> 
   `;
 
   revalidatePath('/admin');
+  revalidatePath('/line-app');
+}
+
+export async function importInsuranceCampaign(formData: FormData): Promise<void> {
+  const csvFile = formData.get('csvFile');
+  const companyCode = String(formData.get('companyCode') ?? '').trim();
+  const campaignCode = String(formData.get('campaignCode') ?? '').trim();
+  const campaignName = String(formData.get('campaignName') ?? '').trim();
+  const replaceExisting = String(formData.get('replaceExisting') ?? '').trim() === 'on';
+
+  if (!(csvFile instanceof File)) {
+    throw new Error('CSV file is required');
+  }
+
+  const csvText = await csvFile.text();
+  await importInsuranceCampaignFromCsv({
+    csvText,
+    companyCode,
+    campaignCode,
+    campaignName,
+    replaceExisting
+  });
+
+  revalidatePath('/admin');
+  revalidatePath('/admin/insurance');
+  revalidatePath('/line-app');
+}
+
+export async function deleteInsuranceCampaign(formData: FormData): Promise<void> {
+  const companyCode = String(formData.get('companyCode') ?? '').trim();
+  const campaignCode = String(formData.get('campaignCode') ?? '').trim();
+
+  await deleteInsuranceCampaignByCode(companyCode, campaignCode);
+
+  revalidatePath('/admin');
+  revalidatePath('/admin/insurance');
   revalidatePath('/line-app');
 }
