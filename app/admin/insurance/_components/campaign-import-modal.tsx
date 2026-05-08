@@ -63,6 +63,7 @@ export function CampaignImportModal({
 }) {
   const [open, setOpen] = useState(false);
   const [fileName, setFileName] = useState('');
+  const [logoFileName, setLogoFileName] = useState('');
   const [preview, setPreview] = useState<{ rowsCount: number; headers: string[] } | null>(null);
   const [campaignCode, setCampaignCode] = useState('');
   const [campaignName, setCampaignName] = useState('');
@@ -91,6 +92,17 @@ export function CampaignImportModal({
 
     const csvText = await file.text();
     setPreview(parseCsvPreview(csvText));
+  }
+
+  function handleLogoFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      setLogoFileName('');
+      return;
+    }
+
+    setLogoFileName(file.name);
   }
 
   return (
@@ -175,6 +187,24 @@ export function CampaignImportModal({
               </div>
 
               <div>
+                <label htmlFor="logoFile" className="mb-2 block text-sm font-semibold text-slate-700">
+                  Campaign Logo
+                </label>
+                <input
+                  id="logoFile"
+                  name="logoFile"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleLogoFileChange}
+                  className="w-full rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-[16px] outline-none file:mr-4 file:rounded-lg file:border-0 file:bg-cyan-600 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-cyan-700"
+                />
+                <p className="mt-2 text-xs text-slate-500">
+                  อัปโหลดโลโก้ครั้งนี้เพื่อใช้กับทุกแพ็กเกจใน campaign เดียวกัน
+                </p>
+                {logoFileName ? <p className="mt-2 text-xs font-medium text-cyan-700">Selected: {logoFileName}</p> : null}
+              </div>
+
+              <div>
                 <label htmlFor="csvFile" className="mb-2 block text-sm font-semibold text-slate-700">
                   CSV File
                 </label>
@@ -208,6 +238,11 @@ export function CampaignImportModal({
                     <span className="text-slate-500">Inferred campaign name:</span> {campaignName || inferredCampaignName}
                   </div>
                 </div>
+                {logoFileName ? (
+                  <div className="mt-3">
+                    <span className="text-slate-500">Campaign logo file:</span> {logoFileName}
+                  </div>
+                ) : null}
 
                 {preview?.headers?.length ? (
                   <div className="mt-3">

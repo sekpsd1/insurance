@@ -9,6 +9,7 @@ export type InsuranceCampaignImportOptions = {
   campaignCode: string;
   campaignName: string;
   replaceExisting?: boolean;
+  logoUrl?: string | null;
 };
 
 type CsvRecord = Record<string, string>;
@@ -30,6 +31,14 @@ export type InsuranceCampaignSummary = {
   totalNetPrice: number;
   latestCreatedAt: Date | null;
   status: 'ACTIVE';
+};
+
+export type InsuranceCompanySummary = {
+  companyCode: string;
+  campaignCount: number;
+  packageCount: number;
+  totalNetPrice: number;
+  latestCreatedAt: Date | null;
 };
 
 export type InsuranceCampaignImportResult = {
@@ -100,6 +109,11 @@ function buildDetails(record: CsvRecord, aliases: Array<[string, string[]]>) {
     .filter(Boolean);
 
   return segments.length > 0 ? segments.join(' | ') : null;
+}
+
+function normalizeLogoUrl(value: string | null | undefined) {
+  const normalized = value?.trim();
+  return normalized ? normalized : null;
 }
 
 function chunkArray<T>(items: T[], size: number) {
@@ -174,7 +188,7 @@ export function parseInsuranceCsvRecords(csvText: string): CsvRecord[] {
 
 export function mapCsvRecordToInsurancePackage(
   record: CsvRecord,
-  context: { companyCode: string; campaignCode: string; campaignName: string }
+  context: { companyCode: string; campaignCode: string; campaignName: string; logoUrl?: string | null }
 ): Record<string, unknown> | null {
   const brand = readRecordValue(record, ['makdes', 'brand', 'carbrand', 'make']);
   const model = readRecordValue(record, ['moddes', 'model', 'carmodel']);
@@ -206,7 +220,7 @@ export function mapCsvRecordToInsurancePackage(
     model: model || null,
     year,
     rawData: record,
-    logoUrl: null,
+    logoUrl: normalizeLogoUrl(context.logoUrl),
     details: buildDetails(record, [
       ['brand', ['makdes', 'brand', 'carbrand', 'make']],
       ['model', ['moddes', 'model', 'carmodel']],
@@ -238,7 +252,14 @@ export async function importInsuranceCampaignFromCsv(
 
   const records = parseInsuranceCsvRecords(options.csvText);
   const packageRows = records
-    .map((record) => mapCsvRecordToInsurancePackage(record, { companyCode, campaignCode, campaignName }))
+    .map((record) =>
+      mapCsvRecordToInsurancePackage(record, {
+        companyCode,
+        campaignCode,
+        campaignName,
+        logoUrl: options.logoUrl ?? null
+      })
+    )
     .filter((row): row is Record<string, unknown> => Boolean(row));
 
   if (packageRows.length === 0) {
@@ -332,4 +353,37 @@ export async function getInsuranceCampaignSummaries(): Promise<InsuranceCampaign
       status: 'ACTIVE' as const
     }))
     .filter((row) => row.companyCode && row.campaignCode);
+}
+
+type CompanySummaryRow = {
+  companyCode: string | null;
+  campaignCount: bigint | number | string;
+  packageCount: bigint | number | string;
+  totalNetPrice: bigint | number | string | null;
+  latestCreatedAt: Date | string | null;
+};
+
+export async function getInsuranceCompanySummaries(): Promise<InsuranceCompanySummary[]> {
+  const rows = await prisma.$queryRaw<CompanySummaryRow[]>`
+    SELECT
+      companyCode,
+      COUNT(DISTINCT campaignCode) AS campaignCount,
+      COUNT(*) AS packageCount,
+      COALESCE(SUM(netPrice), 0) AS totalNetPrice,
+      MAX(createdAt) AS latestCreatedAt
+    FROM InsurancePackage
+    WHERE companyCode IS NOT NULL
+    GROUP BY companyCode
+    ORDER BY latestCreatedAt DESC
+  `;
+
+  return rows
+    .map((row) => ({
+      companyCode: row.companyCode ?? '',
+      campaignCount: Number(row.campaignCount) || 0,
+      packageCount: Number(row.packageCount) || 0,
+      totalNetPrice: Number(row.totalNetPrice ?? 0) || 0,
+      latestCreatedAt: row.latestCreatedAt ? new Date(row.latestCreatedAt) : null
+    }))
+    .filter((row) => row.companyCode);
 }

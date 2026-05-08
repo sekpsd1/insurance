@@ -27,6 +27,7 @@ type PackageRow = {
   discount: number;
   repairType: string | null;
   coverage: string | null;
+  logoUrl: string | null;
   createdAt: Date;
 };
 
@@ -126,6 +127,7 @@ async function getPackages(searchParams: PackageSearchParams) {
       discount: true,
       repairType: true,
       coverage: true,
+      logoUrl: true,
       createdAt: true
     }
   });

@@ -1,8 +1,11 @@
 import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
-import { deleteInsuranceCampaign, importInsuranceCampaign } from '@/lib/actions';
+import { deleteInsuranceCampaign, importInsuranceCampaign, updateInsuranceCampaignLogo } from '@/lib/actions';
 import { CampaignImportModal } from './_components/campaign-import-modal';
-import { getInsuranceCampaignSummaries } from '@/lib/insurance-import';
+import {
+  getInsuranceCampaignSummaries,
+  getInsuranceCompanySummaries
+} from '@/lib/insurance-import';
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat('th-TH', {
@@ -32,27 +35,27 @@ function getStatusStyles(status: string) {
   }
 }
 
-async function getInsuranceDashboardStats() {
-  const [campaignSummaries, packageCount, companyCountRows] = await Promise.all([
-    getInsuranceCampaignSummaries(),
-    prisma.insurancePackage.count(),
-    prisma.$queryRaw<Array<{ count: bigint | number | string }>>`
-      SELECT COUNT(DISTINCT CONCAT(COALESCE(companyCode, ''), '::', COALESCE(campaignCode, '')) ) AS count
-      FROM InsurancePackage
-    `
-  ]);
+function buildCompanyPackagesHref(companyCode: string) {
+  return `/admin/insurance/packages?companyCode=${encodeURIComponent(companyCode)}`;
+}
 
-  const companyCount = Number(companyCountRows[0]?.count ?? 0);
+async function getInsuranceDashboardStats() {
+  const [campaignSummaries, companySummaries, packageCount] = await Promise.all([
+    getInsuranceCampaignSummaries(),
+    getInsuranceCompanySummaries(),
+    prisma.insurancePackage.count(),
+  ]);
 
   return {
     campaignSummaries,
+    companySummaries,
     packageCount,
-    companyCount
+    companyCount: companySummaries.length
   };
 }
 
 export default async function InsuranceCampaignAdminPage() {
-  const { campaignSummaries, packageCount, companyCount } = await getInsuranceDashboardStats();
+  const { campaignSummaries, companySummaries, packageCount, companyCount } = await getInsuranceDashboardStats();
 
   return (
     <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -77,7 +80,7 @@ export default async function InsuranceCampaignAdminPage() {
             <div className="mt-1 text-xl font-bold">{packageCount.toLocaleString()}</div>
           </div>
           <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white shadow-lg shadow-black/10">
-            <div className="text-slate-300">กลุ่ม companyCode</div>
+            <div className="text-slate-300">บริษัททั้งหมด</div>
             <div className="mt-1 text-xl font-bold">{companyCount.toLocaleString()}</div>
           </div>
         </div>
@@ -98,6 +101,66 @@ export default async function InsuranceCampaignAdminPage() {
             Search / Edit Packages
           </Link>
           <CampaignImportModal action={importInsuranceCampaign} />
+        </div>
+      </div>
+
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div>
+          <h3 className="text-lg font-semibold text-white">สรุประดับบริษัท</h3>
+          <p className="text-sm text-slate-300">ดูจำนวนแคมเปญและรายการข้อมูลของแต่ละบริษัทก่อนเจาะลงไปที่แคมเปญ</p>
+        </div>
+      </div>
+
+      <div className="mb-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {companySummaries.length === 0 ? (
+          <div className="rounded-3xl border border-dashed border-white/15 bg-white/5 p-8 text-center text-slate-300 md:col-span-2 xl:col-span-3">
+            ยังไม่มีข้อมูลบริษัทในระบบ
+          </div>
+        ) : (
+          companySummaries.map((company) => (
+            <article
+              key={company.companyCode}
+              className="rounded-3xl border border-white/10 bg-white/5 p-5 text-white shadow-2xl shadow-black/10"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">companyCode</p>
+                  <h4 className="mt-2 text-xl font-bold text-white">{company.companyCode}</h4>
+                </div>
+                <Link
+                  href={buildCompanyPackagesHref(company.companyCode)}
+                  className="rounded-xl border border-white/10 px-3 py-2 text-xs font-semibold text-white transition hover:bg-white/10"
+                >
+                  ดูแคมเปญ
+                </Link>
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                <div className="rounded-2xl bg-white/5 p-3">
+                  <div className="text-slate-300">แคมเปญ</div>
+                  <div className="mt-1 text-lg font-bold text-white">{company.campaignCount.toLocaleString()}</div>
+                </div>
+                <div className="rounded-2xl bg-white/5 p-3">
+                  <div className="text-slate-300">รายการข้อมูล</div>
+                  <div className="mt-1 text-lg font-bold text-white">{company.packageCount.toLocaleString()}</div>
+                </div>
+                <div className="rounded-2xl bg-white/5 p-3 col-span-2">
+                  <div className="text-slate-300">มูลค่าเบี้ยสุทธิรวม</div>
+                  <div className="mt-1 text-lg font-bold text-white">{formatCurrency(company.totalNetPrice)}</div>
+                </div>
+                <div className="rounded-2xl bg-white/5 p-3 col-span-2">
+                  <div className="text-slate-300">อัปเดตล่าสุด</div>
+                  <div className="mt-1 font-semibold text-white">{formatDate(company.latestCreatedAt)}</div>
+                </div>
+              </div>
+            </article>
+          ))
+        )}
+      </div>
+
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div>
+          <h3 className="text-lg font-semibold text-white">สรุประดับแคมเปญ</h3>
+          <p className="text-sm text-slate-300">แต่ละการ์ดคือหนึ่ง campaign ที่อยู่ใต้บริษัทเดียวกัน</p>
         </div>
       </div>
 
@@ -145,6 +208,28 @@ export default async function InsuranceCampaignAdminPage() {
               </dl>
 
               <div className="mt-5 flex flex-wrap gap-3">
+                <form action={updateInsuranceCampaignLogo} className="flex-1 min-w-[240px] space-y-3 rounded-2xl bg-slate-50 p-3">
+                  <input type="hidden" name="companyCode" value={campaign.companyCode} />
+                  <input type="hidden" name="campaignCode" value={campaign.campaignCode} />
+                  <div>
+                    <div className="text-slate-500">Campaign Logo</div>
+                    <p className="mt-1 text-xs text-slate-500">อัปโหลดครั้งเดียว โลโก้จะถูกใช้กับทุกแพ็กเกจในแคมเปญนี้</p>
+                  </div>
+                  <input
+                    name="logoFile"
+                    type="file"
+                    accept="image/*"
+                    required
+                    className="block w-full text-sm text-slate-700 file:mr-3 file:rounded-xl file:border-0 file:bg-cyan-600 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-cyan-700"
+                  />
+                  <button
+                    type="submit"
+                    className="inline-flex w-full items-center justify-center rounded-xl bg-cyan-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-cyan-700"
+                  >
+                    อัปโหลดโลโก้แคมเปญ
+                  </button>
+                </form>
+
                 <form action={deleteInsuranceCampaign} className="flex-1 min-w-[160px]">
                   <input type="hidden" name="companyCode" value={campaign.companyCode} />
                   <input type="hidden" name="campaignCode" value={campaign.campaignCode} />
