@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import Link from 'next/link';
 import { deleteInsuranceCampaign, importInsuranceCampaign } from '@/lib/actions';
 import { CampaignImportModal } from './_components/campaign-import-modal';
 import { getInsuranceCampaignSummaries } from '@/lib/insurance-import';
@@ -89,7 +90,15 @@ export default async function InsuranceCampaignAdminPage() {
             อัปโหลด CSV เพื่อสร้างหรือแทนที่ข้อมูลของแคมเปญ รวมถึงลบแคมเปญเก่าออกทั้งหมดได้
           </p>
         </div>
-        <CampaignImportModal action={importInsuranceCampaign} />
+        <div className="flex flex-wrap gap-3">
+          <Link
+            href="/admin/insurance/packages"
+            className="inline-flex items-center rounded-xl border border-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
+          >
+            Search / Edit Packages
+          </Link>
+          <CampaignImportModal action={importInsuranceCampaign} />
+        </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">

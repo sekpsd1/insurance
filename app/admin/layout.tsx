@@ -19,12 +19,21 @@ export default function AdminLayout({
           <nav className="flex items-center gap-2 text-sm font-semibold">
             <Link
               href="/admin"
+              prefetch={false}
               className="rounded-full border border-white/10 px-4 py-2 text-white transition hover:bg-white/10"
             >
               Orders
             </Link>
             <Link
+              href="/admin/insurance/packages"
+              prefetch={false}
+              className="rounded-full border border-white/10 px-4 py-2 text-white transition hover:bg-white/10"
+            >
+              Packages
+            </Link>
+            <Link
               href="/admin/insurance"
+              prefetch={false}
               className="rounded-full bg-cyan-500 px-4 py-2 text-slate-950 transition hover:bg-cyan-400"
             >
               Insurance Campaigns

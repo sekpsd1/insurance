@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import { updateInsurancePackage, updateOrderStatus } from '@/lib/actions';
+import { updateOrderStatus } from '@/lib/actions';
 
 function getStatusStyles(status: string) {
   switch (status) {
@@ -14,18 +14,9 @@ function getStatusStyles(status: string) {
   }
 }
 
-type AdminInsurancePackageRow = {
-  id: string;
-  name: string;
-  company: string;
-  netPrice: number;
-  repairType: string | null;
-  coverage: string | null;
-  createdAt: Date;
-};
-
 export default async function AdminPage() {
   const orders = await prisma.order.findMany({
+    take: 20,
     orderBy: {
       createdAt: 'desc'
     },
@@ -34,19 +25,6 @@ export default async function AdminPage() {
       pkg: true
     }
   });
-
-  const packages = await prisma.$queryRaw<AdminInsurancePackageRow[]>`
-    SELECT
-      id,
-      name,
-      company,
-      netPrice,
-      repairType,
-      coverage,
-      createdAt
-    FROM InsurancePackage
-    ORDER BY createdAt DESC
-  `;
 
   const adminOrders = orders as Array<
     (typeof orders)[number] & {
@@ -62,7 +40,7 @@ export default async function AdminPage() {
         </p>
         <h2 className="text-3xl font-bold tracking-tight text-white">จัดการออเดอร์</h2>
         <p className="max-w-2xl text-sm leading-6 text-slate-300">
-          ดูรายการออเดอร์ล่าสุด พร้อมเปลี่ยนสถานะได้อย่างรวดเร็วจากตารางด้านล่าง
+          ดูรายการออเดอร์ล่าสุด 20 รายการ ส่วนการจัดการแพ็กเกจและแคมเปญให้ไปที่หน้า Insurance Campaigns
         </p>
       </div>
 
@@ -160,81 +138,11 @@ export default async function AdminPage() {
         </div>
       </div>
 
-      <div className="mt-8 overflow-hidden rounded-3xl border border-white/10 bg-white shadow-2xl shadow-black/10">
-        <div className="border-b border-slate-200 bg-slate-50 px-5 py-4 sm:px-6">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <h3 className="text-lg font-semibold text-slate-900">จัดการแพ็กเกจ</h3>
-              <p className="text-sm text-slate-500">แก้ไขประเภทการซ่อมและความคุ้มครอง แล้วบันทึกลงฐานข้อมูล</p>
-            </div>
-            <span className="rounded-full bg-cyan-600 px-3 py-1 text-sm font-semibold text-white">
-              {packages.length} แพ็กเกจ
-            </span>
-          </div>
-        </div>
-
-        <div className="grid gap-4 p-5 sm:p-6 lg:grid-cols-2">
-          {packages.map((pkg) => (
-            <form
-              key={pkg.id}
-              action={updateInsurancePackage}
-              className="rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm"
-            >
-              <input type="hidden" name="packageId" value={pkg.id} />
-
-              <div className="mb-4 flex items-start justify-between gap-3">
-                <div>
-                  <h4 className="text-base font-semibold text-slate-900">{pkg.name}</h4>
-                  <p className="text-sm text-slate-500">{pkg.company}</p>
-                </div>
-                <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">
-                  {pkg.netPrice.toLocaleString()} ฿
-                </span>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor={`repairType-${pkg.id}`} className="mb-1 block text-sm font-medium text-slate-700">
-                    ประเภทการซ่อม
-                  </label>
-                  <input
-                    id={`repairType-${pkg.id}`}
-                    name="repairType"
-                    type="text"
-                    defaultValue={pkg.repairType ?? ''}
-                    placeholder="เช่น ซ่อมห้าง / อู่ / ห้าง"
-                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-[16px] text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-100"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor={`coverage-${pkg.id}`} className="mb-1 block text-sm font-medium text-slate-700">
-                    ความคุ้มครอง
-                  </label>
-                  <input
-                    id={`coverage-${pkg.id}`}
-                    name="coverage"
-                    type="text"
-                    defaultValue={pkg.coverage ?? ''}
-                    placeholder="เช่น ซ่อมรถคู่กรณี / ซ่อมรถเรา"
-                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-[16px] text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-100"
-                  />
-                </div>
-
-                <div className="flex items-center gap-2 text-xs text-slate-500">
-                  <span>แสดงบนหน้า customer แบบทันทีหลังบันทึก</span>
-                </div>
-
-                <button
-                  type="submit"
-                  className="inline-flex w-full items-center justify-center rounded-xl bg-cyan-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-cyan-700"
-                >
-                  บันทึกแพ็กเกจนี้
-                </button>
-              </div>
-            </form>
-          ))}
-        </div>
+      <div className="mt-8 rounded-3xl border border-cyan-500/20 bg-cyan-500/10 px-5 py-4 text-sm text-cyan-50 shadow-2xl shadow-black/10">
+        <div className="font-semibold text-white">จัดการแพ็กเกจย้ายไปหน้า Insurance Campaigns แล้ว</div>
+        <p className="mt-1 text-cyan-100">
+          ตอนนี้หน้า /admin จะเบาลงมาก เพราะไม่ต้องโหลดรายการแพ็กเกจจำนวนมากในหน้าเดียวอีกต่อไป
+        </p>
       </div>
     </section>
   );

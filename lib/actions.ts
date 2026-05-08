@@ -65,6 +65,7 @@ export async function updateInsurancePackage(formData: FormData): Promise<void> 
   `;
 
   revalidatePath('/admin');
+  revalidatePath('/admin/insurance/packages');
   revalidatePath('/line-app');
 }
 
@@ -90,6 +91,7 @@ export async function importInsuranceCampaign(formData: FormData): Promise<void>
 
   revalidatePath('/admin');
   revalidatePath('/admin/insurance');
+  revalidatePath('/admin/insurance/packages');
   revalidatePath('/line-app');
 }
 
@@ -101,5 +103,6 @@ export async function deleteInsuranceCampaign(formData: FormData): Promise<void>
 
   revalidatePath('/admin');
   revalidatePath('/admin/insurance');
+  revalidatePath('/admin/insurance/packages');
   revalidatePath('/line-app');
 }

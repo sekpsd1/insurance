@@ -1,7 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 
-export const INSURANCE_IMPORT_BATCH_SIZE = 500;
+export const INSURANCE_IMPORT_BATCH_SIZE = 200;
 
 export type InsuranceCampaignImportOptions = {
   csvText: string;
@@ -248,7 +248,8 @@ export async function importInsuranceCampaignFromCsv(
   let rowsDeleted = 0;
   let rowsInserted = 0;
 
-  await prisma.$transaction(async (tx) => {
+  await prisma.$transaction(
+    async (tx) => {
     if (options.replaceExisting) {
       await tx.$executeRaw`
         DELETE FROM InsurancePackage
@@ -266,7 +267,12 @@ export async function importInsuranceCampaignFromCsv(
 
       rowsInserted += result.count;
     }
-  });
+    },
+    {
+      timeout: 600000,
+      maxWait: 600000
+    }
+  );
 
   return {
     companyCode,
