@@ -62,12 +62,8 @@ function normalizeSearchValue(value: string | string[] | undefined) {
 function normalizeCoverageType(value: string | string[] | undefined) {
   const normalized = normalizeSearchValue(value);
 
-  if (normalized === '1' || normalized === '2+' || normalized === '3+' || normalized === '3') {
-    return normalized as '1' | '2+' | '3+' | '3';
-  }
-
-  if (normalized.startsWith('1')) {
-    return '1';
+  if (normalized === '2+' || normalized === '3+' || normalized === '3') {
+    return normalized as '2+' | '3+' | '3';
   }
 
   if (normalized === '2.2') {
@@ -86,7 +82,6 @@ function normalizeCoverageType(value: string | string[] | undefined) {
 }
 
 function getCoverageLabel(value: string) {
-  if (value === '1') return 'ประกันชั้น 1';
   if (value === '2+') return 'ประกัน 2+';
   if (value === '3+') return 'ประกัน 3+';
   if (value === '3') return 'ประกันชั้น 3';
@@ -171,7 +166,7 @@ export default async function ComparePage({
   const selectedIds = normalizeIdList(resolvedSearchParams.ids);
 
   const coverageTypeSql = buildCoverageTypeSql();
-  const searchConditions: Prisma.Sql[] = [];
+  const searchConditions: Prisma.Sql[] = [Prisma.sql`${coverageTypeSql} <> '1'`];
 
   if (coverage) {
     searchConditions.push(Prisma.sql`${coverageTypeSql} = ${coverage}`);

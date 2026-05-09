@@ -19,10 +19,6 @@ type OptionRow = {
 function normalizeCoverageType(value: string | null | undefined) {
   const normalized = value?.trim() ?? '';
 
-  if (normalized.startsWith('1')) {
-    return '1';
-  }
-
   if (normalized === '2.2') {
     return '2+';
   }
@@ -74,7 +70,7 @@ export default async function SearchInsurancePage({
       model: row.model?.trim() ?? '',
       year: row.year ? String(row.year) : null
     }))
-    .filter((row) => Boolean(row.coverageType && row.brand && row.model));
+    .filter((row) => Boolean(row.coverageType && row.coverageType !== '1' && row.brand && row.model));
 
   return (
     <main className="min-h-screen bg-[#f4f5ff] text-[#12131a]">

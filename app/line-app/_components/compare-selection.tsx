@@ -34,7 +34,6 @@ function getText(value: string | null | undefined, fallback: string) {
 }
 
 function getCoverageLabel(value: string) {
-  if (value === '1') return 'ประกันชั้น 1';
   if (value === '2+') return 'ประกัน 2+';
   if (value === '3+') return 'ประกัน 3+';
   if (value === '3') return 'ประกันชั้น 3';

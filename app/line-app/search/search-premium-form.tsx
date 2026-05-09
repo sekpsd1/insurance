@@ -10,7 +10,7 @@ type SearchPremiumOptionRow = {
   year: string | number | null;
 };
 
-type CoverageType = '1' | '2+' | '3+' | '3';
+type CoverageType = '2+' | '3+' | '3';
 
 type SearchPremiumFormProps = {
   optionRows: SearchPremiumOptionRow[];
@@ -21,7 +21,6 @@ type SearchPremiumFormProps = {
 };
 
 const COVERAGE_OPTIONS: Array<{ value: CoverageType; label: string }> = [
-  { value: '1', label: 'ประกันชั้น 1' },
   { value: '2+', label: 'ประกัน 2+' },
   { value: '3+', label: 'ประกัน 3+' },
   { value: '3', label: 'ประกันชั้น 3' }
