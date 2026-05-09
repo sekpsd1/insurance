@@ -4,6 +4,7 @@ out/
 coverage/
 dist/
 .cache/
+tsconfig.tsbuildinfo
 
 # Environment secrets
 .env
@@ -18,6 +19,7 @@ dist/
 prisma/dev.db
 mysql_data/
 backups/
+public/uploads/slips/
 
 # OS / editor files
 .DS_Store

@@ -6,13 +6,46 @@ type SuccessPageProps = {
   params: Promise<{ orderId: string }>;
 };
 
+function formatCurrency(value: number | null | undefined) {
+  return new Intl.NumberFormat('th-TH', {
+    style: 'currency',
+    currency: 'THB',
+    maximumFractionDigits: 0
+  }).format(value ?? 0);
+}
+
+function getStatusLabel(status: string) {
+  const labels: Record<string, string> = {
+    DRAFT: 'ร่างคำสั่งซื้อ',
+    PENDING_PAYMENT: 'รอชำระเงิน',
+    PAYMENT_SUBMITTED: 'ส่งหลักฐานชำระเงินแล้ว',
+    PENDING: 'รอตรวจสอบ',
+    APPROVED: 'อนุมัติแล้ว',
+    PAID: 'ชำระเงินแล้ว',
+    SENT_TO_INSURER: 'ส่งให้บริษัทประกันแล้ว',
+    INSURER_REVIEWING: 'บริษัทประกันกำลังตรวจสอบ',
+    POLICY_APPROVED: 'อนุมัติกรมธรรม์แล้ว',
+    POLICY_ISSUED: 'ออกกรมธรรม์แล้ว',
+    REJECTED: 'ไม่อนุมัติ',
+    CANCELLED: 'ยกเลิก'
+  };
+
+  return labels[status] ?? status;
+}
+
 export default async function OrderSuccessPage({ params }: SuccessPageProps) {
   const { orderId } = await params;
 
   const order = await prisma.order.findUnique({
     where: { id: orderId },
     include: {
-      pkg: true
+      pkg: true,
+      statusHistory: {
+        orderBy: {
+          createdAt: 'desc'
+        },
+        take: 4
+      }
     }
   });
 
@@ -20,28 +53,22 @@ export default async function OrderSuccessPage({ params }: SuccessPageProps) {
     notFound();
   }
 
-  const receiptOrder = order as typeof order & {
-    plateNumber: string | null;
-  };
-
   return (
-    <main className="min-h-screen bg-slate-100 px-4 py-8">
+    <main className="min-h-screen bg-[#f4f7ff] px-4 py-8 text-[#101828]">
       <div className="mx-auto flex max-w-md flex-col gap-4">
-        <section className="overflow-hidden rounded-[28px] bg-white shadow-[0_20px_60px_rgba(15,23,42,0.08)] ring-1 ring-slate-200">
-          <div className="bg-gradient-to-r from-brand-600 to-cyan-500 px-6 py-6 text-white">
+        <section className="overflow-hidden rounded-3xl bg-white shadow-[0_20px_60px_rgba(15,23,42,0.08)] ring-1 ring-slate-200">
+          <div className="bg-[#0052CC] px-6 py-6 text-white">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-white/80">
-                  Receipt
-                </p>
-                <h1 className="mt-2 text-2xl font-bold tracking-tight">สั่งซื้อสำเร็จ</h1>
+                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-white/80">Payment Success</p>
+                <h1 className="mt-2 text-2xl font-bold tracking-tight">รับคำสั่งซื้อเรียบร้อย</h1>
               </div>
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/15 text-2xl backdrop-blur">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/15 text-2xl font-bold">
                 ✓
               </div>
             </div>
             <p className="mt-3 text-sm leading-6 text-white/85">
-              ระบบได้สร้างรายการสั่งซื้อและบันทึกข้อมูลเรียบร้อยแล้ว
+              ระบบบันทึกข้อมูลแล้ว คุณสามารถใช้เลขคำสั่งซื้อนี้เพื่อติดตามสถานะได้ตลอดเวลา
             </p>
           </div>
 
@@ -49,7 +76,7 @@ export default async function OrderSuccessPage({ params }: SuccessPageProps) {
             <div className="flex items-center justify-between text-xs font-medium uppercase tracking-[0.22em] text-slate-400">
               <span>Order Detail</span>
               <span className="rounded-full bg-amber-50 px-3 py-1 text-amber-700">
-                {order.status}
+                {getStatusLabel(order.status)}
               </span>
             </div>
 
@@ -57,43 +84,73 @@ export default async function OrderSuccessPage({ params }: SuccessPageProps) {
 
             <dl className="space-y-4">
               <div className="flex items-start justify-between gap-6">
-                <dt className="text-sm text-slate-500">เลขคำสั่งซื้อ</dt>
-                <dd className="text-right text-sm font-semibold tracking-wide text-slate-900">
-                  {receiptOrder.orderNumber}
-                </dd>
+                <dt className="text-sm text-slate-500">เลขที่คำสั่งซื้อ</dt>
+                <dd className="text-right text-sm font-semibold tracking-wide text-slate-900">{order.orderNumber}</dd>
               </div>
-
               <div className="flex items-start justify-between gap-6">
                 <dt className="text-sm text-slate-500">แพ็กเกจประกัน</dt>
-                <dd className="text-right text-sm font-semibold text-slate-900">
-                  {receiptOrder.pkg.name}
-                </dd>
+                <dd className="text-right text-sm font-semibold text-slate-900">{order.pkg.name}</dd>
               </div>
-
               <div className="flex items-start justify-between gap-6">
-                <dt className="text-sm text-slate-500">เลขทะเบียนรถ</dt>
-                <dd className="text-right text-sm font-semibold uppercase tracking-wide text-slate-900">
-                  {receiptOrder.plateNumber ?? '-'}
+                <dt className="text-sm text-slate-500">ผู้เอาประกัน</dt>
+                <dd className="text-right text-sm font-semibold text-slate-900">{order.customerName ?? '-'}</dd>
+              </div>
+              <div className="flex items-start justify-between gap-6">
+                <dt className="text-sm text-slate-500">ทะเบียนรถ</dt>
+                <dd className="text-right text-sm font-semibold uppercase tracking-wide text-slate-900">{order.plateNumber ?? '-'}</dd>
+              </div>
+              <div className="flex items-start justify-between gap-6">
+                <dt className="text-sm text-slate-500">ยอดชำระ</dt>
+                <dd className="text-right text-sm font-semibold text-slate-900">{formatCurrency(order.paymentAmount)}</dd>
+              </div>
+              <div className="flex items-start justify-between gap-6">
+                <dt className="text-sm text-slate-500">วิธีชำระเงิน</dt>
+                <dd className="text-right text-sm font-semibold text-slate-900">
+                  {order.paymentMethod === 'BANK_TRANSFER' ? 'โอนเงินแนบสลิป' : order.paymentMethod === 'CARD_GATEWAY' ? 'Gateway' : '-'}
                 </dd>
               </div>
             </dl>
 
-            <div className="my-5 border-t border-dashed border-slate-200" />
+            {order.gatewayUrl ? (
+              <a
+                href={order.gatewayUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-5 flex w-full items-center justify-center rounded-2xl bg-slate-950 px-4 py-3 font-semibold text-white"
+              >
+                เปิดลิงก์ชำระเงิน
+              </a>
+            ) : null}
+          </div>
+        </section>
 
-            <div className="rounded-2xl bg-slate-50 px-4 py-4">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-500">สถานะปัจจุบัน</span>
-                <span className="font-semibold text-slate-900">{receiptOrder.status}</span>
-              </div>
-            </div>
+        <section className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+          <h2 className="font-bold text-slate-950">Timeline ล่าสุด</h2>
+          <div className="mt-4 space-y-3">
+            {order.statusHistory.length === 0 ? (
+              <p className="text-sm text-slate-500">ยังไม่มีประวัติสถานะ</p>
+            ) : (
+              order.statusHistory.map((item) => (
+                <div key={item.id} className="rounded-2xl bg-slate-50 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="font-semibold text-slate-950">{getStatusLabel(item.status)}</div>
+                    <div className="text-xs text-slate-500">{item.createdAt.toLocaleString('th-TH')}</div>
+                  </div>
+                  {item.message ? <p className="mt-1 text-sm text-slate-600">{item.message}</p> : null}
+                </div>
+              ))
+            )}
           </div>
         </section>
 
         <Link
-          href="/line-app"
-          className="rounded-2xl bg-brand-600 px-4 py-3 text-center font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700"
+          href={`/line-app/tracking/${order.orderNumber}`}
+          className="rounded-2xl bg-[#0052CC] px-4 py-4 text-center font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-[#0040a2]"
         >
-          กลับไปหน้าแพ็กเกจ
+          ติดตามสถานะคำสั่งซื้อ
+        </Link>
+        <Link href="/line-app/search" className="rounded-2xl bg-white px-4 py-3 text-center font-semibold text-[#0052CC] ring-1 ring-blue-100">
+          กลับไปค้นหาแพ็กเกจ
         </Link>
       </div>
     </main>

@@ -18,6 +18,10 @@ type CampaignSummaryRow = {
   companyCode: string | null;
   campaignCode: string | null;
   campaignName: string | null;
+  providerName: string | null;
+  providerEmail: string | null;
+  providerContactName: string | null;
+  providerPhone: string | null;
   packageCount: bigint | number | string;
   totalNetPrice: bigint | number | string | null;
   latestCreatedAt: Date | string | null;
@@ -27,6 +31,10 @@ export type InsuranceCampaignSummary = {
   companyCode: string;
   campaignCode: string;
   campaignName: string;
+  providerName: string;
+  providerEmail: string;
+  providerContactName: string;
+  providerPhone: string;
   packageCount: number;
   totalNetPrice: number;
   latestCreatedAt: Date | null;
@@ -332,6 +340,10 @@ export async function getInsuranceCampaignSummaries(): Promise<InsuranceCampaign
       companyCode,
       campaignCode,
       campaignName,
+      MAX(providerName) AS providerName,
+      MAX(providerEmail) AS providerEmail,
+      MAX(providerContactName) AS providerContactName,
+      MAX(providerPhone) AS providerPhone,
       COUNT(*) AS packageCount,
       COALESCE(SUM(netPrice), 0) AS totalNetPrice,
       MAX(createdAt) AS latestCreatedAt
@@ -347,6 +359,10 @@ export async function getInsuranceCampaignSummaries(): Promise<InsuranceCampaign
       companyCode: row.companyCode ?? '',
       campaignCode: row.campaignCode ?? '',
       campaignName: row.campaignName ?? row.campaignCode ?? '',
+      providerName: row.providerName ?? '',
+      providerEmail: row.providerEmail ?? '',
+      providerContactName: row.providerContactName ?? '',
+      providerPhone: row.providerPhone ?? '',
       packageCount: Number(row.packageCount) || 0,
       totalNetPrice: Number(row.totalNetPrice ?? 0) || 0,
       latestCreatedAt: row.latestCreatedAt ? new Date(row.latestCreatedAt) : null,

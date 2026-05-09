@@ -1,6 +1,11 @@
 import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
-import { deleteInsuranceCampaign, importInsuranceCampaign, updateInsuranceCampaignLogo } from '@/lib/actions';
+import {
+  deleteInsuranceCampaign,
+  importInsuranceCampaign,
+  updateInsuranceCampaignLogo,
+  updateInsuranceCampaignProviderContact
+} from '@/lib/actions';
 import { CampaignImportModal } from './_components/campaign-import-modal';
 import {
   getInsuranceCampaignSummaries,
@@ -206,6 +211,50 @@ export default async function InsuranceCampaignAdminPage() {
                   <dd className="mt-1 font-semibold text-slate-900">{formatDate(campaign.latestCreatedAt)}</dd>
                 </div>
               </dl>
+
+              <form action={updateInsuranceCampaignProviderContact} className="mt-5 space-y-3 rounded-2xl bg-slate-50 p-4">
+                <input type="hidden" name="companyCode" value={campaign.companyCode} />
+                <input type="hidden" name="campaignCode" value={campaign.campaignCode} />
+                <div>
+                  <div className="font-semibold text-slate-900">Provider Contact</div>
+                  <p className="mt-1 text-xs leading-5 text-slate-500">
+                    ข้อมูลนี้ใช้เป็นปลายทางสำหรับส่งอีเมล Magic Link ให้บริษัทประกันหลังลูกค้ายืนยันออเดอร์
+                  </p>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <input
+                    name="providerName"
+                    defaultValue={campaign.providerName}
+                    placeholder="ชื่อบริษัทประกัน"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
+                  />
+                  <input
+                    name="providerEmail"
+                    type="email"
+                    defaultValue={campaign.providerEmail}
+                    placeholder="provider@example.com"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
+                  />
+                  <input
+                    name="providerContactName"
+                    defaultValue={campaign.providerContactName}
+                    placeholder="ชื่อเจ้าหน้าที่"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
+                  />
+                  <input
+                    name="providerPhone"
+                    defaultValue={campaign.providerPhone}
+                    placeholder="เบอร์ติดต่อ"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="inline-flex w-full items-center justify-center rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-700"
+                >
+                  บันทึกข้อมูลบริษัทประกัน
+                </button>
+              </form>
 
               <div className="mt-5 flex flex-wrap gap-3">
                 <form action={updateInsuranceCampaignLogo} className="flex-1 min-w-[240px] space-y-3 rounded-2xl bg-slate-50 p-3">

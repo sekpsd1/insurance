@@ -12,6 +12,8 @@ model User {
   lineId    String   @unique
   name      String?
   phone     String?
+  email     String?
+  consentedAt DateTime?
   orders    Order[]
   createdAt DateTime @default(now())
 }
@@ -23,6 +25,10 @@ model InsurancePackage {
   companyCode String?
   campaignCode String?
   campaignName String?
+  providerName String?
+  providerEmail String?
+  providerContactName String?
+  providerPhone String?
   brand       String?
   model       String?
   year        Int?
@@ -44,13 +50,73 @@ model InsurancePackage {
 model Order {
   id                String   @id @default(uuid())
   orderNumber       String   @unique
-  status            String   @default("PENDING")
+  status            String   @default("DRAFT")
   userId            String
   user              User     @relation(fields: [userId], references: [id])
   packageId         String
   pkg               InsurancePackage @relation(fields: [packageId], references: [id])
+
+  customerName      String?
+  customerPhone     String?
+  customerEmail     String?
+  customerAddress   String?  @db.Text
+  province          String?
+  district          String?
+  subDistrict       String?
+  postalCode        String?
+  idCardNumber      String?
+
+  carBrand          String?
+  carModel          String?
+  carYear           Int?
   plateNumber       String?
+  plateProvince     String?
+  policyStartDate   DateTime?
+
+  paymentMethod     String?
+  paymentStatus     String   @default("UNPAID")
+  paymentAmount     Float?
+  slipUrl           String?
+  gatewayUrl        String?
+  paidAt            DateTime?
+
   trackingNumber    String?
+  insurerStatus     String?
+  insurerNote       String?  @db.Text
+  insurerUpdatedAt  DateTime?
+  statusHistory     OrderStatusHistory[]
+  magicLinks        MagicLinkToken[]
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+
+  @@index([status])
+  @@index([paymentStatus])
+  @@index([orderNumber])
+}
+
+model OrderStatusHistory {
+  id        String   @id @default(uuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status    String
+  message   String?  @db.Text
+  actorType String   @default("SYSTEM")
+  actorName String?
+  createdAt DateTime @default(now())
+
+  @@index([orderId, createdAt])
+}
+
+model MagicLinkToken {
+  id        String   @id @default(uuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  purpose   String   @default("INSURER_STATUS_UPDATE")
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orderId])
 }
