@@ -132,6 +132,7 @@ Main Prisma models:
 - Missing provider email is captured as `MISSING_RECIPIENT` with an error message instead of only being hidden in server logs.
 - Admin order monitor shows latest provider email status per order.
 - Admin order monitor shows a recent Email Outbox table.
+- Admin order monitor supports search/filter by order/customer/phone/plate, status, provider, payment method, date range, and missing provider email.
 - Admin can send queued provider emails with a mock sender from the Email Outbox table.
 - Admin can retry `ERROR` email outbox rows.
 - `SENT` rows show sent timestamp and cannot be resent from the monitor.
@@ -142,6 +143,8 @@ Main Prisma models:
 - New order/status/email history messages are recorded in Thai.
 - Provider email outbox creation now reuses or refreshes the latest outbox row for an order instead of creating duplicate visible queue rows.
 - Admin Email Outbox table shows the latest outbox row per order to avoid duplicate rows for the same order number.
+- Checkout now attempts to send the provider email automatically after creating the `EmailOutbox` row, using the current mock sender.
+- Admin Email Outbox send button is now primarily for retry/manual recovery rather than the normal checkout path.
 
 ### Infrastructure / Maintenance
 
@@ -158,7 +161,7 @@ Main Prisma models:
 
 ### Email / Notification
 
-- Replace mock provider email sender with real email sending to `providerEmail` from queued `EmailOutbox` rows.
+- Replace mock provider email sender with real email sending to `providerEmail`.
 - Replace simulated broker email log with a real notification.
 - Replace simulated LINE push log with real LINE Messaging API integration.
 
@@ -228,6 +231,7 @@ Main Prisma models:
    - Then add real LINE Messaging API push using customer `lineId`.
 
 3. Improve admin order monitor.
-   - Filters, status chips, missing provider contact warnings, and order detail view.
+   - Add a dedicated order detail page if the table becomes too dense.
+   - Consider export/report views for filtered results.
 
 4. Commit/push after each coherent slice.

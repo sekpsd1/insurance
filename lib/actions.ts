@@ -313,6 +313,104 @@ async function sendProviderEmailMock(input: {
   });
 }
 
+async function deliverEmailOutboxItem(emailOutboxId: string) {
+  const email = await prisma.emailOutbox.findUnique({
+    where: {
+      id: emailOutboxId
+    },
+    include: {
+      order: true
+    }
+  });
+
+  if (!email) {
+    throw new Error('Email outbox item was not found');
+  }
+
+  if (!email.recipient) {
+    await prisma.emailOutbox.update({
+      where: {
+        id: email.id
+      },
+      data: {
+        status: 'MISSING_RECIPIENT',
+        errorAt: new Date(),
+        errorMessage: 'Provider email is missing. Update the campaign provider contact before sending.'
+      }
+    });
+
+    if (email.orderId) {
+      await createOrderStatusHistory({
+        orderId: email.orderId,
+        status: email.order?.status ?? 'SENT_TO_INSURER',
+        message: 'ส่งอีเมลไม่ได้ เพราะไม่มีอีเมลบริษัทประกัน',
+        actorType: 'SYSTEM',
+        actorName: 'System'
+      });
+    }
+
+    return;
+  }
+
+  if (email.status === 'SENT') {
+    return;
+  }
+
+  try {
+    await sendProviderEmailMock({
+      recipient: email.recipient,
+      subject: email.subject,
+      body: email.body,
+      magicLinkPath: email.magicLinkPath
+    });
+
+    await prisma.emailOutbox.update({
+      where: {
+        id: email.id
+      },
+      data: {
+        status: 'SENT',
+        sentAt: new Date(),
+        errorAt: null,
+        errorMessage: null
+      }
+    });
+
+    if (email.orderId) {
+      await createOrderStatusHistory({
+        orderId: email.orderId,
+        status: email.order?.status ?? 'SENT_TO_INSURER',
+        message: 'ส่งอีเมลบริษัทประกันแล้ว',
+        actorType: 'SYSTEM',
+        actorName: 'System'
+      });
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown email send error';
+
+    await prisma.emailOutbox.update({
+      where: {
+        id: email.id
+      },
+      data: {
+        status: 'ERROR',
+        errorAt: new Date(),
+        errorMessage
+      }
+    });
+
+    if (email.orderId) {
+      await createOrderStatusHistory({
+        orderId: email.orderId,
+        status: email.order?.status ?? 'SENT_TO_INSURER',
+        message: `ส่งอีเมลบริษัทประกันไม่สำเร็จ: ${errorMessage}`,
+        actorType: 'SYSTEM',
+        actorName: 'System'
+      });
+    }
+  }
+}
+
 async function saveUploadFile(file: File, options: { directory: string; publicPath: string; prefix: string }) {
   if (!file.type.startsWith('image/')) {
     throw new Error('Upload file must be an image');
@@ -409,103 +507,7 @@ export async function updateOrderStatus(formData: FormData): Promise<void> {
 export async function sendEmailOutboxItem(formData: FormData): Promise<void> {
   const emailOutboxId = getRequiredFormValue(formData, 'emailOutboxId');
 
-  const email = await prisma.emailOutbox.findUnique({
-    where: {
-      id: emailOutboxId
-    },
-    include: {
-      order: true
-    }
-  });
-
-  if (!email) {
-    throw new Error('Email outbox item was not found');
-  }
-
-  if (!email.recipient) {
-    await prisma.emailOutbox.update({
-      where: {
-        id: email.id
-      },
-      data: {
-        status: 'MISSING_RECIPIENT',
-        errorAt: new Date(),
-        errorMessage: 'Provider email is missing. Update the campaign provider contact before sending.'
-      }
-    });
-
-    if (email.orderId) {
-      await createOrderStatusHistory({
-        orderId: email.orderId,
-        status: email.order?.status ?? 'SENT_TO_INSURER',
-        message: 'ส่งอีเมลไม่ได้ เพราะไม่มีอีเมลบริษัทประกัน',
-        actorType: 'SYSTEM',
-        actorName: 'System'
-      });
-    }
-
-    revalidatePath('/admin');
-    return;
-  }
-
-  if (email.status === 'SENT') {
-    revalidatePath('/admin');
-    return;
-  }
-
-  try {
-    await sendProviderEmailMock({
-      recipient: email.recipient,
-      subject: email.subject,
-      body: email.body,
-      magicLinkPath: email.magicLinkPath
-    });
-
-    await prisma.emailOutbox.update({
-      where: {
-        id: email.id
-      },
-      data: {
-        status: 'SENT',
-        sentAt: new Date(),
-        errorAt: null,
-        errorMessage: null
-      }
-    });
-
-    if (email.orderId) {
-      await createOrderStatusHistory({
-        orderId: email.orderId,
-        status: email.order?.status ?? 'SENT_TO_INSURER',
-        message: 'ส่งอีเมลบริษัทประกันแล้ว',
-        actorType: 'SYSTEM',
-        actorName: 'System'
-      });
-    }
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown email send error';
-
-    await prisma.emailOutbox.update({
-      where: {
-        id: email.id
-      },
-      data: {
-        status: 'ERROR',
-        errorAt: new Date(),
-        errorMessage
-      }
-    });
-
-    if (email.orderId) {
-      await createOrderStatusHistory({
-        orderId: email.orderId,
-        status: email.order?.status ?? 'SENT_TO_INSURER',
-        message: `ส่งอีเมลบริษัทประกันไม่สำเร็จ: ${errorMessage}`,
-        actorType: 'SYSTEM',
-        actorName: 'System'
-      });
-    }
-  }
+  await deliverEmailOutboxItem(emailOutboxId);
 
   revalidatePath('/admin');
 }
@@ -694,10 +696,11 @@ export async function submitCheckout(formData: FormData): Promise<void> {
   });
 
   const insurerToken = await createMagicLinkTokenForOrder(orderId);
-  await createProviderEmailOutbox({
+  const providerEmailOutbox = await createProviderEmailOutbox({
     orderId,
     token: insurerToken
   });
+  await deliverEmailOutboxItem(providerEmailOutbox.id);
 
   revalidatePath('/admin');
   revalidatePath(`/line-app/success/${orderId}`);

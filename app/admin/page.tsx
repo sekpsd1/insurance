@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { sendEmailOutboxItem } from '@/lib/actions';
 import {
@@ -52,10 +53,148 @@ function canSendEmail(status: string, recipient: string | null) {
   return Boolean(recipient) && status !== 'SENT' && status !== 'MISSING_RECIPIENT';
 }
 
-export default async function AdminPage() {
-  const [orders, emailOutboxRows] = await Promise.all([
+type AdminPageProps = {
+  searchParams?: Promise<{
+    q?: string;
+    status?: string;
+    provider?: string;
+    paymentMethod?: string;
+    missingProviderEmail?: string;
+    dateFrom?: string;
+    dateTo?: string;
+  }>;
+};
+
+const orderStatusOptions = [
+  'PENDING_PAYMENT',
+  'PAYMENT_SUBMITTED',
+  'PAID',
+  'SENT_TO_INSURER',
+  'INSURER_REVIEWING',
+  'POLICY_APPROVED',
+  'POLICY_ISSUED',
+  'REJECTED',
+  'CANCELLED'
+];
+
+const paymentMethodOptions = ['BANK_TRANSFER', 'CARD_GATEWAY'];
+
+function getDateRange(dateFrom?: string, dateTo?: string) {
+  const createdAt: Prisma.DateTimeFilter = {};
+
+  if (dateFrom) {
+    const from = new Date(dateFrom);
+
+    if (!Number.isNaN(from.getTime())) {
+      from.setHours(0, 0, 0, 0);
+      createdAt.gte = from;
+    }
+  }
+
+  if (dateTo) {
+    const to = new Date(dateTo);
+
+    if (!Number.isNaN(to.getTime())) {
+      to.setHours(23, 59, 59, 999);
+      createdAt.lte = to;
+    }
+  }
+
+  return Object.keys(createdAt).length > 0 ? createdAt : null;
+}
+
+function addAndWhere(where: Prisma.OrderWhereInput, condition: Prisma.OrderWhereInput) {
+  const existingAnd = where.AND
+    ? Array.isArray(where.AND)
+      ? where.AND
+      : [where.AND]
+    : [];
+
+  where.AND = [...existingAnd, condition];
+}
+
+function buildOrderWhere(filters: Awaited<NonNullable<AdminPageProps['searchParams']>>) {
+  const where: Prisma.OrderWhereInput = {};
+  const q = filters.q?.trim();
+  const status = filters.status?.trim();
+  const provider = filters.provider?.trim();
+  const paymentMethod = filters.paymentMethod?.trim();
+  const dateRange = getDateRange(filters.dateFrom, filters.dateTo);
+
+  if (q) {
+    where.OR = [
+      { orderNumber: { contains: q } },
+      { customerName: { contains: q } },
+      { customerPhone: { contains: q } },
+      { plateNumber: { contains: q } },
+      { plateProvince: { contains: q } },
+      { carBrand: { contains: q } },
+      { carModel: { contains: q } },
+      {
+        user: {
+          OR: [
+            { name: { contains: q } },
+            { phone: { contains: q } },
+            { lineId: { contains: q } }
+          ]
+        }
+      },
+      {
+        pkg: {
+          OR: [
+            { name: { contains: q } },
+            { company: { contains: q } }
+          ]
+        }
+      }
+    ];
+  }
+
+  if (status) {
+    where.status = status;
+  }
+
+  if (paymentMethod) {
+    where.paymentMethod = paymentMethod;
+  }
+
+  if (provider) {
+    addAndWhere(where, {
+      pkg: {
+        is: {
+          company: provider
+        }
+      }
+    });
+  }
+
+  if (filters.missingProviderEmail === 'on') {
+    addAndWhere(where, {
+      pkg: {
+        is: {
+          OR: [
+            { providerEmail: null },
+            { providerEmail: '' }
+          ]
+        }
+      }
+    });
+  }
+
+  if (dateRange) {
+    where.createdAt = dateRange;
+  }
+
+  return where;
+}
+
+export default async function AdminPage({ searchParams }: AdminPageProps) {
+  const filters = (await searchParams) ?? {};
+  const orderWhere = buildOrderWhere(filters);
+  const [orders, orderCount, providerRows, emailOutboxRows] = await Promise.all([
     prisma.order.findMany({
-      take: 30,
+      where: orderWhere,
+      take: 50,
       orderBy: {
         createdAt: 'desc'
       },
@@ -76,6 +215,15 @@ export default async function AdminPage() {
         }
       }
     }),
+    prisma.order.count({
+      where: orderWhere
+    }),
+    prisma.insurancePackage.findMany({
+      select: {
+        company: true
+      },
+      distinct: ['company']
+    }),
     prisma.emailOutbox.findMany({
       take: 50,
       orderBy: {
@@ -90,6 +238,10 @@ export default async function AdminPage() {
       }
     })
   ]);
+  const providerOptions = providerRows
+    .map((row) => row.company)
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b, 'th'));
   const emailOutbox = emailOutboxRows
     .filter((email, index, rows) => {
       const dedupeKey = email.orderId ?? email.id;
@@ -115,10 +267,138 @@ export default async function AdminPage() {
               <p className="text-sm text-slate-500">ตรวจสอบลูกค้า รถ แพ็กเกจ การชำระเงิน และสถานะการส่งอีเมล</p>
             </div>
             <span className="rounded-full bg-slate-900 px-3 py-1 text-sm font-semibold text-white">
-              {orders.length} รายการ
+              {orderCount} รายการ
             </span>
           </div>
         </div>
+
+        <form action="/admin" className="border-b border-slate-200 bg-white px-5 py-4 sm:px-6">
+          <div className="grid gap-3 lg:grid-cols-[1.4fr_1fr_1fr_1fr_1fr_1fr]">
+            <div>
+              <label htmlFor="q" className="mb-1 block text-xs font-semibold text-slate-500">
+                ค้นหา
+              </label>
+              <input
+                id="q"
+                name="q"
+                type="search"
+                defaultValue={filters.q ?? ''}
+                placeholder="เลขออเดอร์ ลูกค้า เบอร์ ทะเบียน"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-cyan-500 focus:bg-white focus:ring-4 focus:ring-cyan-100"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="status" className="mb-1 block text-xs font-semibold text-slate-500">
+                สถานะ
+              </label>
+              <select
+                id="status"
+                name="status"
+                defaultValue={filters.status ?? ''}
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-cyan-500 focus:bg-white focus:ring-4 focus:ring-cyan-100"
+              >
+                <option value="">ทั้งหมด</option>
+                {orderStatusOptions.map((status) => (
+                  <option key={status} value={status}>
+                    {getOrderStatusLabel(status)}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="provider" className="mb-1 block text-xs font-semibold text-slate-500">
+                บริษัทประกัน
+              </label>
+              <select
+                id="provider"
+                name="provider"
+                defaultValue={filters.provider ?? ''}
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-cyan-500 focus:bg-white focus:ring-4 focus:ring-cyan-100"
+              >
+                <option value="">ทั้งหมด</option>
+                {providerOptions.map((provider) => (
+                  <option key={provider} value={provider}>
+                    {provider}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="paymentMethod" className="mb-1 block text-xs font-semibold text-slate-500">
+                วิธีชำระเงิน
+              </label>
+              <select
+                id="paymentMethod"
+                name="paymentMethod"
+                defaultValue={filters.paymentMethod ?? ''}
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-cyan-500 focus:bg-white focus:ring-4 focus:ring-cyan-100"
+              >
+                <option value="">ทั้งหมด</option>
+                {paymentMethodOptions.map((method) => (
+                  <option key={method} value={method}>
+                    {getPaymentMethodLabel(method)}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="dateFrom" className="mb-1 block text-xs font-semibold text-slate-500">
+                จากวันที่
+              </label>
+              <input
+                id="dateFrom"
+                name="dateFrom"
+                type="date"
+                defaultValue={filters.dateFrom ?? ''}
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-cyan-500 focus:bg-white focus:ring-4 focus:ring-cyan-100"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="dateTo" className="mb-1 block text-xs font-semibold text-slate-500">
+                ถึงวันที่
+              </label>
+              <input
+                id="dateTo"
+                name="dateTo"
+                type="date"
+                defaultValue={filters.dateTo ?? ''}
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-cyan-500 focus:bg-white focus:ring-4 focus:ring-cyan-100"
+              />
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+            <label className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700">
+              <input
+                name="missingProviderEmail"
+                type="checkbox"
+                defaultChecked={filters.missingProviderEmail === 'on'}
+                className="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
+              />
+              แสดงเฉพาะรายการที่ไม่มีอีเมลบริษัทประกัน
+            </label>
+
+            <div className="flex gap-2">
+              <Link
+                href="/admin"
+                className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                ล้างตัวกรอง
+              </Link>
+              <button
+                type="submit"
+                className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
+              >
+                ค้นหา
+              </button>
+            </div>
+          </div>
+        </form>
 
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-200">
@@ -232,7 +512,7 @@ export default async function AdminPage() {
           <div className="flex items-center justify-between gap-4">
             <div>
               <h3 className="text-lg font-semibold text-slate-900">คิวอีเมลบริษัทประกัน</h3>
-              <p className="text-sm text-slate-500">รายการอีเมลล่าสุดที่สร้างจาก checkout และ Magic Link preview</p>
+              <p className="text-sm text-slate-500">ระบบส่งอีเมลอัตโนมัติหลัง checkout ปุ่มในตารางนี้ใช้ส่งซ้ำหรือแก้รายการที่ส่งไม่สำเร็จ</p>
             </div>
             <span className="rounded-full bg-slate-900 px-3 py-1 text-sm font-semibold text-white">
               {emailOutbox.length} รายการ
