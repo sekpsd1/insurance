@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
+import { getPaymentStatusLabel, getStatusHistoryMessageLabel } from '@/lib/status-labels';
 
 type TrackingPageProps = {
   params: Promise<{ orderNumber: string }>;
@@ -63,7 +64,7 @@ export default async function TrackingDetailPage({ params }: TrackingPageProps) 
           <div className="mt-5 rounded-2xl bg-[#eef3ff] p-4">
             <div className="text-sm text-slate-600">สถานะปัจจุบัน</div>
             <div className="mt-1 text-xl font-bold text-[#0052CC]">{getStatusLabel(order.status)}</div>
-            <div className="mt-2 text-sm text-slate-600">การชำระเงิน: {order.paymentStatus}</div>
+            <div className="mt-2 text-sm text-slate-600">การชำระเงิน: {getPaymentStatusLabel(order.paymentStatus)}</div>
           </div>
         </section>
 
@@ -97,7 +98,7 @@ export default async function TrackingDetailPage({ params }: TrackingPageProps) 
                     <div className="font-semibold text-slate-950">{getStatusLabel(item.status)}</div>
                     <div className="text-xs text-slate-500">{item.createdAt.toLocaleString('th-TH')}</div>
                   </div>
-                  {item.message ? <p className="mt-1 text-sm text-slate-600">{item.message}</p> : null}
+                  {item.message ? <p className="mt-1 text-sm text-slate-600">{getStatusHistoryMessageLabel(item.message)}</p> : null}
                 </div>
               ))
             )}

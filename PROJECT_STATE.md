@@ -1,0 +1,233 @@
+# Project State
+
+Last updated: 2026-05-09
+
+## Current Architecture
+
+This project is a Next.js 15 App Router application for a car insurance LINE Mini App style purchase flow and broker/admin operations.
+
+### Main Stack
+
+- Next.js 15 App Router
+- React 19
+- TypeScript
+- Tailwind CSS
+- Prisma ORM
+- MySQL
+- Server Actions for writes
+
+### Main Areas
+
+#### Customer Flow
+
+Customer-facing routes live under `/line-app`.
+
+- `/line-app/search` - search premium form.
+- `/line-app` - search results and package cards.
+- `/line-app/compare` - comparison table and compare selection flow.
+- `/line-app/form/[id]` - Policy Info page for the selected package.
+- `/line-app/checkout/[orderId]` - hybrid checkout.
+- `/line-app/success/[orderId]` - order success and recent timeline.
+- `/line-app/tracking` - order tracking lookup.
+- `/line-app/tracking/[orderNumber]` - order tracking detail.
+
+The customer flow currently starts at `/line-app/search`. LINE rich menu and consent are treated as external LINE/LIFF responsibilities, not in-system pages.
+
+#### Admin/Broker Flow
+
+Admin routes live under `/admin`.
+
+- `/admin/login` - simple password login using `ADMIN_PASSWORD`.
+- `/admin` - order monitor/report page.
+- `/admin/insurance` - campaign dashboard, CSV import, logo upload, provider contact setup.
+- `/admin/insurance/packages` - package search/edit page.
+- `/admin/orders/[orderId]/email-preview` - Magic Link provider email preview.
+
+Admin is intended to manage package/campaign data and monitor orders. The primary policy/order status updates should come from insurance provider Magic Links.
+
+#### Insurance Provider Magic Link Flow
+
+- `/insurance/update/[token]` - public Magic Link page for insurance company staff.
+
+Magic Link tokens are stored as SHA-256 hashes in `MagicLinkToken`. The raw token is shown only in generated/preview links.
+
+### Database Models
+
+Main Prisma models:
+
+- `User`
+- `InsurancePackage`
+- `Order`
+- `OrderStatusHistory`
+- `MagicLinkToken`
+- `EmailOutbox`
+
+`InsurancePackage` stores campaign/package data and now includes provider contact fields:
+
+- `providerName`
+- `providerEmail`
+- `providerContactName`
+- `providerPhone`
+
+`Order` stores customer policy info, vehicle info, payment method/status, slip/gateway fields, insurer status/note, and links to status history and magic links.
+
+`EmailOutbox` stores provider email audit records, including recipient, subject, body, Magic Link path, queue/error status, and sent/error timestamps.
+
+## Completed Tasks
+
+### Customer Flow
+
+- Search Premium page loads real brand/model/year options from DB.
+- Search Results filters by coverage, brand, model, and year.
+- Results page supports pagination.
+- Compare selection flow exists.
+- Compare page displays selected packages side by side.
+- Results and compare preserve query parameters.
+- Policy Info page has been redesigned to match the Stitch-style form:
+  - Personal information card.
+  - Vehicle information card.
+  - Name, phone, delivery address, plate number, plate province.
+- Checkout page supports:
+  - Bank transfer with slip upload.
+  - Gateway mock link flow.
+- Success page shows order summary, payment method, and timeline.
+- Tracking page supports lookup and direct tracking by order number.
+- First class insurance has been removed from customer-facing selection/results/compare flow.
+
+### Admin/Broker Flow
+
+- Admin login exists with cookie-based auth.
+- Admin order page has been shifted toward monitor/report behavior.
+- Campaign dashboard supports CSV import.
+- Campaign-level logo upload exists.
+- Package management page exists for package search/edit.
+- Provider Contact can now be saved per campaign and applied to all packages in that campaign.
+- Email preview page exists for provider Magic Link emails.
+
+### Magic Link Flow
+
+- Magic Link token model exists.
+- Magic Link token generation exists.
+- Provider update page exists at `/insurance/update/[token]`.
+- Provider update page shows full order detail before status update:
+  - customer contact and address
+  - ID card number when present
+  - vehicle and plate
+  - selected package, repair type, coverage, amount
+  - payment method/status
+  - payment slip or gateway link when present
+- Provider can update status:
+  - `INSURER_REVIEWING`
+  - `POLICY_APPROVED`
+  - `POLICY_ISSUED`
+  - `REJECTED`
+- Provider updates write to `OrderStatusHistory`.
+- Provider update logs simulated broker email and simulated LINE push notification.
+
+### Email / Notification
+
+- Email Outbox model exists.
+- Checkout now creates a provider Magic Link and writes a provider email audit row to `EmailOutbox`.
+- Provider email preview generation also writes an `EmailOutbox` audit row.
+- Missing provider email is captured as `MISSING_RECIPIENT` with an error message instead of only being hidden in server logs.
+- Admin order monitor shows latest provider email status per order.
+- Admin order monitor shows a recent Email Outbox table.
+- Admin can send queued provider emails with a mock sender from the Email Outbox table.
+- Admin can retry `ERROR` email outbox rows.
+- `SENT` rows show sent timestamp and cannot be resent from the monitor.
+- `MISSING_RECIPIENT` rows are blocked until provider email is added to the campaign/provider contact.
+- Admin-facing order, payment, and email statuses now display Thai labels while keeping internal enum/status values unchanged.
+- Provider email preview and generated email body now display Thai payment method/status labels.
+- Timeline/status history messages now render Thai labels for older English audit messages.
+- New order/status/email history messages are recorded in Thai.
+- Provider email outbox creation now reuses or refreshes the latest outbox row for an order instead of creating duplicate visible queue rows.
+- Admin Email Outbox table shows the latest outbox row per order to avoid duplicate rows for the same order number.
+
+### Infrastructure / Maintenance
+
+- `PROJECT_HANDOVER.md` exists.
+- `IMPLEMENTATION_BLUEPRINT.md` exists.
+- `PROJECT_STATE.md` added.
+- ESLint config was updated for ESLint 9 flat config compatibility.
+- `.gitignore` excludes local caches and uploaded slip files.
+- Latest pushed commits:
+  - `a4ccef4` - order checkout and Magic Link flow.
+  - `502e6af` - removed first class insurance from customer flow.
+
+## Pending Tasks
+
+### Email / Notification
+
+- Replace mock provider email sender with real email sending to `providerEmail` from queued `EmailOutbox` rows.
+- Replace simulated broker email log with a real notification.
+- Replace simulated LINE push log with real LINE Messaging API integration.
+
+### Payment
+
+- Replace gateway mock URL with real gateway configuration.
+- Add payment callback/webhook handling if gateway supports it.
+- Add payment verification workflow for bank-transfer slips.
+- Decide whether admin or system verifies payment before provider receives the Magic Link.
+
+### Magic Link
+
+- Add token invalidation/rotation behavior after provider action, if needed.
+- Add stronger provider identity fields on update.
+- Add provider-facing attachment/download views if insurer needs documents/slip.
+- Improve expired/invalid Magic Link error page.
+
+### Admin
+
+- Add filters/search to order monitor:
+  - status
+  - provider
+  - date range
+  - payment method
+  - missing provider contact
+- Add clearer order detail page if table becomes too dense.
+- Consider separating campaign/package management from order monitoring in navigation labels.
+
+### Data / Imports
+
+- Document supported CSV columns more explicitly.
+- Consider provider contact import fields if CSV sources include them.
+- Add cleanup for old logo files after replacement.
+- Add replace/delete controls for campaign logos.
+
+## Current Bugs / Known Issues
+
+- Thai text appears mojibake in some files when read through PowerShell. Browser rendering may still be fine, but large Thai copy edits should be checked visually.
+- Compare year can show `-` if imported CSV/database rows have no `year`.
+- Uploaded old logo files are not automatically deleted when replaced.
+- Uploaded slip files are local filesystem files under `public/uploads/slips`; this is fine for local/dev but needs a production storage decision.
+- `tsconfig.tsbuildinfo` may show as modified after typecheck/build. It is generated and should not be committed.
+- Build still shows Next lint warnings for `<img>` usage in compare pages.
+- Running `npm run build` and then dev mode can leave stale `.next` chunks on Windows; clearing `.next` and restarting dev fixes it.
+- Local database schema was synced with `npx prisma db push` after adding `EmailOutbox`; future environments need the same schema push or a proper migration.
+
+## Important Decisions
+
+- LINE rich menu and consent are outside this web app scope for now.
+- Customer web flow starts at `/line-app/search`.
+- Admin/broker should primarily manage insurance data and monitor orders, not manually drive policy status.
+- Insurance provider Magic Link is the main mechanism for provider-side status updates.
+- Magic Link raw tokens are not stored; only token hashes are stored.
+- First class insurance is removed from customer-facing flow.
+- Campaign logos are managed at campaign level, not per-package.
+- Provider Contact is stored on `InsurancePackage` rows and updated across packages in the same campaign.
+- Real email and LINE integrations are intentionally not implemented yet; logs/preview pages are used for local MVP testing.
+
+## Next Recommended Steps
+
+1. Connect a real email provider.
+   - Possible providers: SMTP, Resend, SendGrid, Amazon SES.
+   - Replace `sendProviderEmailMock` while keeping Email Outbox audit updates.
+
+2. Implement LINE notification integration.
+   - Start with message templates.
+   - Then add real LINE Messaging API push using customer `lineId`.
+
+3. Improve admin order monitor.
+   - Filters, status chips, missing provider contact warnings, and order detail view.
+
+4. Commit/push after each coherent slice.

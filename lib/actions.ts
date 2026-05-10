@@ -6,6 +6,7 @@ import { createHash, randomBytes, randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
+import { getOrderStatusLabel, getPaymentMethodLabel, getPaymentStatusLabel } from '@/lib/status-labels';
 import {
   deleteInsuranceCampaignByCode,
   importInsuranceCampaignFromCsv
@@ -106,6 +107,212 @@ async function createMagicLinkTokenForOrder(orderId: string) {
   return token;
 }
 
+function buildProviderEmail(input: {
+  order: {
+    orderNumber: string;
+    customerName: string | null;
+    customerPhone: string | null;
+    carBrand: string | null;
+    carModel: string | null;
+    carYear: number | null;
+    plateNumber: string | null;
+    plateProvince: string | null;
+    paymentMethod: string | null;
+    paymentStatus: string;
+    slipUrl: string | null;
+    gatewayUrl: string | null;
+    user: {
+      name: string | null;
+      phone: string | null;
+    };
+    pkg: {
+      name: string;
+      company: string;
+      providerName: string | null;
+      providerContactName: string | null;
+      providerPhone: string | null;
+      providerEmail: string | null;
+      netPrice: number;
+    };
+  };
+  magicLinkPath: string;
+}) {
+  const { order, magicLinkPath } = input;
+  const customerName = order.customerName ?? order.user.name ?? '-';
+  const customerPhone = order.customerPhone ?? order.user.phone ?? '-';
+  const car = [order.carBrand, order.carModel, order.carYear].filter(Boolean).join(' / ') || '-';
+  const plate = [order.plateNumber, order.plateProvince].filter(Boolean).join(' ') || '-';
+  const providerName = order.pkg.providerName ?? order.pkg.company;
+  const subject = `New policy request ${order.orderNumber}`;
+  const body = [
+    `Hello ${order.pkg.providerContactName ?? providerName},`,
+    '',
+    `A new policy request is ready for review.`,
+    '',
+    `Order: ${order.orderNumber}`,
+    `Customer: ${customerName}`,
+    `Customer phone: ${customerPhone}`,
+    `Vehicle: ${car}`,
+    `Plate: ${plate}`,
+    `Package: ${order.pkg.name}`,
+    `Payment method: ${getPaymentMethodLabel(order.paymentMethod)}`,
+    `Payment status: ${getPaymentStatusLabel(order.paymentStatus)}`,
+    order.slipUrl ? `Payment slip: ${order.slipUrl}` : null,
+    order.gatewayUrl ? `Gateway URL: ${order.gatewayUrl}` : null,
+    '',
+    `Update policy status here: ${magicLinkPath}`,
+    '',
+    'This is an automated broker system message.'
+  ]
+    .filter((line): line is string => line !== null)
+    .join('\n');
+
+  return {
+    recipient: order.pkg.providerEmail,
+    subject,
+    body
+  };
+}
+
+async function createProviderEmailOutbox(input: {
+  orderId: string;
+  token: string;
+  message?: string;
+}) {
+  const order = await prisma.order.findUnique({
+    where: { id: input.orderId },
+    include: {
+      user: true,
+      pkg: true
+    }
+  });
+
+  if (!order) {
+    throw new Error('Order was not found');
+  }
+
+  const magicLinkPath = `/insurance/update/${input.token}`;
+  const email = buildProviderEmail({
+    order,
+    magicLinkPath
+  });
+  const status = email.recipient ? 'QUEUED' : 'MISSING_RECIPIENT';
+  const existingOutbox = await prisma.emailOutbox.findFirst({
+    where: {
+      orderId: order.id
+    },
+    orderBy: {
+      createdAt: 'desc'
+    }
+  });
+
+  if (existingOutbox?.status === 'SENT') {
+    console.log('[Email Outbox Reuse]', {
+      id: existingOutbox.id,
+      orderNumber: order.orderNumber,
+      status: existingOutbox.status
+    });
+
+    return existingOutbox;
+  }
+
+  if (existingOutbox) {
+    const outbox = await prisma.emailOutbox.update({
+      where: {
+        id: existingOutbox.id
+      },
+      data: {
+        recipient: email.recipient,
+        subject: email.subject,
+        body: email.body,
+        magicLinkPath,
+        status,
+        sentAt: null,
+        errorAt: status === 'MISSING_RECIPIENT' ? new Date() : null,
+        errorMessage:
+          status === 'MISSING_RECIPIENT'
+            ? 'Provider email is missing for the selected campaign/package.'
+            : null
+      }
+    });
+
+    await createOrderStatusHistory({
+      orderId: order.id,
+      status: order.status,
+      message:
+        input.message ??
+        (status === 'QUEUED'
+          ? 'อัปเดตคิวอีเมลบริษัทประกันแล้ว'
+          : 'ยังเพิ่มอีเมลเข้าคิวไม่ได้ เพราะไม่มีอีเมลบริษัทประกัน'),
+      actorType: 'SYSTEM',
+      actorName: 'System'
+    });
+
+    console.log('[Email Outbox Updated]', {
+      id: outbox.id,
+      orderNumber: order.orderNumber,
+      recipient: outbox.recipient ?? '-',
+      status: outbox.status,
+      magicLinkPath: outbox.magicLinkPath
+    });
+
+    return outbox;
+  }
+
+  const outbox = await prisma.emailOutbox.create({
+    data: {
+      orderId: order.id,
+      recipient: email.recipient,
+      subject: email.subject,
+      body: email.body,
+      magicLinkPath,
+      status,
+      errorAt: status === 'MISSING_RECIPIENT' ? new Date() : null,
+      errorMessage:
+        status === 'MISSING_RECIPIENT'
+          ? 'Provider email is missing for the selected campaign/package.'
+          : null
+    }
+  });
+
+  await createOrderStatusHistory({
+    orderId: order.id,
+    status: order.status,
+      message:
+        input.message ??
+        (status === 'QUEUED'
+        ? 'เพิ่มอีเมลบริษัทประกันเข้าคิวส่งแล้ว'
+        : 'ยังเพิ่มอีเมลเข้าคิวไม่ได้ เพราะไม่มีอีเมลบริษัทประกัน'),
+    actorType: 'SYSTEM',
+    actorName: 'System'
+  });
+
+  console.log('[Email Outbox]', {
+    id: outbox.id,
+    orderNumber: order.orderNumber,
+    recipient: outbox.recipient ?? '-',
+    status: outbox.status,
+    magicLinkPath: outbox.magicLinkPath
+  });
+
+  return outbox;
+}
+
+async function sendProviderEmailMock(input: {
+  recipient: string;
+  subject: string;
+  body: string;
+  magicLinkPath: string | null;
+}) {
+  console.log('[Mock Provider Email Send]', {
+    recipient: input.recipient,
+    subject: input.subject,
+    magicLinkPath: input.magicLinkPath ?? '-',
+    bodyPreview: input.body.slice(0, 160),
+    timestamp: new Date().toISOString()
+  });
+}
+
 async function saveUploadFile(file: File, options: { directory: string; publicPath: string; prefix: string }) {
   if (!file.type.startsWith('image/')) {
     throw new Error('Upload file must be an image');
@@ -180,7 +387,7 @@ export async function updateOrderStatus(formData: FormData): Promise<void> {
   await createOrderStatusHistory({
     orderId,
     status,
-    message: `Admin updated order status to ${status}`,
+        message: `แอดมินอัปเดตสถานะเป็น ${getOrderStatusLabel(status)}`,
     actorType: 'ADMIN',
     actorName: 'Admin'
   });
@@ -199,6 +406,110 @@ export async function updateOrderStatus(formData: FormData): Promise<void> {
   revalidatePath('/admin');
 }
 
+export async function sendEmailOutboxItem(formData: FormData): Promise<void> {
+  const emailOutboxId = getRequiredFormValue(formData, 'emailOutboxId');
+
+  const email = await prisma.emailOutbox.findUnique({
+    where: {
+      id: emailOutboxId
+    },
+    include: {
+      order: true
+    }
+  });
+
+  if (!email) {
+    throw new Error('Email outbox item was not found');
+  }
+
+  if (!email.recipient) {
+    await prisma.emailOutbox.update({
+      where: {
+        id: email.id
+      },
+      data: {
+        status: 'MISSING_RECIPIENT',
+        errorAt: new Date(),
+        errorMessage: 'Provider email is missing. Update the campaign provider contact before sending.'
+      }
+    });
+
+    if (email.orderId) {
+      await createOrderStatusHistory({
+        orderId: email.orderId,
+        status: email.order?.status ?? 'SENT_TO_INSURER',
+        message: 'ส่งอีเมลไม่ได้ เพราะไม่มีอีเมลบริษัทประกัน',
+        actorType: 'SYSTEM',
+        actorName: 'System'
+      });
+    }
+
+    revalidatePath('/admin');
+    return;
+  }
+
+  if (email.status === 'SENT') {
+    revalidatePath('/admin');
+    return;
+  }
+
+  try {
+    await sendProviderEmailMock({
+      recipient: email.recipient,
+      subject: email.subject,
+      body: email.body,
+      magicLinkPath: email.magicLinkPath
+    });
+
+    await prisma.emailOutbox.update({
+      where: {
+        id: email.id
+      },
+      data: {
+        status: 'SENT',
+        sentAt: new Date(),
+        errorAt: null,
+        errorMessage: null
+      }
+    });
+
+    if (email.orderId) {
+      await createOrderStatusHistory({
+        orderId: email.orderId,
+        status: email.order?.status ?? 'SENT_TO_INSURER',
+        message: 'ส่งอีเมลบริษัทประกันแล้ว',
+        actorType: 'SYSTEM',
+        actorName: 'System'
+      });
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown email send error';
+
+    await prisma.emailOutbox.update({
+      where: {
+        id: email.id
+      },
+      data: {
+        status: 'ERROR',
+        errorAt: new Date(),
+        errorMessage
+      }
+    });
+
+    if (email.orderId) {
+      await createOrderStatusHistory({
+        orderId: email.orderId,
+        status: email.order?.status ?? 'SENT_TO_INSURER',
+        message: `ส่งอีเมลบริษัทประกันไม่สำเร็จ: ${errorMessage}`,
+        actorType: 'SYSTEM',
+        actorName: 'System'
+      });
+    }
+  }
+
+  revalidatePath('/admin');
+}
+
 export async function createInsurerMagicLinkPreview(formData: FormData): Promise<void> {
   const orderId = getRequiredFormValue(formData, 'orderId');
 
@@ -212,10 +523,16 @@ export async function createInsurerMagicLinkPreview(formData: FormData): Promise
 
   const token = await createMagicLinkTokenForOrder(orderId);
 
+  await createProviderEmailOutbox({
+    orderId,
+    token,
+    message: 'เพิ่มตัวอย่างอีเมลบริษัทประกันเข้าคิวส่งแล้ว'
+  });
+
   await createOrderStatusHistory({
     orderId,
     status: order.status,
-    message: 'Magic Link email preview was generated for the insurance provider.',
+    message: 'สร้างตัวอย่างอีเมล Magic Link สำหรับบริษัทประกันแล้ว',
     actorType: 'SYSTEM',
     actorName: 'System'
   });
@@ -307,7 +624,7 @@ export async function createPolicyDraftOrder(formData: FormData): Promise<void> 
   await createOrderStatusHistory({
     orderId: order.id,
     status: 'PENDING_PAYMENT',
-    message: 'Policy information submitted. Waiting for checkout.',
+    message: 'กรอกข้อมูลกรมธรรม์แล้ว รอชำระเงิน',
     actorType: 'CUSTOMER',
     actorName: customerName
   });
@@ -324,6 +641,7 @@ export async function submitCheckout(formData: FormData): Promise<void> {
   const order = await prisma.order.findUnique({
     where: { id: orderId },
     include: {
+      user: true,
       pkg: true
     }
   });
@@ -340,7 +658,7 @@ export async function submitCheckout(formData: FormData): Promise<void> {
   let gatewayUrl: string | null = null;
   let status: OrderStatus = 'PAYMENT_SUBMITTED';
   let paymentStatus = 'SLIP_SUBMITTED';
-  let historyMessage = 'Customer submitted a bank transfer slip.';
+  let historyMessage = 'ลูกค้าส่งสลิปโอนเงินแล้ว';
 
   if (paymentMethod === 'BANK_TRANSFER') {
     if (!(slipFile instanceof File) || slipFile.size === 0) {
@@ -352,7 +670,7 @@ export async function submitCheckout(formData: FormData): Promise<void> {
     gatewayUrl = order.gatewayUrl || `https://example.com/payment-gateway/orders/${order.orderNumber}`;
     status = 'PENDING_PAYMENT';
     paymentStatus = 'AWAITING_TRANSFER';
-    historyMessage = 'Customer selected card/gateway payment.';
+    historyMessage = 'ลูกค้าเลือกชำระเงินผ่าน Gateway';
   }
 
   await prisma.order.update({
@@ -376,10 +694,9 @@ export async function submitCheckout(formData: FormData): Promise<void> {
   });
 
   const insurerToken = await createMagicLinkTokenForOrder(orderId);
-  console.log('[Simulated Provider Email]', {
-    orderNumber: order.orderNumber,
-    provider: order.pkg.company,
-    magicLinkPath: `/insurance/update/${insurerToken}`
+  await createProviderEmailOutbox({
+    orderId,
+    token: insurerToken
   });
 
   revalidatePath('/admin');
@@ -437,7 +754,7 @@ export async function updateOrderFromMagicLink(formData: FormData): Promise<void
   await createOrderStatusHistory({
     orderId: magicToken.orderId,
     status,
-    message: insurerNote || `Insurance provider updated status to ${status}`,
+    message: insurerNote || `บริษัทประกันอัปเดตสถานะเป็น ${getOrderStatusLabel(status)}`,
     actorType: 'INSURER',
     actorName
   });

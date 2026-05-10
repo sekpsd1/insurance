@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { createInsurerMagicLinkPreview } from '@/lib/actions';
+import { getPaymentMethodLabel, getPaymentStatusLabel } from '@/lib/status-labels';
 
 type EmailPreviewPageProps = {
   params: Promise<{ orderId: string }>;
@@ -80,8 +81,8 @@ export default async function InsurerEmailPreviewPage({ params, searchParams }: 
             </div>
             <div className="rounded-2xl bg-slate-50 p-4 sm:col-span-2">
               <dt className="text-slate-500">การชำระเงิน</dt>
-              <dd className="mt-1 font-semibold">{order.paymentMethod === 'BANK_TRANSFER' ? 'โอนเงินแนบสลิป' : order.paymentMethod ?? '-'}</dd>
-              <dd className="mt-1 text-slate-600">{order.paymentStatus}</dd>
+              <dd className="mt-1 font-semibold">{getPaymentMethodLabel(order.paymentMethod)}</dd>
+              <dd className="mt-1 text-slate-600">{getPaymentStatusLabel(order.paymentStatus)}</dd>
             </div>
           </dl>
 

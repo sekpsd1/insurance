@@ -86,6 +86,7 @@ model Order {
   insurerUpdatedAt  DateTime?
   statusHistory     OrderStatusHistory[]
   magicLinks        MagicLinkToken[]
+  emailOutbox       EmailOutbox[]
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
@@ -119,4 +120,23 @@ model MagicLinkToken {
   updatedAt DateTime @updatedAt
 
   @@index([orderId])
+}
+
+model EmailOutbox {
+  id            String   @id @default(uuid())
+  orderId       String?
+  order         Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  recipient     String?
+  subject       String
+  body          String   @db.Text
+  magicLinkPath String?
+  status        String   @default("QUEUED")
+  sentAt        DateTime?
+  errorAt       DateTime?
+  errorMessage  String?  @db.Text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([orderId, createdAt])
+  @@index([status])
 }

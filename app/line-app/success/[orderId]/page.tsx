@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
+import { getPaymentMethodLabel, getStatusHistoryMessageLabel } from '@/lib/status-labels';
 
 type SuccessPageProps = {
   params: Promise<{ orderId: string }>;
@@ -106,7 +107,7 @@ export default async function OrderSuccessPage({ params }: SuccessPageProps) {
               <div className="flex items-start justify-between gap-6">
                 <dt className="text-sm text-slate-500">วิธีชำระเงิน</dt>
                 <dd className="text-right text-sm font-semibold text-slate-900">
-                  {order.paymentMethod === 'BANK_TRANSFER' ? 'โอนเงินแนบสลิป' : order.paymentMethod === 'CARD_GATEWAY' ? 'Gateway' : '-'}
+                  {getPaymentMethodLabel(order.paymentMethod)}
                 </dd>
               </div>
             </dl>
@@ -136,7 +137,7 @@ export default async function OrderSuccessPage({ params }: SuccessPageProps) {
                     <div className="font-semibold text-slate-950">{getStatusLabel(item.status)}</div>
                     <div className="text-xs text-slate-500">{item.createdAt.toLocaleString('th-TH')}</div>
                   </div>
-                  {item.message ? <p className="mt-1 text-sm text-slate-600">{item.message}</p> : null}
+                  {item.message ? <p className="mt-1 text-sm text-slate-600">{getStatusHistoryMessageLabel(item.message)}</p> : null}
                 </div>
               ))
             )}

@@ -3,6 +3,12 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { updateOrderFromMagicLink } from '@/lib/actions';
+import {
+  getOrderStatusLabel,
+  getPaymentMethodLabel,
+  getPaymentStatusLabel,
+  getStatusHistoryMessageLabel
+} from '@/lib/status-labels';
 
 type InsurerUpdatePageProps = {
   params: Promise<{ token: string }>;
@@ -13,20 +19,6 @@ function hashMagicToken(token: string) {
   return createHash('sha256').update(token).digest('hex');
 }
 
-function getStatusLabel(status: string) {
-  const labels: Record<string, string> = {
-    PAYMENT_SUBMITTED: 'ลูกค้าส่งหลักฐานชำระเงินแล้ว',
-    PAID: 'ชำระเงินแล้ว',
-    SENT_TO_INSURER: 'ส่งให้บริษัทประกันแล้ว',
-    INSURER_REVIEWING: 'กำลังตรวจสอบ',
-    POLICY_APPROVED: 'อนุมัติกรมธรรม์แล้ว',
-    POLICY_ISSUED: 'ออกกรมธรรม์แล้ว',
-    REJECTED: 'ไม่อนุมัติ'
-  };
-
-  return labels[status] ?? status;
-}
-
 function formatCurrency(value: number | null | undefined) {
   return new Intl.NumberFormat('th-TH', {
     style: 'currency',
@@ -35,12 +27,31 @@ function formatCurrency(value: number | null | undefined) {
   }).format(value ?? 0);
 }
 
+function getFullAddress(order: {
+  customerAddress: string | null;
+  subDistrict: string | null;
+  district: string | null;
+  province: string | null;
+  postalCode: string | null;
+}) {
+  return [
+    order.customerAddress,
+    order.subDistrict,
+    order.district,
+    order.province,
+    order.postalCode
+  ]
+    .filter(Boolean)
+    .join(' ') || '-';
+}
+
 export default async function InsurerUpdatePage({ params, searchParams }: InsurerUpdatePageProps) {
   const { token } = await params;
   const resolvedSearchParams = (await searchParams) ?? {};
+  const decodedToken = decodeURIComponent(token);
   const magicToken = await prisma.magicLinkToken.findUnique({
     where: {
-      tokenHash: hashMagicToken(decodeURIComponent(token))
+      tokenHash: hashMagicToken(decodedToken)
     },
     include: {
       order: {
@@ -63,20 +74,25 @@ export default async function InsurerUpdatePage({ params, searchParams }: Insure
   }
 
   const order = magicToken.order;
+  const customerName = order.customerName ?? order.user.name ?? '-';
+  const customerPhone = order.customerPhone ?? order.user.phone ?? '-';
+  const vehicle = [order.carBrand, order.carModel, order.carYear].filter(Boolean).join(' / ') || '-';
+  const plate = [order.plateNumber, order.plateProvince].filter(Boolean).join(' ') || '-';
+  const providerName = order.pkg.providerName ?? order.pkg.company;
 
   return (
     <main className="min-h-screen bg-[#f4f7ff] px-4 py-8 text-[#101828]">
-      <div className="mx-auto grid max-w-5xl gap-5 lg:grid-cols-[1fr_360px]">
+      <div className="mx-auto grid max-w-6xl gap-5 lg:grid-cols-[1fr_380px]">
         <section className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#0052CC]">Insurance Provider</p>
-          <h1 className="mt-2 text-2xl font-bold text-slate-950">อัปเดตสถานะกรมธรรม์</h1>
+          <h1 className="mt-2 text-2xl font-bold text-slate-950">ตรวจสอบคำขอออกกรมธรรม์</h1>
           <p className="mt-2 text-sm leading-6 text-slate-500">
-            ลิงก์นี้ใช้สำหรับเจ้าหน้าที่บริษัทประกันอัปเดตสถานะกลับมายังระบบโดยตรง
+            กรุณาตรวจสอบข้อมูลลูกค้า รถยนต์ แพ็กเกจ และหลักฐานชำระเงินก่อนอัปเดตสถานะกลับมายังระบบ
           </p>
 
           {resolvedSearchParams.updated ? (
             <div className="mt-5 rounded-2xl bg-emerald-50 p-4 text-sm font-semibold text-emerald-700 ring-1 ring-emerald-100">
-              บันทึกสถานะเรียบร้อยแล้ว ระบบจำลองการแจ้งอีเมลถึง broker และ LINE ถึงลูกค้าแล้ว
+              บันทึกสถานะเรียบร้อยแล้ว ระบบได้จำลองการแจ้ง broker และ LINE ถึงลูกค้าแล้ว
             </div>
           ) : null}
 
@@ -84,33 +100,114 @@ export default async function InsurerUpdatePage({ params, searchParams }: Insure
             <div className="rounded-2xl bg-slate-50 p-4">
               <div className="text-slate-500">เลขที่คำสั่งซื้อ</div>
               <div className="mt-1 font-semibold text-slate-950">{order.orderNumber}</div>
+              <div className="mt-1 text-xs text-slate-500">สร้างเมื่อ {order.createdAt.toLocaleString('th-TH')}</div>
             </div>
             <div className="rounded-2xl bg-slate-50 p-4">
               <div className="text-slate-500">สถานะปัจจุบัน</div>
-              <div className="mt-1 font-semibold text-slate-950">{getStatusLabel(order.status)}</div>
+              <div className="mt-1 font-semibold text-slate-950">{getOrderStatusLabel(order.status)}</div>
+              <div className="mt-1 text-xs text-slate-500">Magic Link หมดอายุ {magicToken.expiresAt.toLocaleDateString('th-TH')}</div>
+            </div>
+
+            <div className="rounded-2xl bg-slate-50 p-4">
+              <div className="text-slate-500">ข้อมูลผู้เอาประกัน</div>
+              <div className="mt-1 font-semibold text-slate-950">{customerName}</div>
+              <div className="mt-1 text-slate-600">{customerPhone}</div>
+              <div className="mt-1 text-slate-600">{order.customerEmail ?? '-'}</div>
+              <div className="mt-2 text-xs text-slate-500">เลขบัตรประชาชน: {order.idCardNumber ?? '-'}</div>
             </div>
             <div className="rounded-2xl bg-slate-50 p-4">
-              <div className="text-slate-500">ผู้เอาประกัน</div>
-              <div className="mt-1 font-semibold text-slate-950">{order.customerName ?? order.user.name ?? '-'}</div>
-              <div className="mt-1 text-slate-600">{order.customerPhone ?? order.user.phone ?? '-'}</div>
+              <div className="text-slate-500">ที่อยู่จัดส่งเอกสาร</div>
+              <div className="mt-1 leading-6 text-slate-700">{getFullAddress(order)}</div>
+            </div>
+
+            <div className="rounded-2xl bg-slate-50 p-4">
+              <div className="text-slate-500">ข้อมูลรถยนต์</div>
+              <div className="mt-1 font-semibold text-slate-950">{vehicle}</div>
+              <div className="mt-1 text-slate-600">ทะเบียน {plate}</div>
+              <div className="mt-1 text-slate-600">
+                วันที่เริ่มคุ้มครอง: {order.policyStartDate ? order.policyStartDate.toLocaleDateString('th-TH') : '-'}
+              </div>
             </div>
             <div className="rounded-2xl bg-slate-50 p-4">
-              <div className="text-slate-500">รถยนต์</div>
-              <div className="mt-1 font-semibold text-slate-950">{[order.carBrand, order.carModel, order.carYear].filter(Boolean).join(' / ') || '-'}</div>
-              <div className="mt-1 text-slate-600">{order.plateNumber ?? '-'} {order.plateProvince ? `(${order.plateProvince})` : ''}</div>
+              <div className="text-slate-500">บริษัทประกัน</div>
+              <div className="mt-1 font-semibold text-slate-950">{providerName}</div>
+              <div className="mt-1 text-slate-600">{order.pkg.providerContactName ?? '-'}</div>
+              <div className="mt-1 text-slate-600">{order.pkg.providerPhone ?? '-'}</div>
             </div>
+
             <div className="rounded-2xl bg-slate-50 p-4 sm:col-span-2">
-              <div className="text-slate-500">แพ็กเกจ</div>
+              <div className="text-slate-500">แพ็กเกจที่เลือก</div>
               <div className="mt-1 font-semibold text-slate-950">{order.pkg.name}</div>
-              <div className="mt-1 text-slate-600">{formatCurrency(order.paymentAmount ?? order.pkg.netPrice)}</div>
+              <div className="mt-1 text-slate-600">{order.pkg.company}</div>
+              <div className="mt-2 grid gap-3 sm:grid-cols-3">
+                <div>
+                  <div className="text-xs text-slate-500">ประเภทซ่อม</div>
+                  <div className="font-semibold text-slate-900">{order.pkg.repairType ?? '-'}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-slate-500">ความคุ้มครอง</div>
+                  <div className="font-semibold text-slate-900">{order.pkg.coverage ?? '-'}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-slate-500">ยอดชำระ</div>
+                  <div className="font-semibold text-slate-900">{formatCurrency(order.paymentAmount ?? order.pkg.netPrice)}</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl bg-blue-50 p-4 sm:col-span-2">
+              <div className="text-slate-600">การชำระเงิน</div>
+              <div className="mt-2 grid gap-3 sm:grid-cols-3">
+                <div>
+                  <div className="text-xs text-slate-500">วิธีชำระเงิน</div>
+                  <div className="font-semibold text-slate-950">{getPaymentMethodLabel(order.paymentMethod)}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-slate-500">สถานะชำระเงิน</div>
+                  <div className="font-semibold text-slate-950">{getPaymentStatusLabel(order.paymentStatus)}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-slate-500">จำนวนเงิน</div>
+                  <div className="font-semibold text-slate-950">{formatCurrency(order.paymentAmount ?? order.pkg.netPrice)}</div>
+                </div>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {order.slipUrl ? (
+                  <a
+                    href={order.slipUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex rounded-xl bg-[#0052CC] px-4 py-2 text-sm font-semibold text-white"
+                  >
+                    เปิดสลิปชำระเงิน
+                  </a>
+                ) : null}
+                {order.gatewayUrl ? (
+                  <a
+                    href={order.gatewayUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex rounded-xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white"
+                  >
+                    เปิดลิงก์ Gateway
+                  </a>
+                ) : null}
+                {!order.slipUrl && !order.gatewayUrl ? (
+                  <span className="text-sm text-slate-500">ยังไม่มีไฟล์สลิปหรือลิงก์ชำระเงิน</span>
+                ) : null}
+              </div>
             </div>
           </div>
         </section>
 
         <section className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-          <h2 className="text-lg font-bold text-slate-950">อัปเดตกลับมายังระบบ</h2>
+          <h2 className="text-lg font-bold text-slate-950">อัปเดตสถานะกรมธรรม์</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-500">
+            สถานะนี้จะถูกบันทึกใน timeline ของลูกค้า และแจ้งกลับไปยัง broker
+          </p>
+
           <form action={updateOrderFromMagicLink} className="mt-5 space-y-4">
-            <input type="hidden" name="token" value={decodeURIComponent(token)} />
+            <input type="hidden" name="token" value={decodedToken} />
 
             <div>
               <label htmlFor="actorName" className="mb-1 block text-sm font-semibold text-slate-700">
@@ -174,10 +271,10 @@ export default async function InsurerUpdatePage({ params, searchParams }: Insure
               order.statusHistory.map((item) => (
                 <div key={item.id} className="rounded-2xl bg-slate-50 p-4">
                   <div className="flex items-center justify-between gap-3">
-                    <div className="font-semibold text-slate-950">{getStatusLabel(item.status)}</div>
+                    <div className="font-semibold text-slate-950">{getOrderStatusLabel(item.status)}</div>
                     <div className="text-xs text-slate-500">{item.createdAt.toLocaleString('th-TH')}</div>
                   </div>
-                  {item.message ? <p className="mt-1 text-sm text-slate-600">{item.message}</p> : null}
+                  {item.message ? <p className="mt-1 text-sm text-slate-600">{getStatusHistoryMessageLabel(item.message)}</p> : null}
                 </div>
               ))
             )}
