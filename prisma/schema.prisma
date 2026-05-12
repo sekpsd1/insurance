@@ -29,6 +29,12 @@ model InsurancePackage {
   providerEmail String?
   providerContactName String?
   providerPhone String?
+  paymentBankName String?
+  paymentAccountName String?
+  paymentAccountNumber String?
+  paymentQrUrl String?
+  paymentUrl String?
+  paymentNotes String? @db.Text
   brand       String?
   model       String?
   year        Int?

@@ -101,3 +101,22 @@ export function getStatusHistoryMessageLabel(message: string | null | undefined)
 
   return message;
 }
+
+export function isCustomerVisibleStatusHistory(item: {
+  message: string | null;
+}) {
+  const message = item.message ?? '';
+  const label = getStatusHistoryMessageLabel(message);
+  const searchableText = `${message} ${label}`.toLowerCase();
+  const hiddenTerms = [
+    'email outbox',
+    'provider email',
+    'magic link email preview',
+    'magic link สำหรับบริษัทประกัน',
+    'อีเมลบริษัทประกัน',
+    'คิวส่ง',
+    'คิวอีเมล'
+  ];
+
+  return !hiddenTerms.some((term) => searchableText.includes(term.toLowerCase()));
+}

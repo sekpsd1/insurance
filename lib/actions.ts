@@ -1,6 +1,6 @@
 "use server";
 
-import { mkdir, writeFile } from 'fs/promises';
+import { mkdir, unlink, writeFile } from 'fs/promises';
 import path from 'path';
 import { createHash, randomBytes, randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
@@ -441,10 +441,62 @@ async function saveUploadFile(file: File, options: { directory: string; publicPa
   return `/uploads/${options.publicPath}/${fileName}`;
 }
 
+async function deletePublicUploadFile(publicUrl: string | null | undefined) {
+  if (!publicUrl?.startsWith('/uploads/')) {
+    return;
+  }
+
+  const uploadRoot = path.join(process.cwd(), 'public', 'uploads');
+  const relativePath = publicUrl.replace(/^\/uploads\//, '').split('/').filter(Boolean);
+  const filePath = path.resolve(uploadRoot, ...relativePath);
+
+  if (!filePath.startsWith(path.resolve(uploadRoot) + path.sep)) {
+    return;
+  }
+
+  try {
+    await unlink(filePath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      console.warn('[Upload Cleanup Failed]', {
+        publicUrl,
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  }
+}
+
+async function getCampaignAssetUrls(companyCode: string, campaignCode: string) {
+  const rows = await prisma.insurancePackage.findMany({
+    where: {
+      companyCode,
+      campaignCode
+    },
+    select: {
+      logoUrl: true,
+      paymentQrUrl: true
+    },
+    distinct: ['logoUrl', 'paymentQrUrl']
+  });
+
+  return {
+    logoUrls: Array.from(new Set(rows.map((row) => row.logoUrl).filter((url): url is string => Boolean(url)))),
+    paymentQrUrls: Array.from(new Set(rows.map((row) => row.paymentQrUrl).filter((url): url is string => Boolean(url))))
+  };
+}
+
 async function saveLogoFile(logoFile: File, prefix: string): Promise<string> {
   return saveUploadFile(logoFile, {
     directory: 'logos',
     publicPath: 'logos',
+    prefix
+  });
+}
+
+async function savePaymentQrFile(qrFile: File, prefix: string): Promise<string> {
+  return saveUploadFile(qrFile, {
+    directory: 'payment-qrs',
+    publicPath: 'payment-qrs',
     prefix
   });
 }
@@ -669,7 +721,10 @@ export async function submitCheckout(formData: FormData): Promise<void> {
 
     slipUrl = await saveSlipFile(slipFile, order.orderNumber);
   } else {
-    gatewayUrl = order.gatewayUrl || `https://example.com/payment-gateway/orders/${order.orderNumber}`;
+    gatewayUrl = order.pkg.paymentUrl;
+    if (!gatewayUrl) {
+      throw new Error('Provider payment URL is not configured for this campaign');
+    }
     status = 'PENDING_PAYMENT';
     paymentStatus = 'AWAITING_TRANSFER';
     historyMessage = 'ลูกค้าเลือกชำระเงินผ่าน Gateway';
@@ -827,6 +882,7 @@ export async function updateInsuranceCampaignLogo(formData: FormData): Promise<v
     throw new Error('Logo file is required');
   }
 
+  const existingAssets = await getCampaignAssetUrls(companyCode, campaignCode);
   const logoUrl = await saveLogoFile(logoFile, `${companyCode}-${campaignCode}`);
 
   await prisma.insurancePackage.updateMany({
@@ -838,6 +894,38 @@ export async function updateInsuranceCampaignLogo(formData: FormData): Promise<v
       logoUrl
     }
   });
+
+  await Promise.all(existingAssets.logoUrls.map((url) => deletePublicUploadFile(url)));
+
+  revalidatePath('/admin');
+  revalidatePath('/admin/insurance');
+  revalidatePath('/admin/insurance/packages');
+  revalidatePath('/line-app');
+  revalidatePath('/line-app/search');
+  revalidatePath('/line-app/compare');
+}
+
+export async function deleteInsuranceCampaignLogo(formData: FormData): Promise<void> {
+  const companyCode = String(formData.get('companyCode') ?? '').trim();
+  const campaignCode = String(formData.get('campaignCode') ?? '').trim();
+
+  if (!companyCode || !campaignCode) {
+    throw new Error('Missing companyCode or campaignCode');
+  }
+
+  const existingAssets = await getCampaignAssetUrls(companyCode, campaignCode);
+
+  await prisma.insurancePackage.updateMany({
+    where: {
+      companyCode,
+      campaignCode
+    },
+    data: {
+      logoUrl: null
+    }
+  });
+
+  await Promise.all(existingAssets.logoUrls.map((url) => deletePublicUploadFile(url)));
 
   revalidatePath('/admin');
   revalidatePath('/admin/insurance');
@@ -877,6 +965,80 @@ export async function updateInsuranceCampaignProviderContact(formData: FormData)
   revalidatePath('/admin/insurance/packages');
 }
 
+export async function updateInsuranceCampaignPaymentSetup(formData: FormData): Promise<void> {
+  const companyCode = String(formData.get('companyCode') ?? '').trim();
+  const campaignCode = String(formData.get('campaignCode') ?? '').trim();
+  const paymentBankName = String(formData.get('paymentBankName') ?? '').trim();
+  const paymentAccountName = String(formData.get('paymentAccountName') ?? '').trim();
+  const paymentAccountNumber = String(formData.get('paymentAccountNumber') ?? '').trim();
+  const paymentUrl = String(formData.get('paymentUrl') ?? '').trim();
+  const paymentNotes = String(formData.get('paymentNotes') ?? '').trim();
+  const paymentQrFile = formData.get('paymentQrFile');
+
+  if (!companyCode || !campaignCode) {
+    throw new Error('Missing companyCode or campaignCode');
+  }
+
+  const existingAssets = await getCampaignAssetUrls(companyCode, campaignCode);
+  let paymentQrUrl: string | undefined;
+
+  if (paymentQrFile instanceof File && paymentQrFile.size > 0) {
+    paymentQrUrl = await savePaymentQrFile(paymentQrFile, `${companyCode}-${campaignCode}`);
+  }
+
+  await prisma.insurancePackage.updateMany({
+    where: {
+      companyCode,
+      campaignCode
+    },
+    data: {
+      paymentBankName: paymentBankName || null,
+      paymentAccountName: paymentAccountName || null,
+      paymentAccountNumber: paymentAccountNumber || null,
+      paymentUrl: paymentUrl || null,
+      paymentNotes: paymentNotes || null,
+      ...(paymentQrUrl !== undefined ? { paymentQrUrl } : {})
+    }
+  });
+
+  if (paymentQrUrl !== undefined) {
+    await Promise.all(existingAssets.paymentQrUrls.map((url) => deletePublicUploadFile(url)));
+  }
+
+  revalidatePath('/admin');
+  revalidatePath('/admin/insurance');
+  revalidatePath('/admin/insurance/packages');
+  revalidatePath('/line-app');
+}
+
+export async function deleteInsuranceCampaignPaymentQr(formData: FormData): Promise<void> {
+  const companyCode = String(formData.get('companyCode') ?? '').trim();
+  const campaignCode = String(formData.get('campaignCode') ?? '').trim();
+
+  if (!companyCode || !campaignCode) {
+    throw new Error('Missing companyCode or campaignCode');
+  }
+
+  const existingAssets = await getCampaignAssetUrls(companyCode, campaignCode);
+
+  await prisma.insurancePackage.updateMany({
+    where: {
+      companyCode,
+      campaignCode
+    },
+    data: {
+      paymentQrUrl: null
+    }
+  });
+
+  await Promise.all(existingAssets.paymentQrUrls.map((url) => deletePublicUploadFile(url)));
+
+  revalidatePath('/admin');
+  revalidatePath('/admin/insurance');
+  revalidatePath('/admin/insurance/packages');
+  revalidatePath('/line-app');
+}
+
 export async function importInsuranceCampaign(formData: FormData): Promise<void> {
   const csvFile = formData.get('csvFile');
   const companyCode = String(formData.get('companyCode') ?? '').trim();
@@ -914,8 +1076,13 @@ export async function importInsuranceCampaign(formData: FormData): Promise<void>
 export async function deleteInsuranceCampaign(formData: FormData): Promise<void> {
   const companyCode = String(formData.get('companyCode') ?? '').trim();
   const campaignCode = String(formData.get('campaignCode') ?? '').trim();
+  const existingAssets = await getCampaignAssetUrls(companyCode, campaignCode);
 
   await deleteInsuranceCampaignByCode(companyCode, campaignCode);
+  await Promise.all([
+    ...existingAssets.logoUrls.map((url) => deletePublicUploadFile(url)),
+    ...existingAssets.paymentQrUrls.map((url) => deletePublicUploadFile(url))
+  ]);
 
   revalidatePath('/admin');
   revalidatePath('/admin/insurance');

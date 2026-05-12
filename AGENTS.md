@@ -80,6 +80,8 @@ LINE rich menu and LIFF consent are out of scope for this web app for now.
   - payment notes/instructions
 - Checkout should show the selected campaign/company payment instructions, not a broker/demo bank account.
 - Customer bank transfer slips remain uploaded to this app and should be visible to insurer staff from the Magic Link page.
+- Insurance provider staff review customer bank transfer slips from the Magic Link page and decide policy status themselves.
+- Do not add a separate broker/admin slip approval gate unless the user explicitly changes this product decision.
 
 ## Provider Magic Link Flow
 
@@ -129,7 +131,7 @@ When starting/stopping local servers, verify routes with `Invoke-WebRequest`, fo
 ## Git Hygiene
 
 - Do not commit `tsconfig.tsbuildinfo`; it is generated and may change after typecheck/build.
-- Do not commit `.next`, `node_modules`, local uploaded slips, or other generated artifacts.
+- Do not commit `.next`, `node_modules`, local uploaded slips/logos/payment QR images, or other generated artifacts.
 - Check `git status --short` before staging.
 - Stage only files related to the task.
 - After coherent slices, commit and push when requested by the user.
@@ -142,5 +144,6 @@ When starting/stopping local servers, verify routes with `Invoke-WebRequest`, fo
 - Provider Contact is stored on `InsurancePackage` rows and updated across packages in the same campaign.
 - Payment is made directly to the insurance company, not to this app.
 - Bank transfer uses insurer bank account details; gateway payment uses insurer payment links.
+- Insurance provider staff review uploaded slips from the Magic Link page and decide policy status there.
 - Admin/broker primarily manages insurance data and monitors orders; provider Magic Link is the main mechanism for provider-side status updates.
 - Real email and LINE integrations are not implemented yet; logs/mock sender are used for local MVP testing.

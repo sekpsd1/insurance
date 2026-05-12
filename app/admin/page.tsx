@@ -62,8 +62,12 @@ type AdminPageProps = {
     missingProviderEmail?: string;
     dateFrom?: string;
     dateTo?: string;
+    ordersPage?: string;
+    emailPage?: string;
   }>;
 };
+
+const ADMIN_PAGE_SIZE = 20;
 
 const orderStatusOptions = [
   'PENDING_PAYMENT',
@@ -78,6 +82,45 @@ const orderStatusOptions = [
 ];
 
 const paymentMethodOptions = ['BANK_TRANSFER', 'CARD_GATEWAY'];
+
+const orderProgressSteps = [
+  { status: 'PENDING_PAYMENT', label: 'รอชำระ' },
+  { status: 'PAYMENT_SUBMITTED', label: 'ส่งหลักฐาน' },
+  { status: 'SENT_TO_INSURER', label: 'ส่งบริษัท' },
+  { status: 'POLICY_APPROVED', label: 'อนุมัติ' },
+  { status: 'POLICY_ISSUED', label: 'ออกกรมธรรม์' }
+];
+
+function getOrderProgressIndex(status: string) {
+  if (status === 'PAID') {
+    return 1;
+  }
+
+  if (status === 'INSURER_REVIEWING') {
+    return 2;
+  }
+
+  const index = orderProgressSteps.findIndex((step) => step.status === status);
+  return index >= 0 ? index : -1;
+}
+
+function getOrderProgressStepStyles(index: number, activeIndex: number, status: string) {
+  if (status === 'REJECTED' || status === 'CANCELLED') {
+    return index <= Math.max(activeIndex, 0)
+      ? 'bg-rose-500 text-white'
+      : 'bg-slate-200 text-slate-400';
+  }
+
+  if (index < activeIndex) {
+    return 'bg-emerald-500 text-white';
+  }
+
+  if (index === activeIndex) {
+    return 'bg-cyan-600 text-white';
+  }
+
+  return 'bg-slate-200 text-slate-400';
+}
 
 function getDateRange(dateFrom?: string, dateTo?: string) {
   const createdAt: Prisma.DateTimeFilter = {};
@@ -188,13 +231,136 @@ function buildOrderWhere(filters: Awaited<NonNullable<AdminPageProps['searchPara
   return where;
 }
 
+function parsePage(value: string | undefined) {
+  const page = Number.parseInt(value ?? '', 10);
+  return Number.isFinite(page) && page > 0 ? page : 1;
+}
+
+function buildPageHref(
+  filters: Awaited<NonNullable<AdminPageProps['searchParams']>>,
+  updates: Record<string, string | number | null>
+) {
+  const params = new URLSearchParams();
+  const preservedKeys = [
+    'q',
+    'status',
+    'provider',
+    'paymentMethod',
+    'dateFrom',
+    'dateTo',
+    'ordersPage',
+    'emailPage'
+  ] as const;
+
+  preservedKeys.forEach((key) => {
+    const value = filters[key];
+    if (value) {
+      params.set(key, value);
+    }
+  });
+
+  if (filters.missingProviderEmail === 'on') {
+    params.set('missingProviderEmail', 'on');
+  }
+
+  Object.entries(updates).forEach(([key, value]) => {
+    if (value === null || value === '' || value === 1) {
+      params.delete(key);
+    } else {
+      params.set(key, String(value));
+    }
+  });
+
+  const query = params.toString();
+  return query ? `/admin?${query}` : '/admin';
+}
+
+function PaginationControls({
+  filters,
+  pageParam,
+  currentPage,
+  totalItems
+}: {
+  filters: Awaited<NonNullable<AdminPageProps['searchParams']>>;
+  pageParam: 'ordersPage' | 'emailPage';
+  currentPage: number;
+  totalItems: number;
+}) {
+  const totalPages = Math.max(Math.ceil(totalItems / ADMIN_PAGE_SIZE), 1);
+  const startItem = totalItems === 0 ? 0 : (currentPage - 1) * ADMIN_PAGE_SIZE + 1;
+  const endItem = Math.min(currentPage * ADMIN_PAGE_SIZE, totalItems);
+
+  return (
+    <div className="flex flex-col gap-3 border-t border-slate-200 bg-slate-50 px-5 py-4 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+      <div>
+        แสดง {startItem}-{endItem} จาก {totalItems.toLocaleString()} รายการ
+      </div>
+      <div className="flex items-center gap-2">
+        <Link
+          href={buildPageHref(filters, { [pageParam]: Math.max(currentPage - 1, 1) })}
+          aria-disabled={currentPage <= 1}
+          className={`rounded-xl px-4 py-2 font-semibold ring-1 ring-inset ${
+            currentPage <= 1
+              ? 'pointer-events-none bg-slate-100 text-slate-400 ring-slate-200'
+              : 'bg-white text-slate-700 ring-slate-200 hover:bg-slate-50'
+          }`}
+        >
+          ก่อนหน้า
+        </Link>
+        <span className="rounded-xl bg-white px-3 py-2 font-semibold text-slate-700 ring-1 ring-inset ring-slate-200">
+          {currentPage} / {totalPages}
+        </span>
+        <Link
+          href={buildPageHref(filters, { [pageParam]: currentPage + 1 })}
+          aria-disabled={currentPage >= totalPages}
+          className={`rounded-xl px-4 py-2 font-semibold ring-1 ring-inset ${
+            currentPage >= totalPages
+              ? 'pointer-events-none bg-slate-100 text-slate-400 ring-slate-200'
+              : 'bg-white text-slate-700 ring-slate-200 hover:bg-slate-50'
+          }`}
+        >
+          ถัดไป
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 export default async function AdminPage({ searchParams }: AdminPageProps) {
   const filters = (await searchParams) ?? {};
   const orderWhere = buildOrderWhere(filters);
-  const [orders, orderCount, providerRows, emailOutboxRows] = await Promise.all([
+  const ordersPage = parsePage(filters.ordersPage);
+  const emailPage = parsePage(filters.emailPage);
+  const latestEmailOutboxRows = await prisma.emailOutbox.groupBy({
+    by: ['orderId'],
+    _max: {
+      createdAt: true
+    },
+    where: {
+      orderId: {
+        not: null
+      }
+    }
+  });
+  const latestEmailOutboxWhere: Prisma.EmailOutboxWhereInput = {
+    OR: latestEmailOutboxRows.map((row) => ({
+      orderId: row.orderId,
+      createdAt: row._max.createdAt ?? undefined
+    }))
+  };
+  const [
+    orders,
+    orderCount,
+    providerRows,
+    emailOutboxRows,
+    emailOutboxCount,
+    orphanEmailOutboxRows,
+    orphanEmailOutboxCount
+  ] = await Promise.all([
     prisma.order.findMany({
       where: orderWhere,
-      take: 50,
+      skip: (ordersPage - 1) * ADMIN_PAGE_SIZE,
+      take: ADMIN_PAGE_SIZE,
       orderBy: {
         createdAt: 'desc'
       },
@@ -218,14 +384,19 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     prisma.order.count({
       where: orderWhere
     }),
-    prisma.insurancePackage.findMany({
+    prisma.order.findMany({
       select: {
-        company: true
-      },
-      distinct: ['company']
+        pkg: {
+          select: {
+            company: true
+          }
+        }
+      }
     }),
     prisma.emailOutbox.findMany({
-      take: 50,
+      where: latestEmailOutboxWhere.OR?.length ? latestEmailOutboxWhere : { id: '__none__' },
+      skip: (emailPage - 1) * ADMIN_PAGE_SIZE,
+      take: ADMIN_PAGE_SIZE,
       orderBy: {
         createdAt: 'desc'
       },
@@ -236,21 +407,44 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           }
         }
       }
+    }),
+    prisma.emailOutbox.count({
+      where: latestEmailOutboxWhere.OR?.length ? latestEmailOutboxWhere : { id: '__none__' }
+    }),
+    prisma.emailOutbox.findMany({
+      where: {
+        orderId: null
+      },
+      orderBy: {
+        createdAt: 'desc'
+      },
+      take: ADMIN_PAGE_SIZE,
+      include: {
+        order: {
+          include: {
+            pkg: true
+          }
+        }
+      }
+    }),
+    prisma.emailOutbox.count({
+      where: {
+        orderId: null
+      }
     })
   ]);
+  const emailOutbox = [...emailOutboxRows, ...(emailPage === 1 ? orphanEmailOutboxRows : [])]
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+    .slice(0, ADMIN_PAGE_SIZE);
+  const displayEmailOutboxCount = emailOutboxCount + orphanEmailOutboxCount;
   const providerOptions = providerRows
-    .map((row) => row.company)
+    .map((row) => row.pkg.company)
     .filter(Boolean)
+    .filter((provider, index, rows) => rows.indexOf(provider) === index)
     .sort((a, b) => a.localeCompare(b, 'th'));
-  const emailOutbox = emailOutboxRows
-    .filter((email, index, rows) => {
-      const dedupeKey = email.orderId ?? email.id;
-      return rows.findIndex((row) => (row.orderId ?? row.id) === dedupeKey) === index;
-    })
-    .slice(0, 20);
 
   return (
-    <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <section className="mx-auto w-full max-w-[1800px] px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-6 flex flex-col gap-2 sm:mb-8">
         <p className="text-sm font-semibold uppercase tracking-[0.24em] text-cyan-300">Order Monitor</p>
         <h2 className="text-3xl font-bold tracking-tight text-white">ติดตามคำสั่งซื้อ</h2>
@@ -410,7 +604,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                 <th className="px-5 py-4 sm:px-6">การชำระเงิน</th>
                 <th className="px-5 py-4 sm:px-6">สถานะ</th>
                 <th className="px-5 py-4 sm:px-6">อีเมล</th>
-                <th className="px-5 py-4 sm:px-6 text-right">Magic Link</th>
+                <th className="px-5 py-4 sm:px-6 text-right">คำสั่ง</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white">
@@ -467,6 +661,33 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                       <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ring-1 ring-inset ${getStatusStyles(order.status)}`}>
                         {getOrderStatusLabel(order.status)}
                       </span>
+                      <div className="mt-3 min-w-[300px] rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100">
+                        <div className="grid grid-cols-5 gap-2">
+                          {orderProgressSteps.map((step, index) => {
+                            const activeIndex = getOrderProgressIndex(order.status);
+
+                            return (
+                              <div key={step.status} className="text-center">
+                                <div
+                                  className={`mx-auto flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${getOrderProgressStepStyles(
+                                    index,
+                                    activeIndex,
+                                    order.status
+                                  )}`}
+                                >
+                                  {index + 1}
+                                </div>
+                                <div className="mt-1 text-[10px] font-medium leading-4 text-slate-500">{step.label}</div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        {order.status === 'REJECTED' || order.status === 'CANCELLED' ? (
+                          <div className="mt-2 rounded-xl bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
+                            คำสั่งซื้อนี้สิ้นสุดแล้ว
+                          </div>
+                        ) : null}
+                      </div>
                       {order.statusHistory[0]?.message ? (
                         <div className="mt-2 max-w-xs text-xs leading-5 text-slate-500">{order.statusHistory[0].message}</div>
                       ) : null}
@@ -492,12 +713,20 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                     </td>
 
                     <td className="px-5 py-5 text-right sm:px-6">
+                      <div className="flex flex-col items-end gap-2">
+                      <Link
+                        href={`/admin/orders/${order.id}`}
+                        className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                      >
+                        รายละเอียด
+                      </Link>
                       <Link
                         href={`/admin/orders/${order.id}/email-preview`}
                         className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-xs font-semibold text-white transition hover:bg-slate-700"
                       >
                         เปิดอีเมลบริษัทประกัน
                       </Link>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -505,6 +734,12 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
             </tbody>
           </table>
         </div>
+        <PaginationControls
+          filters={filters}
+          pageParam="ordersPage"
+          currentPage={ordersPage}
+          totalItems={orderCount}
+        />
       </div>
 
       <div className="mt-8 overflow-hidden rounded-3xl border border-white/10 bg-white shadow-2xl shadow-black/10">
@@ -515,7 +750,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
               <p className="text-sm text-slate-500">ระบบส่งอีเมลอัตโนมัติหลัง checkout ปุ่มในตารางนี้ใช้ส่งซ้ำหรือแก้รายการที่ส่งไม่สำเร็จ</p>
             </div>
             <span className="rounded-full bg-slate-900 px-3 py-1 text-sm font-semibold text-white">
-              {emailOutbox.length} รายการ
+              {displayEmailOutboxCount} รายการ
             </span>
           </div>
         </div>
@@ -594,6 +829,12 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
             </tbody>
           </table>
         </div>
+        <PaginationControls
+          filters={filters}
+          pageParam="emailPage"
+          currentPage={emailPage}
+          totalItems={displayEmailOutboxCount}
+        />
       </div>
     </section>
   );

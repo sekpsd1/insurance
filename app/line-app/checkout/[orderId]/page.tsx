@@ -29,6 +29,13 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
   }
 
   const amount = order.paymentAmount ?? order.pkg.netPrice;
+  const bankDetails = [
+    order.pkg.paymentBankName,
+    order.pkg.paymentAccountNumber ? `เลขที่บัญชี: ${order.pkg.paymentAccountNumber}` : null,
+    order.pkg.paymentAccountName ? `ชื่อบัญชี: ${order.pkg.paymentAccountName}` : null
+  ].filter((detail): detail is string => Boolean(detail));
+  const hasBankTransferSetup = bankDetails.length > 0 || Boolean(order.pkg.paymentQrUrl || order.pkg.paymentNotes);
+  const hasGatewaySetup = Boolean(order.pkg.paymentUrl);
 
   return (
     <main className="min-h-screen bg-[#f4f7ff] px-4 py-5 text-[#101828]">
@@ -51,9 +58,30 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
           </div>
 
           <div className="mb-4 rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
-            <div className="font-semibold text-slate-950">บัญชีรับโอน</div>
-            <div className="mt-2">ธนาคารตัวอย่าง 123-4-56789-0</div>
-            <div>ชื่อบัญชี: Broker Insurance Demo</div>
+            <div className="font-semibold text-slate-950">บัญชีรับโอนของบริษัทประกัน</div>
+            {hasBankTransferSetup ? (
+              <div className="mt-2 space-y-2">
+                {bankDetails.map((detail) => (
+                  <div key={detail}>{detail}</div>
+                ))}
+                {order.pkg.paymentQrUrl ? (
+                  <img
+                    src={order.pkg.paymentQrUrl}
+                    alt="QR code สำหรับชำระเงิน"
+                    className="mt-3 max-h-64 w-full rounded-2xl border border-slate-200 bg-white object-contain"
+                  />
+                ) : null}
+                {order.pkg.paymentNotes ? (
+                  <div className="whitespace-pre-line rounded-xl bg-white p-3 text-slate-600 ring-1 ring-slate-200">
+                    {order.pkg.paymentNotes}
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              <div className="mt-2 rounded-xl bg-amber-50 p-3 text-amber-800 ring-1 ring-amber-100">
+                ยังไม่ได้ตั้งค่าบัญชีรับชำระสำหรับแคมเปญนี้ กรุณาติดต่อเจ้าหน้าที่ก่อนโอนเงิน
+              </div>
+            )}
           </div>
 
           <form action={submitCheckout} className="space-y-4">
@@ -74,7 +102,8 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
             </div>
             <button
               type="submit"
-              className="w-full rounded-2xl bg-[#0052CC] px-4 py-4 text-base font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-[#0040a2]"
+              disabled={!hasBankTransferSetup}
+              className="w-full rounded-2xl bg-[#0052CC] px-4 py-4 text-base font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-[#0040a2] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
             >
               ยืนยันการโอนเงิน
             </button>
@@ -84,19 +113,25 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
         <section className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
           <div className="mb-4">
             <h2 className="text-lg font-bold text-slate-950">จ่ายผ่านบัตร / Gateway</h2>
-            <p className="mt-1 text-sm leading-6 text-slate-500">ตอนนี้เป็นลิงก์จำลองสำหรับเตรียมเชื่อมต่อ gateway ของบริษัทประกันในภายหลัง</p>
+            <p className="mt-1 text-sm leading-6 text-slate-500">ระบบจะพาไปยังลิงก์ชำระเงินของบริษัทประกันที่ตั้งค่าไว้ใน campaign นี้</p>
           </div>
 
-          <form action={submitCheckout}>
-            <input type="hidden" name="orderId" value={order.id} />
-            <input type="hidden" name="paymentMethod" value="CARD_GATEWAY" />
-            <button
-              type="submit"
-              className="w-full rounded-2xl bg-slate-950 px-4 py-4 text-base font-semibold text-white transition hover:bg-slate-800"
-            >
-              สร้างลิงก์ชำระผ่าน Gateway
-            </button>
-          </form>
+          {hasGatewaySetup ? (
+            <form action={submitCheckout}>
+              <input type="hidden" name="orderId" value={order.id} />
+              <input type="hidden" name="paymentMethod" value="CARD_GATEWAY" />
+              <button
+                type="submit"
+                className="w-full rounded-2xl bg-slate-950 px-4 py-4 text-base font-semibold text-white transition hover:bg-slate-800"
+              >
+                ไปที่ลิงก์ชำระเงินของบริษัทประกัน
+              </button>
+            </form>
+          ) : (
+            <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">
+              แคมเปญนี้ยังไม่ได้ตั้งค่าลิงก์ชำระเงินออนไลน์
+            </div>
+          )}
         </section>
 
         <Link href={`/line-app/form/${order.packageId}`} className="rounded-2xl bg-white px-4 py-3 text-center font-semibold text-[#0052CC] ring-1 ring-blue-100">

@@ -9,7 +9,7 @@ export default function AdminLayout({
   return (
     <main className="min-h-screen bg-slate-950 text-white">
       <header className="border-b border-white/10 bg-slate-900/80 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
+        <div className="mx-auto flex w-full max-w-[1800px] items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           <div>
             <p className="text-sm font-medium uppercase tracking-[0.2em] text-cyan-300">
               Admin Area

@@ -1,7 +1,11 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
-import { getPaymentStatusLabel, getStatusHistoryMessageLabel } from '@/lib/status-labels';
+import {
+  getPaymentStatusLabel,
+  getStatusHistoryMessageLabel,
+  isCustomerVisibleStatusHistory
+} from '@/lib/status-labels';
 
 type TrackingPageProps = {
   params: Promise<{ orderNumber: string }>;
@@ -52,6 +56,7 @@ export default async function TrackingDetailPage({ params }: TrackingPageProps) 
 
   const steps = ['PENDING_PAYMENT', 'PAYMENT_SUBMITTED', 'PAID', 'SENT_TO_INSURER', 'POLICY_ISSUED'];
   const activeIndex = Math.max(steps.indexOf(order.status), order.status === 'POLICY_APPROVED' ? 3 : -1);
+  const visibleStatusHistory = order.statusHistory.filter(isCustomerVisibleStatusHistory);
 
   return (
     <main className="min-h-screen bg-[#f4f7ff] px-4 py-8 text-[#101828]">
@@ -89,10 +94,10 @@ export default async function TrackingDetailPage({ params }: TrackingPageProps) 
         <section className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
           <h2 className="font-bold text-slate-950">Timeline</h2>
           <div className="mt-4 space-y-3">
-            {order.statusHistory.length === 0 ? (
+            {visibleStatusHistory.length === 0 ? (
               <p className="text-sm text-slate-500">ยังไม่มีประวัติสถานะ</p>
             ) : (
-              order.statusHistory.map((item) => (
+              visibleStatusHistory.map((item) => (
                 <div key={item.id} className="rounded-2xl bg-slate-50 p-4">
                   <div className="flex items-center justify-between gap-3">
                     <div className="font-semibold text-slate-950">{getStatusLabel(item.status)}</div>

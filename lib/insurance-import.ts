@@ -22,6 +22,13 @@ type CampaignSummaryRow = {
   providerEmail: string | null;
   providerContactName: string | null;
   providerPhone: string | null;
+  logoUrl: string | null;
+  paymentBankName: string | null;
+  paymentAccountName: string | null;
+  paymentAccountNumber: string | null;
+  paymentQrUrl: string | null;
+  paymentUrl: string | null;
+  paymentNotes: string | null;
   packageCount: bigint | number | string;
   totalNetPrice: bigint | number | string | null;
   latestCreatedAt: Date | string | null;
@@ -35,6 +42,13 @@ export type InsuranceCampaignSummary = {
   providerEmail: string;
   providerContactName: string;
   providerPhone: string;
+  logoUrl: string;
+  paymentBankName: string;
+  paymentAccountName: string;
+  paymentAccountNumber: string;
+  paymentQrUrl: string;
+  paymentUrl: string;
+  paymentNotes: string;
   packageCount: number;
   totalNetPrice: number;
   latestCreatedAt: Date | null;
@@ -344,6 +358,13 @@ export async function getInsuranceCampaignSummaries(): Promise<InsuranceCampaign
       MAX(providerEmail) AS providerEmail,
       MAX(providerContactName) AS providerContactName,
       MAX(providerPhone) AS providerPhone,
+      MAX(logoUrl) AS logoUrl,
+      MAX(paymentBankName) AS paymentBankName,
+      MAX(paymentAccountName) AS paymentAccountName,
+      MAX(paymentAccountNumber) AS paymentAccountNumber,
+      MAX(paymentQrUrl) AS paymentQrUrl,
+      MAX(paymentUrl) AS paymentUrl,
+      MAX(paymentNotes) AS paymentNotes,
       COUNT(*) AS packageCount,
       COALESCE(SUM(netPrice), 0) AS totalNetPrice,
       MAX(createdAt) AS latestCreatedAt
@@ -363,6 +384,13 @@ export async function getInsuranceCampaignSummaries(): Promise<InsuranceCampaign
       providerEmail: row.providerEmail ?? '',
       providerContactName: row.providerContactName ?? '',
       providerPhone: row.providerPhone ?? '',
+      logoUrl: row.logoUrl ?? '',
+      paymentBankName: row.paymentBankName ?? '',
+      paymentAccountName: row.paymentAccountName ?? '',
+      paymentAccountNumber: row.paymentAccountNumber ?? '',
+      paymentQrUrl: row.paymentQrUrl ?? '',
+      paymentUrl: row.paymentUrl ?? '',
+      paymentNotes: row.paymentNotes ?? '',
       packageCount: Number(row.packageCount) || 0,
       totalNetPrice: Number(row.totalNetPrice ?? 0) || 0,
       latestCreatedAt: row.latestCreatedAt ? new Date(row.latestCreatedAt) : null,

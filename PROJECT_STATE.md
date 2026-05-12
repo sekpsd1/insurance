@@ -39,6 +39,7 @@ Admin routes live under `/admin`.
 
 - `/admin/login` - simple password login using `ADMIN_PASSWORD`.
 - `/admin` - order monitor/report page.
+- `/admin/orders/[orderId]` - admin order detail page with customer, vehicle, payment, provider, email, and internal timeline detail.
 - `/admin/insurance` - campaign dashboard, CSV import, logo upload, provider contact setup.
 - `/admin/insurance/packages` - package search/edit page.
 - `/admin/orders/[orderId]/email-preview` - Magic Link provider email preview.
@@ -133,6 +134,9 @@ Main Prisma models:
 - Admin order monitor shows latest provider email status per order.
 - Admin order monitor shows a recent Email Outbox table.
 - Admin order monitor supports search/filter by order/customer/phone/plate, status, provider, payment method, date range, and missing provider email.
+- Admin order monitor now links to a full order detail page for each order.
+- Admin order monitor paginates the order table at 20 orders per page while preserving active filters.
+- Admin order detail page shows order progress, customer/vehicle details, package/payment details, slip/gateway links, provider contact, email outbox records, and full internal timeline.
 - Admin can send queued provider emails with a mock sender from the Email Outbox table.
 - Admin can retry `ERROR` email outbox rows.
 - `SENT` rows show sent timestamp and cannot be resent from the monitor.
@@ -143,8 +147,10 @@ Main Prisma models:
 - New order/status/email history messages are recorded in Thai.
 - Provider email outbox creation now reuses or refreshes the latest outbox row for an order instead of creating duplicate visible queue rows.
 - Admin Email Outbox table shows the latest outbox row per order to avoid duplicate rows for the same order number.
+- Admin Email Outbox table paginates at 20 latest rows per page.
 - Checkout now attempts to send the provider email automatically after creating the `EmailOutbox` row, using the current mock sender.
 - Admin Email Outbox send button is now primarily for retry/manual recovery rather than the normal checkout path.
+- Real email delivery and real LINE notifications are intentionally deferred for a later implementation slice.
 
 ### Payment Flow Decision
 
@@ -159,8 +165,15 @@ Main Prisma models:
   - QR code or payment image, if available
   - provider payment URL, if available
   - payment notes/instructions
-- Checkout should display the selected campaign/company payment instructions instead of the current demo broker bank account.
+- Campaign dashboard now supports saving bank details, QR/payment image, provider payment URL, and payment notes across all packages in the campaign.
+- Campaign dashboard supports viewing/deleting the current campaign logo and payment QR/image.
+- Replacing a campaign logo or payment QR/image now removes the previous uploaded file from local storage.
+- Deleting a campaign now also removes its campaign logo and payment QR/image files from local storage.
+- Checkout now displays the selected campaign/company payment instructions instead of the old demo broker bank account.
+- Checkout gateway flow now uses the configured campaign/provider payment URL and no longer creates the mock `example.com` gateway URL.
 - Uploaded customer slips should be visible to the insurance provider on the Magic Link page.
+- Insurance provider staff are responsible for reviewing bank transfer slips from the Magic Link page and deciding the policy status themselves.
+- Broker/admin does not need a separate slip approval gate before provider review; admin monitors orders and can inspect slips for support/reporting.
 - A central in-app payment gateway/webhook is not planned unless a future business requirement changes this decision.
 
 ### Infrastructure / Maintenance
@@ -170,6 +183,7 @@ Main Prisma models:
 - `PROJECT_STATE.md` added.
 - ESLint config was updated for ESLint 9 flat config compatibility.
 - `.gitignore` excludes local caches and uploaded slip files.
+- `.gitignore` excludes local uploaded logo, payment QR/image, and slip files.
 - Latest pushed commits:
   - `a4ccef4` - order checkout and Magic Link flow.
   - `502e6af` - removed first class insurance from customer flow.
@@ -184,16 +198,6 @@ Main Prisma models:
 
 ### Payment
 
-- Add campaign-level insurance company payment setup:
-  - bank name
-  - account name
-  - account number
-  - QR/payment image
-  - provider payment URL
-  - payment notes
-- Replace the demo broker bank account on checkout with the selected campaign/company payment instructions.
-- Replace the mock gateway URL with the provider/campaign payment URL when configured.
-- Decide operationally whether broker admin checks slips before provider review, or whether insurer checks slips directly from the Magic Link page.
 - Keep customer slip upload for bank transfer; provider should be able to inspect it from Magic Link.
 
 ### Magic Link
@@ -205,30 +209,20 @@ Main Prisma models:
 
 ### Admin
 
-- Add filters/search to order monitor:
-  - status
-  - provider
-  - date range
-  - payment method
-  - missing provider contact
-- Add clearer order detail page if table becomes too dense.
 - Consider separating campaign/package management from order monitoring in navigation labels.
 
 ### Data / Imports
 
 - Document supported CSV columns more explicitly.
 - Consider provider contact import fields if CSV sources include them.
-- Add cleanup for old logo files after replacement.
-- Add replace/delete controls for campaign logos.
 
 ## Current Bugs / Known Issues
 
 - Thai text appears mojibake in some files when read through PowerShell. Browser rendering may still be fine, but large Thai copy edits should be checked visually.
 - Compare year can show `-` if imported CSV/database rows have no `year`.
-- Uploaded old logo files are not automatically deleted when replaced.
-- Uploaded slip files are local filesystem files under `public/uploads/slips`; this is fine for local/dev but needs a production storage decision.
+- Uploaded slip/logo/payment QR files are local filesystem files under `public/uploads`; this is fine for local/dev but needs a production storage decision.
 - `tsconfig.tsbuildinfo` may show as modified after typecheck/build. It is generated and should not be committed.
-- Build still shows Next lint warnings for `<img>` usage in compare pages.
+- Build still shows Next lint warnings for `<img>` usage in compare pages and checkout QR/payment images.
 - Running `npm run build` and then dev mode can leave stale `.next` chunks on Windows; clearing `.next` and restarting dev fixes it.
 - Local database schema was synced with `npx prisma db push` after adding `EmailOutbox`; future environments need the same schema push or a proper migration.
 
@@ -246,6 +240,7 @@ Main Prisma models:
 - Bank transfer uses the insurance company's bank account details.
 - Online/gateway payment links out to the insurance company's own payment URL.
 - Payment instructions should be stored and managed at campaign level.
+- Insurance provider staff review uploaded bank transfer slips from the Magic Link page and decide policy status there.
 - Real email and LINE integrations are intentionally not implemented yet; logs/preview pages are used for local MVP testing.
 
 ## Next Recommended Steps
@@ -253,17 +248,14 @@ Main Prisma models:
 1. Connect a real email provider.
    - Possible providers: SMTP, Resend, SendGrid, Amazon SES.
    - Replace `sendProviderEmailMock` while keeping Email Outbox audit updates.
+   - This is intentionally deferred until after the current admin/data cleanup work.
 
-2. Add campaign-level payment instructions.
-   - Store bank account details, QR/payment image, provider payment URL, and notes.
-   - Show those instructions on checkout instead of demo broker account details.
-
-3. Implement LINE notification integration.
+2. Implement LINE notification integration.
    - Start with message templates.
    - Then add real LINE Messaging API push using customer `lineId`.
+   - This is intentionally deferred until after the current admin/data cleanup work.
 
-4. Improve admin order monitor.
-   - Add a dedicated order detail page if the table becomes too dense.
+3. Improve admin order monitor.
    - Consider export/report views for filtered results.
 
-5. Commit/push after each coherent slice.
+4. Commit/push after each coherent slice.

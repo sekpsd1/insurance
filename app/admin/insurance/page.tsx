@@ -1,9 +1,12 @@
 import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
 import {
+  deleteInsuranceCampaignLogo,
+  deleteInsuranceCampaignPaymentQr,
   deleteInsuranceCampaign,
   importInsuranceCampaign,
   updateInsuranceCampaignLogo,
+  updateInsuranceCampaignPaymentSetup,
   updateInsuranceCampaignProviderContact
 } from '@/lib/actions';
 import { CampaignImportModal } from './_components/campaign-import-modal';
@@ -256,6 +259,88 @@ export default async function InsuranceCampaignAdminPage() {
                 </button>
               </form>
 
+              <form action={updateInsuranceCampaignPaymentSetup} className="mt-5 space-y-3 rounded-2xl bg-slate-50 p-4">
+                <input type="hidden" name="companyCode" value={campaign.companyCode} />
+                <input type="hidden" name="campaignCode" value={campaign.campaignCode} />
+                <div>
+                  <div className="font-semibold text-slate-900">ตั้งค่าการชำระเงินของแคมเปญ</div>
+                  <p className="mt-1 text-xs leading-5 text-slate-500">
+                    ลูกค้าโอนเงินเข้าบัญชีบริษัทประกันโดยตรง และระบบจะใช้ลิงก์ชำระเงินของบริษัทประกันเมื่อมีการตั้งค่าไว้
+                  </p>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <input
+                    name="paymentBankName"
+                    defaultValue={campaign.paymentBankName}
+                    placeholder="ชื่อธนาคาร"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
+                  />
+                  <input
+                    name="paymentAccountName"
+                    defaultValue={campaign.paymentAccountName}
+                    placeholder="ชื่อบัญชี"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
+                  />
+                  <input
+                    name="paymentAccountNumber"
+                    defaultValue={campaign.paymentAccountNumber}
+                    placeholder="เลขที่บัญชี"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
+                  />
+                  <input
+                    name="paymentUrl"
+                    type="url"
+                    defaultValue={campaign.paymentUrl}
+                    placeholder="ลิงก์ชำระเงินของบริษัทประกัน"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
+                  />
+                </div>
+                <textarea
+                  name="paymentNotes"
+                  defaultValue={campaign.paymentNotes}
+                  placeholder="หมายเหตุหรือคำแนะนำการชำระเงิน"
+                  rows={3}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
+                />
+                <div className="space-y-2">
+                  {campaign.paymentQrUrl ? (
+                    <a
+                      href={campaign.paymentQrUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex text-xs font-semibold text-cyan-700 hover:text-cyan-900"
+                    >
+                      ดู QR/รูปภาพชำระเงินปัจจุบัน
+                    </a>
+                  ) : null}
+                  <input
+                    name="paymentQrFile"
+                    type="file"
+                    accept="image/*"
+                    className="block w-full text-sm text-slate-700 file:mr-3 file:rounded-xl file:border-0 file:bg-slate-900 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-slate-700"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="inline-flex w-full items-center justify-center rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-700"
+                >
+                  บันทึกการตั้งค่าชำระเงิน
+                </button>
+              </form>
+
+              {campaign.paymentQrUrl ? (
+                <form action={deleteInsuranceCampaignPaymentQr} className="mt-3 rounded-2xl bg-slate-50 p-3">
+                  <input type="hidden" name="companyCode" value={campaign.companyCode} />
+                  <input type="hidden" name="campaignCode" value={campaign.campaignCode} />
+                  <button
+                    type="submit"
+                    className="inline-flex w-full items-center justify-center rounded-xl border border-rose-200 bg-white px-4 py-3 text-sm font-semibold text-rose-700 transition hover:bg-rose-50"
+                  >
+                    ลบ QR/รูปภาพชำระเงิน
+                  </button>
+                </form>
+              ) : null}
+
               <div className="mt-5 flex flex-wrap gap-3">
                 <form action={updateInsuranceCampaignLogo} className="flex-1 min-w-[240px] space-y-3 rounded-2xl bg-slate-50 p-3">
                   <input type="hidden" name="companyCode" value={campaign.companyCode} />
@@ -263,6 +348,16 @@ export default async function InsuranceCampaignAdminPage() {
                   <div>
                     <div className="text-slate-500">Campaign Logo</div>
                     <p className="mt-1 text-xs text-slate-500">อัปโหลดครั้งเดียว โลโก้จะถูกใช้กับทุกแพ็กเกจในแคมเปญนี้</p>
+                    {campaign.logoUrl ? (
+                      <a
+                        href={campaign.logoUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-2 inline-flex text-xs font-semibold text-cyan-700 hover:text-cyan-900"
+                      >
+                        ดูโลโก้ปัจจุบัน
+                      </a>
+                    ) : null}
                   </div>
                   <input
                     name="logoFile"
@@ -278,6 +373,19 @@ export default async function InsuranceCampaignAdminPage() {
                     อัปโหลดโลโก้แคมเปญ
                   </button>
                 </form>
+
+                {campaign.logoUrl ? (
+                  <form action={deleteInsuranceCampaignLogo} className="flex-1 min-w-[160px] rounded-2xl bg-slate-50 p-3">
+                    <input type="hidden" name="companyCode" value={campaign.companyCode} />
+                    <input type="hidden" name="campaignCode" value={campaign.campaignCode} />
+                    <button
+                      type="submit"
+                      className="inline-flex w-full items-center justify-center rounded-xl border border-rose-200 bg-white px-4 py-3 text-sm font-semibold text-rose-700 transition hover:bg-rose-50"
+                    >
+                      ลบโลโก้แคมเปญ
+                    </button>
+                  </form>
+                ) : null}
 
                 <form action={deleteInsuranceCampaign} className="flex-1 min-w-[160px]">
                   <input type="hidden" name="companyCode" value={campaign.companyCode} />

@@ -20,6 +20,8 @@ prisma/dev.db
 mysql_data/
 backups/
 public/uploads/slips/
+public/uploads/logos/
+public/uploads/payment-qrs/
 
 # OS / editor files
 .DS_Store
