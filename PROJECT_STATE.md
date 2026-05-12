@@ -1,6 +1,6 @@
 # Project State
 
-Last updated: 2026-05-09
+Last updated: 2026-05-12
 
 ## Current Architecture
 
@@ -146,6 +146,23 @@ Main Prisma models:
 - Checkout now attempts to send the provider email automatically after creating the `EmailOutbox` row, using the current mock sender.
 - Admin Email Outbox send button is now primarily for retry/manual recovery rather than the normal checkout path.
 
+### Payment Flow Decision
+
+- This system should not receive or hold customer payment directly.
+- For bank transfer, customers should transfer directly to the insurance company's bank account.
+- For online/card/gateway payment, the app should link out to the insurance company's own payment gateway/payment URL.
+- Payment instructions should be managed at campaign level, similar to provider contact and campaign logo.
+- Campaign payment setup should support:
+  - bank name
+  - account name
+  - account number
+  - QR code or payment image, if available
+  - provider payment URL, if available
+  - payment notes/instructions
+- Checkout should display the selected campaign/company payment instructions instead of the current demo broker bank account.
+- Uploaded customer slips should be visible to the insurance provider on the Magic Link page.
+- A central in-app payment gateway/webhook is not planned unless a future business requirement changes this decision.
+
 ### Infrastructure / Maintenance
 
 - `PROJECT_HANDOVER.md` exists.
@@ -167,10 +184,17 @@ Main Prisma models:
 
 ### Payment
 
-- Replace gateway mock URL with real gateway configuration.
-- Add payment callback/webhook handling if gateway supports it.
-- Add payment verification workflow for bank-transfer slips.
-- Decide whether admin or system verifies payment before provider receives the Magic Link.
+- Add campaign-level insurance company payment setup:
+  - bank name
+  - account name
+  - account number
+  - QR/payment image
+  - provider payment URL
+  - payment notes
+- Replace the demo broker bank account on checkout with the selected campaign/company payment instructions.
+- Replace the mock gateway URL with the provider/campaign payment URL when configured.
+- Decide operationally whether broker admin checks slips before provider review, or whether insurer checks slips directly from the Magic Link page.
+- Keep customer slip upload for bank transfer; provider should be able to inspect it from Magic Link.
 
 ### Magic Link
 
@@ -218,6 +242,10 @@ Main Prisma models:
 - First class insurance is removed from customer-facing flow.
 - Campaign logos are managed at campaign level, not per-package.
 - Provider Contact is stored on `InsurancePackage` rows and updated across packages in the same campaign.
+- Payment is made directly to the insurance company, not to this broker app.
+- Bank transfer uses the insurance company's bank account details.
+- Online/gateway payment links out to the insurance company's own payment URL.
+- Payment instructions should be stored and managed at campaign level.
 - Real email and LINE integrations are intentionally not implemented yet; logs/preview pages are used for local MVP testing.
 
 ## Next Recommended Steps
@@ -226,12 +254,16 @@ Main Prisma models:
    - Possible providers: SMTP, Resend, SendGrid, Amazon SES.
    - Replace `sendProviderEmailMock` while keeping Email Outbox audit updates.
 
-2. Implement LINE notification integration.
+2. Add campaign-level payment instructions.
+   - Store bank account details, QR/payment image, provider payment URL, and notes.
+   - Show those instructions on checkout instead of demo broker account details.
+
+3. Implement LINE notification integration.
    - Start with message templates.
    - Then add real LINE Messaging API push using customer `lineId`.
 
-3. Improve admin order monitor.
+4. Improve admin order monitor.
    - Add a dedicated order detail page if the table becomes too dense.
    - Consider export/report views for filtered results.
 
-4. Commit/push after each coherent slice.
+5. Commit/push after each coherent slice.

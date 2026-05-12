@@ -64,6 +64,23 @@ LINE rich menu and LIFF consent are out of scope for this web app for now.
 - Do not show recipient email addresses in customer-facing timeline messages.
 - Avoid creating duplicate visible outbox rows for the same order; reuse or refresh the latest row.
 
+## Payment Flow
+
+- The broker app should not receive or hold customer payment directly.
+- Bank transfer payments go directly to the insurance company's bank account.
+- Online/card/gateway payments should link out to the insurance company's own payment URL.
+- Do not build a central payment gateway/webhook unless the user explicitly changes this product decision.
+- Payment setup should be campaign-level, similar to campaign logo and provider contact.
+- Campaign payment fields should include:
+  - bank name
+  - account name
+  - account number
+  - QR code or payment image when available
+  - provider payment URL when available
+  - payment notes/instructions
+- Checkout should show the selected campaign/company payment instructions, not a broker/demo bank account.
+- Customer bank transfer slips remain uploaded to this app and should be visible to insurer staff from the Magic Link page.
+
 ## Provider Magic Link Flow
 
 - Provider page `/insurance/update/[token]` should show enough detail for insurer staff to make a decision:
@@ -123,5 +140,7 @@ When starting/stopping local servers, verify routes with `Invoke-WebRequest`, fo
 - First class insurance is removed from the customer-facing flow.
 - Campaign logos are managed at campaign level, not per package.
 - Provider Contact is stored on `InsurancePackage` rows and updated across packages in the same campaign.
+- Payment is made directly to the insurance company, not to this app.
+- Bank transfer uses insurer bank account details; gateway payment uses insurer payment links.
 - Admin/broker primarily manages insurance data and monitors orders; provider Magic Link is the main mechanism for provider-side status updates.
 - Real email and LINE integrations are not implemented yet; logs/mock sender are used for local MVP testing.
