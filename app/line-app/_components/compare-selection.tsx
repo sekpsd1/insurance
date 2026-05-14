@@ -12,6 +12,11 @@ type ComparePackageCard = {
   repairType: string | null;
   coverage: string | null;
   coverageType: string | null;
+  sClass: string | null;
+  minCubicCapacity: number | null;
+  maxCubicCapacity: number | null;
+  minSumInsured: number | null;
+  maxSumInsured: number | null;
   fullPrice: number;
   netPrice: number;
   discount: number;
@@ -38,6 +43,18 @@ function getCoverageLabel(value: string) {
   if (value === '3+') return 'ประกัน 3+';
   if (value === '3') return 'ประกันชั้น 3';
   return value;
+}
+
+function formatSumInsuredRange(min: number | null | undefined, max: number | null | undefined) {
+  if (!min && !max) {
+    return '-';
+  }
+
+  if (min && max && min !== max) {
+    return `${formatMoney(min)}-${formatMoney(max)} บาท`;
+  }
+
+  return `${formatMoney(min ?? max ?? 0)} บาท`;
 }
 
 export default function CompareSelection({
@@ -144,6 +161,11 @@ export default function CompareSelection({
                   <div className="flex items-center justify-between gap-4 text-base font-semibold text-[#0052CC]">
                     <span>เบี้ยประกันราคาทุน:</span>
                     <span>{formatMoney(pkg.netPrice)} บาท</span>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-4 text-sm font-semibold text-[#006c7a]">
+                    <span>ทุนประกัน:</span>
+                    <span>{formatSumInsuredRange(pkg.minSumInsured, pkg.maxSumInsured)}</span>
                   </div>
 
                   <div className="flex items-center justify-between gap-4 text-sm font-medium text-[#109e06]">

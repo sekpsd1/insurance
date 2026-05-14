@@ -1,5 +1,7 @@
 # Insurance Mini App Implementation Blueprint
 
+Archive/reference note: this is the original architecture blueprint. Use `PROJECT_STATE.md` for current state and read this file only when changing larger flows or architecture.
+
 ## Goal
 
 Build the app toward the 14-screen product flow:

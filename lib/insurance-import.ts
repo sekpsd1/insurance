@@ -108,6 +108,16 @@ function parseNumberValue(value: string, fallback = 0) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function parseOptionalNumberValue(value: string) {
+  if (!value) {
+    return null;
+  }
+
+  const normalized = value.replace(/,/g, '').trim();
+  const parsed = Number.parseInt(normalized, 10);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 function parseYearValue(value: string) {
   if (!value) {
     return null;
@@ -217,6 +227,13 @@ export function mapCsvRecordToInsurancePackage(
   const year = parseYearValue(
     readRecordValue(record, ['year', 'car_year', 'modelyear', 'mfgyear', 'registeryear'])
   );
+  const sClass = readRecordValue(record, ['sclass', 'carclass', 'vehicleclass']);
+  const minSumInsured = parseOptionalNumberValue(readRecordValue(record, ['minsi', 'minsuminsured', 'suminsuredmin']));
+  const maxSumInsured = parseOptionalNumberValue(readRecordValue(record, ['maxsi', 'maxsuminsured', 'suminsuredmax']));
+  const minCarAge = parseOptionalNumberValue(readRecordValue(record, ['minyear', 'mincarage', 'caragemin']));
+  const maxCarAge = parseOptionalNumberValue(readRecordValue(record, ['maxyear', 'maxcarage', 'caragemax']));
+  const minCubicCapacity = parseOptionalNumberValue(readRecordValue(record, ['mincst', 'mincc', 'mincubiccapacity']));
+  const maxCubicCapacity = parseOptionalNumberValue(readRecordValue(record, ['maxcst', 'maxcc', 'maxcubiccapacity']));
   const netPrice = parseNumberValue(
     readRecordValue(record, ['prem_net_pd', 'netprice', 'premnetpd', 'premium_net', 'premium'])
   );
@@ -241,11 +258,21 @@ export function mapCsvRecordToInsurancePackage(
     brand: brand || null,
     model: model || null,
     year,
+    sClass: sClass || null,
+    minSumInsured,
+    maxSumInsured,
+    minCarAge,
+    maxCarAge,
+    minCubicCapacity,
+    maxCubicCapacity,
     rawData: record,
     logoUrl: normalizeLogoUrl(context.logoUrl),
     details: buildDetails(record, [
       ['brand', ['makdes', 'brand', 'carbrand', 'make']],
       ['model', ['moddes', 'model', 'carmodel']],
+      ['sClass', ['sclass', 'carclass', 'vehicleclass']],
+      ['sumInsured', ['minsi', 'maxsi', 'minsuminsured', 'maxsuminsured']],
+      ['carAge', ['minyear', 'maxyear', 'mincarage', 'maxcarage']],
       ['netPrice', ['prem_net_pd', 'netprice', 'premnetpd', 'premium_net', 'premium']],
       ['year', ['year', 'car_year', 'modelyear', 'mfgyear', 'registeryear']]
     ]),

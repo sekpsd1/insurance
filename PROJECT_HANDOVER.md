@@ -1,5 +1,7 @@
 # Project Handover
 
+Archive/reference note: this file is older broad context. Use `PROJECT_STATE.md` as the current handoff and read this file only when extra background is needed.
+
 ## 1) Project overview and business purpose
 This repository is a LINE mini app for **car insurance quote browsing and purchase flow**.
 

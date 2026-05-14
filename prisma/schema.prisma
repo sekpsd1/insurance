@@ -38,6 +38,13 @@ model InsurancePackage {
   brand       String?
   model       String?
   year        Int?
+  sClass      String?
+  minSumInsured Int?
+  maxSumInsured Int?
+  minCarAge   Int?
+  maxCarAge   Int?
+  minCubicCapacity Int?
+  maxCubicCapacity Int?
   rawData     Json?
   logoUrl     String?
   details     String?
@@ -51,6 +58,7 @@ model InsurancePackage {
 
   @@index([companyCode, campaignCode])
   @@index([brand, model, year])
+  @@index([sClass, minSumInsured, maxSumInsured])
 }
 
 model Order {

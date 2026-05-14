@@ -4,10 +4,13 @@ import { prisma } from '@/lib/prisma';
 import { notFound } from 'next/navigation';
 
 type CompareSearchParams = {
+  sClass?: string;
   coverage?: string;
   brand?: string;
   model?: string;
   year?: string;
+  cubicCapacity?: string;
+  sumInsured?: string;
   ids?: string | string[];
 };
 
@@ -21,6 +24,11 @@ type ComparePackageRow = {
   coverage: string | null;
   coverageCode: string | null;
   coverageType: string | null;
+  sClass: string | null;
+  minCubicCapacity: number | null;
+  maxCubicCapacity: number | null;
+  minSumInsured: number | null;
+  maxSumInsured: number | null;
   brand: string | null;
   model: string | null;
   year: number | null;
@@ -40,6 +48,11 @@ type ComparePackage = {
   coverage: string | null;
   coverageCode: string;
   coverageType: string;
+  sClass: string;
+  minCubicCapacity: number | null;
+  maxCubicCapacity: number | null;
+  minSumInsured: number | null;
+  maxSumInsured: number | null;
   brand: string;
   model: string;
   year: number | null;
@@ -100,29 +113,69 @@ function buildCoverageTypeSql() {
   `;
 }
 
-function buildSearchSummary(filters: { coverage: string; brand: string; model: string; year: string }) {
-  return [filters.coverage ? getCoverageLabel(filters.coverage) : '', filters.brand, filters.model, filters.year].filter(Boolean).join(' ');
+function getSClassLabel(value: string) {
+  const labels: Record<string, string> = {
+    '110': '110 รถยนต์นั่งส่วนบุคคล',
+    '210': '210 รถยนต์โดยสารส่วนบุคคล',
+    '320': '320 รถยนต์บรรทุกส่วนบุคคล'
+  };
+
+  return labels[value] ?? value;
 }
 
-function buildResultsHref(filters: { coverage: string; brand: string; model: string; year: string }) {
+function formatSumInsured(value: string) {
+  const parsed = Number.parseInt(value.replace(/,/g, ''), 10);
+  return Number.isFinite(parsed) ? parsed.toLocaleString('th-TH') : value;
+}
+
+function formatCubicCapacity(value: string) {
+  const parsed = Number.parseInt(value.replace(/,/g, ''), 10);
+  if (!Number.isFinite(parsed)) {
+    return value;
+  }
+
+  return `${parsed.toLocaleString('th-TH')} ซีซี`;
+}
+
+function buildSearchSummary(filters: { sClass: string; coverage: string; brand: string; model: string; year: string; cubicCapacity: string; sumInsured: string }) {
+  return [
+    filters.sClass ? getSClassLabel(filters.sClass) : '',
+    filters.coverage ? getCoverageLabel(filters.coverage) : '',
+    filters.brand,
+    filters.model,
+    filters.year,
+    filters.cubicCapacity ? formatCubicCapacity(filters.cubicCapacity) : '',
+    filters.sumInsured ? `ทุน ${formatSumInsured(filters.sumInsured)}` : ''
+  ]
+    .filter(Boolean)
+    .join(' ');
+}
+
+function buildResultsHref(filters: { sClass: string; coverage: string; brand: string; model: string; year: string; cubicCapacity: string; sumInsured: string }) {
   const params = new URLSearchParams();
 
+  if (filters.sClass) params.set('sClass', filters.sClass);
   if (filters.coverage) params.set('coverage', filters.coverage);
   if (filters.brand) params.set('brand', filters.brand);
   if (filters.model) params.set('model', filters.model);
   if (filters.year) params.set('year', filters.year);
+  if (filters.cubicCapacity) params.set('cubicCapacity', filters.cubicCapacity);
+  if (filters.sumInsured) params.set('sumInsured', filters.sumInsured);
 
   const query = params.toString();
   return query ? `/line-app?${query}` : '/line-app';
 }
 
-function buildSearchHref(filters: { coverage: string; brand: string; model: string; year: string }) {
+function buildSearchHref(filters: { sClass: string; coverage: string; brand: string; model: string; year: string; cubicCapacity: string; sumInsured: string }) {
   const params = new URLSearchParams();
 
+  if (filters.sClass) params.set('sClass', filters.sClass);
   if (filters.coverage) params.set('coverage', filters.coverage);
   if (filters.brand) params.set('brand', filters.brand);
   if (filters.model) params.set('model', filters.model);
   if (filters.year) params.set('year', filters.year);
+  if (filters.cubicCapacity) params.set('cubicCapacity', filters.cubicCapacity);
+  if (filters.sumInsured) params.set('sumInsured', filters.sumInsured);
 
   const query = params.toString();
   return query ? `/line-app/search?${query}` : '/line-app/search';
@@ -144,6 +197,7 @@ function normalizePackageRow(row: ComparePackageRow) {
     ...row,
     brand: row.brand?.trim() ?? '',
     model: row.model?.trim() ?? '',
+    sClass: row.sClass?.trim() ?? '',
     coverageType: row.coverageType?.trim() ?? '',
     coverageCode: row.coverageCode?.trim() ?? ''
   };
@@ -153,16 +207,36 @@ function formatMoney(value: number) {
   return value.toLocaleString('th-TH');
 }
 
+function parsePositiveInt(value: string) {
+  const parsed = Number.parseInt(value.replace(/,/g, ''), 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function getCarAgeFromRegistrationYear(year: string) {
+  const parsedYear = parsePositiveInt(year);
+  if (!parsedYear) {
+    return null;
+  }
+
+  return Math.max(new Date().getFullYear() - parsedYear, 0);
+}
+
 export default async function ComparePage({
   searchParams
 }: {
   searchParams?: Promise<CompareSearchParams>;
 }) {
   const resolvedSearchParams = (await searchParams) ?? {};
+  const sClass = normalizeSearchValue(resolvedSearchParams.sClass);
   const coverage = normalizeCoverageType(resolvedSearchParams.coverage);
   const brand = normalizeSearchValue(resolvedSearchParams.brand);
   const model = normalizeSearchValue(resolvedSearchParams.model);
   const year = normalizeSearchValue(resolvedSearchParams.year);
+  const cubicCapacity = normalizeSearchValue(resolvedSearchParams.cubicCapacity);
+  const sumInsured = normalizeSearchValue(resolvedSearchParams.sumInsured);
+  const selectedCarAge = getCarAgeFromRegistrationYear(year);
+  const selectedCubicCapacity = parsePositiveInt(cubicCapacity);
+  const selectedSumInsured = parsePositiveInt(sumInsured);
   const selectedIds = normalizeIdList(resolvedSearchParams.ids);
 
   const coverageTypeSql = buildCoverageTypeSql();
@@ -170,6 +244,10 @@ export default async function ComparePage({
 
   if (coverage) {
     searchConditions.push(Prisma.sql`${coverageTypeSql} = ${coverage}`);
+  }
+
+  if (sClass) {
+    searchConditions.push(Prisma.sql`COALESCE(sClass, JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.SClass'))) = ${sClass}`);
   }
 
   if (brand) {
@@ -180,8 +258,25 @@ export default async function ComparePage({
     searchConditions.push(Prisma.sql`model = ${model}`);
   }
 
-  if (year) {
-    searchConditions.push(Prisma.sql`year = ${Number.parseInt(year, 10)}`);
+  if (selectedCarAge !== null) {
+    searchConditions.push(Prisma.sql`
+      COALESCE(minCarAge, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MinYear')), '') AS UNSIGNED)) <= ${selectedCarAge}
+      AND COALESCE(maxCarAge, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MaxYear')), '') AS UNSIGNED)) >= ${selectedCarAge}
+    `);
+  }
+
+  if (selectedCubicCapacity !== null) {
+    searchConditions.push(Prisma.sql`
+      COALESCE(minCubicCapacity, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MinCST')), '') AS UNSIGNED)) <= ${selectedCubicCapacity}
+      AND COALESCE(maxCubicCapacity, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MaxCST')), '') AS UNSIGNED)) >= ${selectedCubicCapacity}
+    `);
+  }
+
+  if (selectedSumInsured !== null) {
+    searchConditions.push(Prisma.sql`
+      COALESCE(minSumInsured, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MinSI')), '') AS UNSIGNED)) <= ${selectedSumInsured}
+      AND COALESCE(maxSumInsured, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MaxSI')), '') AS UNSIGNED)) >= ${selectedSumInsured}
+    `);
   }
 
   const whereClause =
@@ -200,6 +295,11 @@ export default async function ComparePage({
       coverage,
       JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.covcod')) AS coverageCode,
       ${coverageTypeSql} AS coverageType,
+      COALESCE(sClass, JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.SClass'))) AS sClass,
+      COALESCE(minCubicCapacity, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MinCST')), '') AS UNSIGNED)) AS minCubicCapacity,
+      COALESCE(maxCubicCapacity, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MaxCST')), '') AS UNSIGNED)) AS maxCubicCapacity,
+      COALESCE(minSumInsured, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MinSI')), '') AS UNSIGNED)) AS minSumInsured,
+      COALESCE(maxSumInsured, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MaxSI')), '') AS UNSIGNED)) AS maxSumInsured,
       brand,
       model,
       year,
@@ -227,6 +327,11 @@ export default async function ComparePage({
         coverage,
         JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.covcod')) AS coverageCode,
         ${coverageTypeSql} AS coverageType,
+        COALESCE(sClass, JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.SClass'))) AS sClass,
+        COALESCE(minCubicCapacity, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MinCST')), '') AS UNSIGNED)) AS minCubicCapacity,
+        COALESCE(maxCubicCapacity, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MaxCST')), '') AS UNSIGNED)) AS maxCubicCapacity,
+        COALESCE(minSumInsured, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MinSI')), '') AS UNSIGNED)) AS minSumInsured,
+        COALESCE(maxSumInsured, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MaxSI')), '') AS UNSIGNED)) AS maxSumInsured,
         brand,
         model,
         year,
@@ -249,9 +354,9 @@ export default async function ComparePage({
       .filter((row): row is ComparePackage => Boolean(row));
   }
 
-  const searchSummary = buildSearchSummary({ coverage, brand, model, year });
-  const searchHref = buildSearchHref({ coverage, brand, model, year });
-  const resultsHref = buildResultsHref({ coverage, brand, model, year });
+  const searchSummary = buildSearchSummary({ sClass, coverage, brand, model, year, cubicCapacity, sumInsured });
+  const searchHref = buildSearchHref({ sClass, coverage, brand, model, year, cubicCapacity, sumInsured });
+  const resultsHref = buildResultsHref({ sClass, coverage, brand, model, year, cubicCapacity, sumInsured });
   const isComparisonReady = packages.length >= 2;
 
   return (
@@ -307,10 +412,13 @@ export default async function ComparePage({
               </div>
             ) : (
               <form action="/line-app/compare" method="get" className="space-y-3">
+                {sClass ? <input type="hidden" name="sClass" value={sClass} /> : null}
                 {coverage ? <input type="hidden" name="coverage" value={coverage} /> : null}
                 {brand ? <input type="hidden" name="brand" value={brand} /> : null}
                 {model ? <input type="hidden" name="model" value={model} /> : null}
                 {year ? <input type="hidden" name="year" value={year} /> : null}
+                {cubicCapacity ? <input type="hidden" name="cubicCapacity" value={cubicCapacity} /> : null}
+                {sumInsured ? <input type="hidden" name="sumInsured" value={sumInsured} /> : null}
 
                 <div className="grid gap-3">
                   {sourcePackages.map((pkg) => (
@@ -385,6 +493,8 @@ export default async function ComparePage({
                     { label: 'ยี่ห้อ', values: packages.map((pkg) => pkg.brand || '-') },
                     { label: 'รุ่น', values: packages.map((pkg) => pkg.model || '-') },
                     { label: 'ปี', values: packages.map((pkg) => (pkg.year ? String(pkg.year) : '-')) },
+                    { label: 'ขนาดเครื่องยนต์', values: packages.map((pkg) => (pkg.minCubicCapacity || pkg.maxCubicCapacity ? `${formatMoney(pkg.minCubicCapacity ?? 0)}-${formatMoney(pkg.maxCubicCapacity ?? 0)} ซีซี` : '-')) },
+                    { label: 'ทุนประกัน', values: packages.map((pkg) => (pkg.minSumInsured || pkg.maxSumInsured ? `${formatMoney(pkg.minSumInsured ?? pkg.maxSumInsured ?? 0)} บาท` : '-')) },
                     { label: 'ประเภทซ่อม', values: packages.map((pkg) => pkg.repairType || '-') },
                     { label: 'ความคุ้มครอง', values: packages.map((pkg) => pkg.coverage || '-') },
                     { label: 'ราคาตลาดทั่วไป', values: packages.map((pkg) => `${formatMoney(pkg.fullPrice)} บาท`) },

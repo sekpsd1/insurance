@@ -1,6 +1,6 @@
 # Project State
 
-Last updated: 2026-05-12
+Last updated: 2026-05-14
 
 ## Current Architecture
 
@@ -70,6 +70,13 @@ Main Prisma models:
 - `providerContactName`
 - `providerPhone`
 
+It also stores rating/search fields imported from insurer CSV rows:
+
+- `sClass` from `SClass` vehicle class.
+- `minSumInsured` and `maxSumInsured` from `MinSI`/`MaxSI`.
+- `minCarAge` and `maxCarAge` from `MinYear`/`MaxYear`.
+- `minCubicCapacity` and `maxCubicCapacity` from `MinCST`/`MaxCST`.
+
 `Order` stores customer policy info, vehicle info, payment method/status, slip/gateway fields, insurer status/note, and links to status history and magic links.
 
 `EmailOutbox` stores provider email audit records, including recipient, subject, body, Magic Link path, queue/error status, and sent/error timestamps.
@@ -79,7 +86,11 @@ Main Prisma models:
 ### Customer Flow
 
 - Search Premium page loads real brand/model/year options from DB.
+- Search Premium now filters by insurer vehicle class (`SClass`) and selected sum insured (`MinSI`/`MaxSI`).
+- Search Premium now exposes cubic-capacity ranges from `MinCST`/`MaxCST` as a "ขนาดเครื่องยนต์" selector because no separate vehicle submodel master exists in the imported CSV.
+- Search year now maps registration year to vehicle age and filters against CSV `MinYear`/`MaxYear`.
 - Search Results filters by coverage, brand, model, and year.
+- Search Results preserve and apply `sClass`, `cubicCapacity`, and `sumInsured` query parameters.
 - Results page supports pagination.
 - Compare selection flow exists.
 - Compare page displays selected packages side by side.
@@ -136,6 +147,7 @@ Main Prisma models:
 - Admin order monitor supports search/filter by order/customer/phone/plate, status, provider, payment method, date range, and missing provider email.
 - Admin order monitor now links to a full order detail page for each order.
 - Admin order monitor paginates the order table at 20 orders per page while preserving active filters.
+- Admin order monitor can export the currently filtered order list as CSV from `/admin/orders/export`.
 - Admin order detail page shows order progress, customer/vehicle details, package/payment details, slip/gateway links, provider contact, email outbox records, and full internal timeline.
 - Admin can send queued provider emails with a mock sender from the Email Outbox table.
 - Admin can retry `ERROR` email outbox rows.
@@ -181,6 +193,8 @@ Main Prisma models:
 - `PROJECT_HANDOVER.md` exists.
 - `IMPLEMENTATION_BLUEPRINT.md` exists.
 - `PROJECT_STATE.md` added.
+- `PROJECT_SUMMARY.md` added as a human-friendly summary.
+- `AGENTS.md` was shortened so future agents read only `PROJECT_STATE.md` by default; `PROJECT_HANDOVER.md` and `IMPLEMENTATION_BLUEPRINT.md` are now archive/reference docs.
 - ESLint config was updated for ESLint 9 flat config compatibility.
 - `.gitignore` excludes local caches and uploaded slip files.
 - `.gitignore` excludes local uploaded logo, payment QR/image, and slip files.
@@ -210,6 +224,7 @@ Main Prisma models:
 ### Admin
 
 - Consider separating campaign/package management from order monitoring in navigation labels.
+- Consider richer report views or scheduled exports if CSV downloads are not enough for operations.
 
 ### Data / Imports
 
@@ -225,6 +240,7 @@ Main Prisma models:
 - Build still shows Next lint warnings for `<img>` usage in compare pages and checkout QR/payment images.
 - Running `npm run build` and then dev mode can leave stale `.next` chunks on Windows; clearing `.next` and restarting dev fixes it.
 - Local database schema was synced with `npx prisma db push` after adding `EmailOutbox`; future environments need the same schema push or a proper migration.
+- Local database schema was synced again with `npx prisma db push` after adding `InsurancePackage` rating/search fields for SClass, sum insured, car age, and cubic capacity.
 
 ## Important Decisions
 

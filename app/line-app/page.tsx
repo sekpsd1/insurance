@@ -13,10 +13,13 @@ function getText(value: string | null | undefined, fallback: string) {
 }
 
 type LineAppSearchParams = {
+  sClass?: string;
   coverage?: string;
   brand?: string;
   model?: string;
   year?: string;
+  cubicCapacity?: string;
+  sumInsured?: string;
   page?: string;
 };
 
@@ -30,6 +33,11 @@ type InsurancePackageRow = {
   coverage: string | null;
   coverageCode: string | null;
   coverageType: string | null;
+  sClass: string | null;
+  minCubicCapacity: number | null;
+  maxCubicCapacity: number | null;
+  minSumInsured: number | null;
+  maxSumInsured: number | null;
   fullPrice: number;
   netPrice: number;
   discount: number;
@@ -80,8 +88,42 @@ function getCoverageLabel(value: string) {
   return value;
 }
 
-function buildSearchSummary(filters: { coverage: string; brand: string; model: string; year: string }) {
-  return [filters.coverage ? getCoverageLabel(filters.coverage) : '', filters.brand, filters.model, filters.year].filter(Boolean).join(' ');
+function getSClassLabel(value: string) {
+  const labels: Record<string, string> = {
+    '110': '110 รถยนต์นั่งส่วนบุคคล',
+    '210': '210 รถยนต์โดยสารส่วนบุคคล',
+    '320': '320 รถยนต์บรรทุกส่วนบุคคล'
+  };
+
+  return labels[value] ?? value;
+}
+
+function formatSumInsured(value: string) {
+  const parsed = Number.parseInt(value.replace(/,/g, ''), 10);
+  return Number.isFinite(parsed) ? parsed.toLocaleString('th-TH') : value;
+}
+
+function formatCubicCapacity(value: string) {
+  const parsed = Number.parseInt(value.replace(/,/g, ''), 10);
+  if (!Number.isFinite(parsed)) {
+    return value;
+  }
+
+  return `${parsed.toLocaleString('th-TH')} ซีซี`;
+}
+
+function buildSearchSummary(filters: { sClass: string; coverage: string; brand: string; model: string; year: string; cubicCapacity: string; sumInsured: string }) {
+  return [
+    filters.sClass ? getSClassLabel(filters.sClass) : '',
+    filters.coverage ? getCoverageLabel(filters.coverage) : '',
+    filters.brand,
+    filters.model,
+    filters.year,
+    filters.cubicCapacity ? formatCubicCapacity(filters.cubicCapacity) : '',
+    filters.sumInsured ? `ทุน ${formatSumInsured(filters.sumInsured)}` : ''
+  ]
+    .filter(Boolean)
+    .join(' ');
 }
 
 function parsePage(value: string | string[] | undefined) {
@@ -93,6 +135,20 @@ function parsePage(value: string | string[] | undefined) {
   }
 
   return parsed;
+}
+
+function parsePositiveInt(value: string) {
+  const parsed = Number.parseInt(value.replace(/,/g, ''), 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function getCarAgeFromRegistrationYear(year: string) {
+  const parsedYear = parsePositiveInt(year);
+  if (!parsedYear) {
+    return null;
+  }
+
+  return Math.max(new Date().getFullYear() - parsedYear, 0);
 }
 
 function buildPageHref(baseParams: URLSearchParams, page: number) {
@@ -203,18 +259,27 @@ export default async function LineAppPage({
   searchParams?: Promise<LineAppSearchParams>;
 }) {
   const resolvedSearchParams = (await searchParams) ?? {};
+  const sClass = normalizeSearchValue(resolvedSearchParams.sClass);
   const coverage = normalizeCoverageType(resolvedSearchParams.coverage);
   const brand = normalizeSearchValue(resolvedSearchParams.brand);
   const model = normalizeSearchValue(resolvedSearchParams.model);
   const year = normalizeSearchValue(resolvedSearchParams.year);
+  const cubicCapacity = normalizeSearchValue(resolvedSearchParams.cubicCapacity);
+  const sumInsured = normalizeSearchValue(resolvedSearchParams.sumInsured);
   const page = parsePage(resolvedSearchParams.page);
-  const hasFilters = Boolean(coverage || brand || model || year);
+  const selectedCarAge = getCarAgeFromRegistrationYear(year);
+  const selectedCubicCapacity = parsePositiveInt(cubicCapacity);
+  const selectedSumInsured = parsePositiveInt(sumInsured);
+  const hasFilters = Boolean(sClass || coverage || brand || model || year || cubicCapacity || sumInsured);
   const baseParams = new URLSearchParams();
 
+  if (sClass) baseParams.set('sClass', sClass);
   if (coverage) baseParams.set('coverage', coverage);
   if (brand) baseParams.set('brand', brand);
   if (model) baseParams.set('model', model);
   if (year) baseParams.set('year', year);
+  if (cubicCapacity) baseParams.set('cubicCapacity', cubicCapacity);
+  if (sumInsured) baseParams.set('sumInsured', sumInsured);
   const baseQueryString = baseParams.toString();
 
   const coverageTypeSql = buildCoverageTypeSql();
@@ -226,6 +291,12 @@ export default async function LineAppPage({
 
     searchConditions.push(coverageCondition);
     baseConditions.push(coverageCondition);
+  }
+
+  if (sClass) {
+    const condition = Prisma.sql`COALESCE(sClass, JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.SClass'))) = ${sClass}`;
+    searchConditions.push(condition);
+    baseConditions.push(condition);
   }
 
   if (brand) {
@@ -240,8 +311,25 @@ export default async function LineAppPage({
     baseConditions.push(condition);
   }
 
-  if (year) {
-    searchConditions.push(Prisma.sql`year = ${Number.parseInt(year, 10)}`);
+  if (selectedCarAge !== null) {
+    searchConditions.push(Prisma.sql`
+      COALESCE(minCarAge, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MinYear')), '') AS UNSIGNED)) <= ${selectedCarAge}
+      AND COALESCE(maxCarAge, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MaxYear')), '') AS UNSIGNED)) >= ${selectedCarAge}
+    `);
+  }
+
+  if (selectedCubicCapacity !== null) {
+    searchConditions.push(Prisma.sql`
+      COALESCE(minCubicCapacity, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MinCST')), '') AS UNSIGNED)) <= ${selectedCubicCapacity}
+      AND COALESCE(maxCubicCapacity, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MaxCST')), '') AS UNSIGNED)) >= ${selectedCubicCapacity}
+    `);
+  }
+
+  if (selectedSumInsured !== null) {
+    searchConditions.push(Prisma.sql`
+      COALESCE(minSumInsured, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MinSI')), '') AS UNSIGNED)) <= ${selectedSumInsured}
+      AND COALESCE(maxSumInsured, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MaxSI')), '') AS UNSIGNED)) >= ${selectedSumInsured}
+    `);
   }
 
   const whereClause =
@@ -256,7 +344,7 @@ export default async function LineAppPage({
   `;
   const exactYearTotal = Number(countRows[0]?.total ?? 0);
 
-  const effectiveConditions = year && exactYearTotal === 0 ? baseConditions : searchConditions;
+  const effectiveConditions = searchConditions;
   const effectiveWhereClause =
     effectiveConditions.length > 0
       ? Prisma.sql`WHERE ${Prisma.join(effectiveConditions, ' AND ')}`
@@ -282,6 +370,11 @@ export default async function LineAppPage({
       coverage,
       JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.covcod')) AS coverageCode,
       ${coverageTypeSql} AS coverageType,
+      COALESCE(sClass, JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.SClass'))) AS sClass,
+      COALESCE(minCubicCapacity, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MinCST')), '') AS UNSIGNED)) AS minCubicCapacity,
+      COALESCE(maxCubicCapacity, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MaxCST')), '') AS UNSIGNED)) AS maxCubicCapacity,
+      COALESCE(minSumInsured, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MinSI')), '') AS UNSIGNED)) AS minSumInsured,
+      COALESCE(maxSumInsured, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MaxSI')), '') AS UNSIGNED)) AS maxSumInsured,
       fullPrice,
       netPrice,
       discount,
@@ -294,11 +387,11 @@ export default async function LineAppPage({
 
   let searchMeta: SearchResultMeta = {
     exactYearMatched: exactYearTotal > 0 || !year,
-    usedFallbackYearSearch: Boolean(year && exactYearTotal === 0),
+    usedFallbackYearSearch: false,
   };
 
   let insurancePackages = packages;
-  const searchSummary = buildSearchSummary({ coverage, brand, model, year });
+  const searchSummary = buildSearchSummary({ sClass, coverage, brand, model, year, cubicCapacity, sumInsured });
 
   const resultRange = totalItems === 0 ? { start: 0, end: 0 } : { start: (safePage - 1) * PAGE_SIZE + 1, end: Math.min(safePage * PAGE_SIZE, totalItems) };
 
@@ -382,6 +475,11 @@ export default async function LineAppPage({
               repairType: pkg.repairType,
               coverage: pkg.coverage,
               coverageType: pkg.coverageType,
+              sClass: pkg.sClass,
+              minCubicCapacity: pkg.minCubicCapacity,
+              maxCubicCapacity: pkg.maxCubicCapacity,
+              minSumInsured: pkg.minSumInsured,
+              maxSumInsured: pkg.maxSumInsured,
               fullPrice: pkg.fullPrice,
               netPrice: pkg.netPrice,
               discount: pkg.discount

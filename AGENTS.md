@@ -1,16 +1,20 @@
 # Agent Instructions
 
-This repository is a Next.js 15 App Router application for a car insurance LINE Mini App style customer flow, admin/broker operations, and insurance provider Magic Link status updates.
+This is a Next.js 15 App Router app for a car insurance LINE Mini App style customer flow, admin/broker operations, and insurance provider Magic Link status updates.
 
-## Start Here
+## Read First
 
-Before making changes, read:
+Before changing code, read only:
 
-1. `PROJECT_STATE.md` for the latest project state and next recommended steps.
-2. `PROJECT_HANDOVER.md` for broader context.
-3. `IMPLEMENTATION_BLUEPRINT.md` if the task touches architecture or larger flows.
+1. `PROJECT_STATE.md` - current handoff, latest decisions, and next steps.
 
-Treat `PROJECT_STATE.md` as the current handoff. Keep it updated after meaningful feature work.
+Read these only when needed:
+
+- `PROJECT_SUMMARY.md` - human-friendly project summary.
+- `PROJECT_HANDOVER.md` - older broad context.
+- `IMPLEMENTATION_BLUEPRINT.md` - older architecture plan for larger flow changes.
+
+Keep `PROJECT_STATE.md` updated after meaningful feature work.
 
 ## Stack
 
@@ -22,107 +26,81 @@ Treat `PROJECT_STATE.md` as the current handoff. Keep it updated after meaningfu
 - MySQL
 - Server Actions for writes
 
-## Important Routes
+## Core Routes
 
-- Customer flow starts at `/line-app/search`.
-- Customer results and package selection live under `/line-app`.
-- Checkout is `/line-app/checkout/[orderId]`.
-- Customer success is `/line-app/success/[orderId]`.
-- Customer tracking is `/line-app/tracking` and `/line-app/tracking/[orderNumber]`.
-- Admin routes live under `/admin`.
-- Provider Magic Link route is `/insurance/update/[token]`.
+- Customer start: `/line-app/search`
+- Customer results/selection: `/line-app`
+- Checkout: `/line-app/checkout/[orderId]`
+- Customer success: `/line-app/success/[orderId]`
+- Customer tracking: `/line-app/tracking` and `/line-app/tracking/[orderNumber]`
+- Admin: `/admin`
+- Provider Magic Link: `/insurance/update/[token]`
 
-LINE rich menu and LIFF consent are out of scope for this web app for now.
+LINE rich menu and LIFF consent are currently out of scope for this web app.
 
-## Development Notes
+## Product Rules
 
-- Prefer existing code patterns over new abstractions.
-- Keep user-facing text in Thai where the surrounding UI is Thai.
+- Keep user-facing Thai text where surrounding UI is Thai.
 - Keep internal enum/status values unchanged; map them to Thai labels for display.
-- Use `lib/status-labels.ts` for status/payment/email/timeline display labels.
-- Avoid editing large Thai copy through tools that display mojibake unless necessary; verify in browser when copy matters.
+- Use `lib/status-labels.ts` for status, payment, email, and timeline labels.
 - Use server actions in `lib/actions.ts` for writes.
-- Use Prisma relations and structured queries instead of ad hoc data handling.
+- Use Prisma relations and structured queries.
+- Prefer existing patterns over new abstractions.
 
-## Prisma / Database
+## Payment Rules
 
-- Prisma schema is `prisma/schema.prisma`.
-- Local DB is MySQL from `docker-compose.yml`.
-- After schema changes, run:
-  - `npx prisma validate`
-  - `npx prisma generate`
-  - `npx prisma db push` for local sync, unless a proper migration is explicitly requested.
-- `EmailOutbox` is the provider email audit/outbox table.
-- Magic Link raw tokens are not stored; only SHA-256 hashes are stored in `MagicLinkToken`.
+- This app must not receive or hold customer payment directly.
+- Bank transfer goes directly to the insurance company's bank account.
+- Online/card/gateway payment links out to the insurance company's own payment URL.
+- Payment setup is campaign-level.
+- Customer bank transfer slips stay uploaded here and must be visible on the provider Magic Link page.
+- Provider staff review slips from the Magic Link page and decide policy status.
+- Do not add a broker/admin slip approval gate unless the product decision changes.
 
-## Email Outbox Flow
+## Provider Magic Link Rules
 
-- Checkout creates a provider Magic Link and an `EmailOutbox` row.
-- Admin can send/retry outbox rows from `/admin`.
-- Current sender is mocked by `sendProviderEmailMock`; it does not send real email.
-- Production should replace the mock sender with SMTP/Resend/SendGrid/SES while preserving outbox audit updates.
-- Do not show recipient email addresses in customer-facing timeline messages.
-- Avoid creating duplicate visible outbox rows for the same order; reuse or refresh the latest row.
-
-## Payment Flow
-
-- The broker app should not receive or hold customer payment directly.
-- Bank transfer payments go directly to the insurance company's bank account.
-- Online/card/gateway payments should link out to the insurance company's own payment URL.
-- Do not build a central payment gateway/webhook unless the user explicitly changes this product decision.
-- Payment setup should be campaign-level, similar to campaign logo and provider contact.
-- Campaign payment fields should include:
-  - bank name
-  - account name
-  - account number
-  - QR code or payment image when available
-  - provider payment URL when available
-  - payment notes/instructions
-- Checkout should show the selected campaign/company payment instructions, not a broker/demo bank account.
-- Customer bank transfer slips remain uploaded to this app and should be visible to insurer staff from the Magic Link page.
-- Insurance provider staff review customer bank transfer slips from the Magic Link page and decide policy status themselves.
-- Do not add a separate broker/admin slip approval gate unless the user explicitly changes this product decision.
-
-## Provider Magic Link Flow
-
-- Provider page `/insurance/update/[token]` should show enough detail for insurer staff to make a decision:
-  - customer contact and address
-  - ID card number when present
-  - vehicle and plate
-  - selected package, repair type, coverage, amount
-  - payment method/status
-  - payment slip or gateway link when present
-- Provider can update:
+- Route: `/insurance/update/[token]`.
+- Store only SHA-256 token hashes in `MagicLinkToken`; do not store raw tokens.
+- Provider page must show enough order, customer, vehicle, package, and payment detail for insurer review.
+- Provider can update only:
   - `INSURER_REVIEWING`
   - `POLICY_APPROVED`
   - `POLICY_ISSUED`
   - `REJECTED`
-- Updates must write `OrderStatusHistory`.
+- Provider updates must write `OrderStatusHistory`.
+
+## Email Outbox Rules
+
+- Checkout creates a provider Magic Link and `EmailOutbox` row.
+- Current sender is `sendProviderEmailMock`; real email is not implemented yet.
+- Admin can send/retry outbox rows from `/admin`.
+- Do not show recipient email addresses in customer-facing timeline messages.
+- Reuse or refresh the latest visible outbox row for an order instead of creating duplicate rows.
 
 ## Verification
 
-Run these before finishing meaningful code changes:
+Run before finishing meaningful code changes:
 
 - `npx tsc --noEmit`
 - `npx prisma validate` if Prisma or DB-related code changed
 - `npm run build`
 
-Known build warnings:
+Known acceptable warnings:
 
-- Next.js warns about `<img>` usage in compare pages. This is known and currently acceptable.
+- Next.js warns about `<img>` usage in compare/checkout image areas.
 
 ## Local Server Notes
 
-On this Windows machine, `next dev` can fail or hang with `spawn EPERM` or stale `.next` chunks.
+On this Windows machine, `next dev` can fail or hang with stale `.next` chunks.
 
-If dev mode is unstable:
+If local server is unstable:
 
 1. Stop old Node/Next processes.
-2. Clear `.next` if stale chunks are suspected.
+2. Clear `.next`.
 3. Run `npm run build`.
 4. Start with `npm run start`.
 
-When starting/stopping local servers, verify routes with `Invoke-WebRequest`, for example:
+Verify routes with `Invoke-WebRequest`, for example:
 
 - `http://localhost:3000/admin`
 - `http://localhost:3000/admin/insurance`
@@ -130,20 +108,8 @@ When starting/stopping local servers, verify routes with `Invoke-WebRequest`, fo
 
 ## Git Hygiene
 
-- Do not commit `tsconfig.tsbuildinfo`; it is generated and may change after typecheck/build.
-- Do not commit `.next`, `node_modules`, local uploaded slips/logos/payment QR images, or other generated artifacts.
+- Do not commit `tsconfig.tsbuildinfo`.
+- Do not commit `.next`, `node_modules`, local uploaded slips/logos/payment QR images, or generated artifacts.
 - Check `git status --short` before staging.
 - Stage only files related to the task.
-- After coherent slices, commit and push when requested by the user.
-
-## Current Product Decisions
-
-- Customer flow starts at `/line-app/search`.
-- First class insurance is removed from the customer-facing flow.
-- Campaign logos are managed at campaign level, not per package.
-- Provider Contact is stored on `InsurancePackage` rows and updated across packages in the same campaign.
-- Payment is made directly to the insurance company, not to this app.
-- Bank transfer uses insurer bank account details; gateway payment uses insurer payment links.
-- Insurance provider staff review uploaded slips from the Magic Link page and decide policy status there.
-- Admin/broker primarily manages insurance data and monitors orders; provider Magic Link is the main mechanism for provider-side status updates.
-- Real email and LINE integrations are not implemented yet; logs/mock sender are used for local MVP testing.
+- Commit and push only when requested.

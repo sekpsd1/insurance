@@ -3,17 +3,26 @@ import { prisma } from '@/lib/prisma';
 import SearchPremiumForm from './search-premium-form';
 
 type SearchPremiumSearchParams = {
+  sClass?: string;
   coverage?: string;
   brand?: string;
   model?: string;
   year?: string;
+  cubicCapacity?: string;
+  sumInsured?: string;
 };
 
 type OptionRow = {
+  sClass: string | null;
   coverageCode: string | null;
   brand: string | null;
   model: string | null;
-  year: number | null;
+  minCarAge: number | null;
+  maxCarAge: number | null;
+  minCubicCapacity: number | null;
+  maxCubicCapacity: number | null;
+  minSumInsured: number | null;
+  maxSumInsured: number | null;
 };
 
 function normalizeCoverageType(value: string | null | undefined) {
@@ -48,29 +57,56 @@ export default async function SearchInsurancePage({
   searchParams?: Promise<SearchPremiumSearchParams>;
 }) {
   const resolvedSearchParams = (await searchParams) ?? {};
+  const selectedSClass = normalizeSearchValue(resolvedSearchParams.sClass);
   const selectedCoverage = normalizeSearchValue(resolvedSearchParams.coverage);
   const selectedBrand = normalizeSearchValue(resolvedSearchParams.brand);
   const selectedModel = normalizeSearchValue(resolvedSearchParams.model);
   const selectedYear = normalizeSearchValue(resolvedSearchParams.year);
+  const selectedCubicCapacity = normalizeSearchValue(resolvedSearchParams.cubicCapacity);
+  const selectedSumInsured = normalizeSearchValue(resolvedSearchParams.sumInsured);
 
   const optionRows = await prisma.$queryRaw<OptionRow[]>`
-    SELECT DISTINCT brand, model, year, JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.covcod')) AS coverageCode
+    SELECT DISTINCT
+      COALESCE(sClass, JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.SClass'))) AS sClass,
+      brand,
+      model,
+      COALESCE(minCarAge, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MinYear')), '') AS UNSIGNED)) AS minCarAge,
+      COALESCE(maxCarAge, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MaxYear')), '') AS UNSIGNED)) AS maxCarAge,
+      COALESCE(minCubicCapacity, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MinCST')), '') AS UNSIGNED)) AS minCubicCapacity,
+      COALESCE(maxCubicCapacity, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MaxCST')), '') AS UNSIGNED)) AS maxCubicCapacity,
+      COALESCE(minSumInsured, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MinSI')), '') AS UNSIGNED)) AS minSumInsured,
+      COALESCE(maxSumInsured, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MaxSI')), '') AS UNSIGNED)) AS maxSumInsured,
+      JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.covcod')) AS coverageCode
     FROM InsurancePackage
     WHERE brand IS NOT NULL
       AND brand <> ''
       AND model IS NOT NULL
       AND model <> ''
-    ORDER BY brand ASC, model ASC, year DESC
+    ORDER BY sClass ASC, brand ASC, model ASC, minCarAge ASC
   `;
+  const currentYear = new Date().getFullYear();
 
   const normalizedOptionRows = optionRows
     .map((row) => ({
+      sClass: row.sClass?.trim() ?? '',
       coverageType: normalizeCoverageType(row.coverageCode),
       brand: row.brand?.trim() ?? '',
       model: row.model?.trim() ?? '',
-      year: row.year ? String(row.year) : null
+      minCarAge: row.minCarAge,
+      maxCarAge: row.maxCarAge,
+      minCubicCapacity: row.minCubicCapacity,
+      maxCubicCapacity: row.maxCubicCapacity,
+      minSumInsured: row.minSumInsured,
+      maxSumInsured: row.maxSumInsured,
+      years:
+        row.minCarAge !== null && row.maxCarAge !== null
+          ? Array.from(
+              { length: Math.max(row.maxCarAge - row.minCarAge + 1, 0) },
+              (_, index) => String(currentYear - (row.minCarAge ?? 0) - index)
+            )
+          : []
     }))
-    .filter((row) => Boolean(row.coverageType && row.coverageType !== '1' && row.brand && row.model));
+    .filter((row) => Boolean(row.sClass && row.coverageType && row.coverageType !== '1' && row.brand && row.model));
 
   return (
     <main className="min-h-screen bg-[#f4f5ff] text-[#12131a]">
@@ -109,10 +145,13 @@ export default async function SearchInsurancePage({
 
         <SearchPremiumForm
           optionRows={normalizedOptionRows}
+          initialSClass={selectedSClass}
           initialCoverage={selectedCoverage}
           initialBrand={selectedBrand}
           initialModel={selectedModel}
           initialYear={selectedYear}
+          initialCubicCapacity={selectedCubicCapacity}
+          initialSumInsured={selectedSumInsured}
         />
       </div>
     </main>

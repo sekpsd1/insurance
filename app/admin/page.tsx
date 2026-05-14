@@ -275,6 +275,25 @@ function buildPageHref(
   return query ? `/admin?${query}` : '/admin';
 }
 
+function buildOrderExportHref(filters: Awaited<NonNullable<AdminPageProps['searchParams']>>) {
+  const params = new URLSearchParams();
+  const preservedKeys = ['q', 'status', 'provider', 'paymentMethod', 'dateFrom', 'dateTo'] as const;
+
+  preservedKeys.forEach((key) => {
+    const value = filters[key];
+    if (value) {
+      params.set(key, value);
+    }
+  });
+
+  if (filters.missingProviderEmail === 'on') {
+    params.set('missingProviderEmail', 'on');
+  }
+
+  const query = params.toString();
+  return query ? `/admin/orders/export?${query}` : '/admin/orders/export';
+}
+
 function PaginationControls({
   filters,
   pageParam,
@@ -578,6 +597,12 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
             </label>
 
             <div className="flex gap-2">
+              <Link
+                href={buildOrderExportHref(filters)}
+                className="inline-flex items-center justify-center rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold text-cyan-800 transition hover:bg-cyan-100"
+              >
+                Export CSV
+              </Link>
               <Link
                 href="/admin"
                 className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
