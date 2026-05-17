@@ -207,6 +207,13 @@ function formatMoney(value: number) {
   return value.toLocaleString('th-TH');
 }
 
+function encodeLogoUrl(logoUrl: string) {
+  return logoUrl
+    .split('/')
+    .map((segment, index) => (index === 0 ? segment : encodeURIComponent(segment)))
+    .join('/');
+}
+
 function parsePositiveInt(value: string) {
   const parsed = Number.parseInt(value.replace(/,/g, ''), 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
@@ -472,7 +479,7 @@ export default async function ComparePage({
                         <div className="flex items-start gap-3">
                           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white text-xs font-semibold text-[#434654] shadow-sm ring-1 ring-slate-200">
                             {pkg.logoUrl ? (
-                              <img src={pkg.logoUrl} alt={pkg.company} className="h-full w-full rounded-full object-contain p-1" />
+                              <img src={encodeLogoUrl(pkg.logoUrl)} alt={pkg.company} className="h-full w-full rounded-full object-contain p-1" />
                             ) : (
                               'LOGO'
                             )}
@@ -495,7 +502,7 @@ export default async function ComparePage({
                     { label: 'ปี', values: packages.map((pkg) => (pkg.year ? String(pkg.year) : '-')) },
                     { label: 'ขนาดเครื่องยนต์', values: packages.map((pkg) => (pkg.minCubicCapacity || pkg.maxCubicCapacity ? `${formatMoney(pkg.minCubicCapacity ?? 0)}-${formatMoney(pkg.maxCubicCapacity ?? 0)} ซีซี` : '-')) },
                     { label: 'ทุนประกัน', values: packages.map((pkg) => (pkg.minSumInsured || pkg.maxSumInsured ? `${formatMoney(pkg.minSumInsured ?? pkg.maxSumInsured ?? 0)} บาท` : '-')) },
-                    { label: 'ประเภทซ่อม', values: packages.map((pkg) => pkg.repairType || '-') },
+                    { label: 'ประเภทซ่อม', values: packages.map((pkg) => pkg.repairType || 'อู่ประกัน') },
                     { label: 'ความคุ้มครอง', values: packages.map((pkg) => pkg.coverage || '-') },
                     { label: 'ราคาตลาดทั่วไป', values: packages.map((pkg) => `${formatMoney(pkg.fullPrice)} บาท`) },
                     { label: 'เบี้ยประกันราคาทุน', values: packages.map((pkg) => `${formatMoney(pkg.netPrice)} บาท`) },

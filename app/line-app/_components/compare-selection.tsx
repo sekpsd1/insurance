@@ -57,17 +57,30 @@ function formatSumInsuredRange(min: number | null | undefined, max: number | nul
   return `${formatMoney(min ?? max ?? 0)} บาท`;
 }
 
+function encodeLogoUrl(logoUrl: string) {
+  return logoUrl
+    .split('/')
+    .map((segment, index) => (index === 0 ? segment : encodeURIComponent(segment)))
+    .join('/');
+}
+
 export default function CompareSelection({
   packages,
   baseQueryString
 }: CompareSelectionProps) {
   const router = useRouter();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [failedLogoIds, setFailedLogoIds] = useState<string[]>([]);
   const [error, setError] = useState('');
 
   const selectedCount = selectedIds.length;
 
   const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const failedLogoIdSet = useMemo(() => new Set(failedLogoIds), [failedLogoIds]);
+
+  function markLogoFailed(id: string) {
+    setFailedLogoIds((current) => (current.includes(id) ? current : [...current, id]));
+  }
 
   function togglePackage(id: string) {
     setError('');
@@ -112,11 +125,18 @@ export default function CompareSelection({
               <div className="relative p-5">
                 <div className="mb-4 flex items-start justify-between gap-3">
                   <div className="flex min-w-0 items-start gap-3">
-                    <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-3xl border border-[rgba(195,198,214,0.2)] bg-white shadow-sm">
-                      {pkg.logoUrl ? (
-                        <img src={pkg.logoUrl} alt={pkg.company} className="h-full w-full object-contain p-1 scale-105" />
+                    <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[rgba(195,198,214,0.35)] bg-[#eef3ff] shadow-sm">
+                      {pkg.logoUrl && !failedLogoIdSet.has(pkg.id) ? (
+                        <img
+                          src={encodeLogoUrl(pkg.logoUrl)}
+                          alt={pkg.company}
+                          onError={() => markLogoFailed(pkg.id)}
+                          className="h-full w-full object-contain p-1"
+                        />
                       ) : (
-                        <span className="text-xs font-semibold text-[#434654]">LOGO</span>
+                        <span className="px-1 text-center text-xs font-bold leading-4 text-[#0052CC]">
+                          {pkg.company.slice(0, 6)}
+                        </span>
                       )}
                     </div>
 
@@ -128,7 +148,7 @@ export default function CompareSelection({
                           {getCoverageLabel(pkg.coverageType || '')}
                         </span>
                         <span className="inline-flex items-center rounded-full bg-[#0f4ec7] px-3 py-1 text-xs font-semibold leading-none text-white shadow-[0_2px_8px_rgba(15,78,199,0.18)]">
-                          {getText(pkg.repairType, 'ยังไม่ได้ระบุประเภทการซ่อม')}
+                          {getText(pkg.repairType, 'อู่ประกัน')}
                         </span>
                         <span className="inline-flex items-center rounded-full bg-[#0f4ec7] px-3 py-1 text-xs font-semibold leading-none text-white shadow-[0_2px_8px_rgba(15,78,199,0.18)]">
                           {getText(pkg.coverage, 'ยังไม่ได้ระบุความคุ้มครอง')}

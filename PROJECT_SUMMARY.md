@@ -1,6 +1,6 @@
 # Project Summary
 
-Last updated: 2026-05-14
+Last updated: 2026-05-17
 
 ## ภาพรวมโปรเจกต์
 
@@ -20,6 +20,8 @@ Last updated: 2026-05-14
 - ค้นหาตามขนาดเครื่องยนต์/ขนาดรถจากช่วง `MinCST`/`MaxCST` ได้ แม้ไม่มี master รุ่นย่อยแยกใน CSV
 - ปีจดทะเบียนถูกแปลงเป็นอายุรถเพื่อเทียบกับช่วง `MinYear`/`MaxYear` ใน CSV
 - หน้า results แสดงแพ็กเกจพร้อม pagination
+- Result cards encode uploaded logo URLs and fall back to company text if a logo image cannot load.
+- Missing repair type is shown as `อู่ประกัน` for now; `อู่ห้าง` separation is deferred until the source data rule is confirmed.
 - เลือกแพ็กเกจเพื่อเปรียบเทียบ และดูตารางเปรียบเทียบได้
 - เอาประกันชั้น 1 ออกจาก customer-facing flow แล้ว
 - หน้า Policy Info เก็บข้อมูลลูกค้า รถ ทะเบียน ที่อยู่ และข้อมูลกรมธรรม์

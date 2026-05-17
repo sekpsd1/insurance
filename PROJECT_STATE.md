@@ -1,6 +1,6 @@
 # Project State
 
-Last updated: 2026-05-14
+Last updated: 2026-05-17
 
 ## Current Architecture
 
@@ -92,6 +92,8 @@ It also stores rating/search fields imported from insurer CSV rows:
 - Search Results filters by coverage, brand, model, and year.
 - Search Results preserve and apply `sClass`, `cubicCapacity`, and `sumInsured` query parameters.
 - Results page supports pagination.
+- Result cards encode uploaded logo URLs before rendering and fall back to company text if the image cannot be loaded.
+- Result cards and compare table display missing repair type as `อู่ประกัน` for now. Future work may distinguish `อู่ประกัน` from `อู่ห้าง` once the source data rule is confirmed.
 - Compare selection flow exists.
 - Compare page displays selected packages side by side.
 - Results and compare preserve query parameters.
