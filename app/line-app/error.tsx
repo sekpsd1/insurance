@@ -2,6 +2,18 @@
 
 import { useEffect } from "react";
 
+function getFriendlyMessage(message: string) {
+  if (message.includes('Customer phone')) return 'เบอร์โทรต้องมีตัวเลข 9-15 หลัก';
+  if (message.includes('Customer email')) return 'รูปแบบอีเมลไม่ถูกต้อง';
+  if (message.includes('ID card number')) return 'เลขบัตรประชาชนไม่ถูกต้อง';
+  if (message.includes('Plate number')) return 'ทะเบียนรถมีรูปแบบไม่ถูกต้อง';
+  if (message.includes('Policy start date')) return 'วันที่เริ่มคุ้มครองต้องไม่ย้อนหลังเกิน 30 วัน และไม่ล่วงหน้าเกิน 1 ปี';
+  if (message.includes('Payment slip')) return 'กรุณาแนบสลิปโอนเงินก่อนส่งข้อมูล';
+  if (message.includes('Upload file')) return 'ไฟล์ที่อัปโหลดต้องเป็นรูปภาพ PNG, JPG, WebP หรือ GIF และขนาดไม่เกินที่กำหนด';
+  if (message.includes('Provider payment URL')) return 'แคมเปญนี้ยังไม่ได้ตั้งค่าลิงก์ชำระเงินของบริษัทประกัน กรุณาติดต่อผู้ดูแลระบบ';
+  return 'กรุณาตรวจสอบข้อมูลอีกครั้ง หากยังพบปัญหาให้ติดต่อผู้ดูแลระบบ';
+}
+
 export default function LineAppError({
   error,
   reset
@@ -22,9 +34,7 @@ export default function LineAppError({
         <h1 className="mt-3 text-xl font-bold text-slate-900">
           เกิดข้อผิดพลาดในการแสดงหน้า
         </h1>
-        <p className="mt-2 text-sm leading-6 text-slate-600">
-          กรุณาลองรีเฟรชหน้าอีกครั้ง หากยังพบปัญหาให้ตรวจสอบ log ใน terminal
-        </p>
+        <p className="mt-2 text-sm leading-6 text-slate-600">{getFriendlyMessage(error.message)}</p>
         <div className="mt-5 flex justify-center gap-3">
           <button
             type="button"

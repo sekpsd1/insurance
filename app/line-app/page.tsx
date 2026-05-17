@@ -169,6 +169,14 @@ function buildCompareHref(baseParams: URLSearchParams) {
   return query ? `/line-app/compare?${query}` : '/line-app/compare';
 }
 
+function buildSearchHref(baseParams: URLSearchParams) {
+  const params = new URLSearchParams(baseParams);
+  params.delete('page');
+
+  const query = params.toString();
+  return query ? `/line-app/search?${query}` : '/line-app/search';
+}
+
 function buildCoverageTypeSql() {
   return Prisma.sql`
     CASE
@@ -399,7 +407,7 @@ export default async function LineAppPage({
     <main className="flex min-h-screen flex-col bg-[#faf8ff] text-[#191b23] antialiased">
       <header className="sticky top-0 z-10 flex w-full items-center justify-between bg-[#0052CC] px-4 py-3 text-white shadow-sm">
         <div className="mx-auto flex max-w-md items-center justify-between">
-          <Link href="/line-app/search" aria-label="กลับไปหน้า Search Premium" className="-ml-2 rounded-full p-2 transition-colors hover:bg-white/10">
+          <Link href={buildSearchHref(baseParams)} aria-label="กลับไปหน้า Search Premium" className="-ml-2 rounded-full p-2 transition-colors hover:bg-white/10">
             <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
             </svg>

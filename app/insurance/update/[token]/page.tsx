@@ -1,6 +1,5 @@
 import { createHash } from 'crypto';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { updateOrderFromMagicLink } from '@/lib/actions';
 import {
@@ -45,6 +44,28 @@ function getFullAddress(order: {
     .join(' ') || '-';
 }
 
+function MagicLinkUnavailablePage() {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-[#f4f7ff] px-4 py-10 text-[#101828]">
+      <section className="w-full max-w-lg rounded-3xl bg-white p-6 text-center shadow-sm ring-1 ring-slate-200">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#0052CC]">Insurance Provider</p>
+        <h1 className="mt-3 text-2xl font-bold text-slate-950">ลิงก์นี้ไม่สามารถใช้งานได้</h1>
+        <p className="mt-3 text-sm leading-6 text-slate-600">
+          Magic Link อาจหมดอายุ ถูกใช้ไปแล้ว หรือไม่ถูกต้อง กรุณาติดต่อ broker เพื่อขอลิงก์ใหม่สำหรับอัปเดตสถานะกรมธรรม์
+        </p>
+        <div className="mt-6 rounded-2xl bg-slate-50 p-4 text-left text-sm leading-6 text-slate-600">
+          <div className="font-semibold text-slate-900">สิ่งที่ตรวจสอบได้</div>
+          <ul className="mt-2 list-disc space-y-1 pl-5">
+            <li>เปิดลิงก์จากอีเมลล่าสุดของคำสั่งซื้อนี้</li>
+            <li>ตรวจสอบว่าไม่ได้คัดลอกลิงก์ขาดบางส่วน</li>
+            <li>หากเคยบันทึกสถานะสุดท้ายแล้ว ต้องให้ broker สร้างลิงก์ใหม่</li>
+          </ul>
+        </div>
+      </section>
+    </main>
+  );
+}
+
 export default async function InsurerUpdatePage({ params, searchParams }: InsurerUpdatePageProps) {
   const { token } = await params;
   const resolvedSearchParams = (await searchParams) ?? {};
@@ -70,7 +91,7 @@ export default async function InsurerUpdatePage({ params, searchParams }: Insure
   });
 
   if (!magicToken || magicToken.expiresAt < new Date()) {
-    notFound();
+    return <MagicLinkUnavailablePage />;
   }
 
   const order = magicToken.order;
@@ -79,6 +100,7 @@ export default async function InsurerUpdatePage({ params, searchParams }: Insure
   const vehicle = [order.carBrand, order.carModel, order.carYear].filter(Boolean).join(' / ') || '-';
   const plate = [order.plateNumber, order.plateProvince].filter(Boolean).join(' ') || '-';
   const providerName = order.pkg.providerName ?? order.pkg.company;
+  const isMagicLinkUsed = Boolean(magicToken.usedAt);
 
   return (
     <main className="min-h-screen bg-[#f4f7ff] px-4 py-8 text-[#101828]">
@@ -93,6 +115,12 @@ export default async function InsurerUpdatePage({ params, searchParams }: Insure
           {resolvedSearchParams.updated ? (
             <div className="mt-5 rounded-2xl bg-emerald-50 p-4 text-sm font-semibold text-emerald-700 ring-1 ring-emerald-100">
               บันทึกสถานะเรียบร้อยแล้ว ระบบได้จำลองการแจ้ง broker และ LINE ถึงลูกค้าแล้ว
+            </div>
+          ) : null}
+
+          {isMagicLinkUsed ? (
+            <div className="mt-5 rounded-2xl bg-amber-50 p-4 text-sm font-semibold text-amber-800 ring-1 ring-amber-100">
+              Magic Link นี้ถูกใช้เพื่อบันทึกสถานะสุดท้ายแล้ว หากต้องแก้ไขเพิ่มเติม กรุณาให้ broker สร้างลิงก์ใหม่
             </div>
           ) : null}
 
@@ -206,6 +234,12 @@ export default async function InsurerUpdatePage({ params, searchParams }: Insure
             สถานะนี้จะถูกบันทึกใน timeline ของลูกค้า และแจ้งกลับไปยัง broker
           </p>
 
+          {isMagicLinkUsed ? (
+            <div className="mt-5 rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">
+              สถานะปัจจุบัน: <span className="font-semibold text-slate-950">{getOrderStatusLabel(order.status)}</span>
+              {magicToken.usedAt ? <span className="mt-1 block">บันทึกเมื่อ {magicToken.usedAt.toLocaleString('th-TH')}</span> : null}
+            </div>
+          ) : (
           <form action={updateOrderFromMagicLink} className="mt-5 space-y-4">
             <input type="hidden" name="token" value={decodedToken} />
 
@@ -260,6 +294,7 @@ export default async function InsurerUpdatePage({ params, searchParams }: Insure
               บันทึกและแจ้งลูกค้า
             </button>
           </form>
+          )}
         </section>
 
         <section className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200 lg:col-span-2">

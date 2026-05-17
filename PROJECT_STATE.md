@@ -97,6 +97,7 @@ It also stores rating/search fields imported from insurer CSV rows:
 - Compare selection flow exists.
 - Compare page displays selected packages side by side.
 - Results and compare preserve query parameters.
+- Results, compare, search, and Policy Info back navigation now preserve search query parameters so users return to the same filtered result/search state instead of the unfiltered package list.
 - Policy Info page has been redesigned to match the Stitch-style form:
   - Personal information card.
   - Vehicle information card.
@@ -162,9 +163,10 @@ It also stores rating/search fields imported from insurer CSV rows:
 - Provider email outbox creation now reuses or refreshes the latest outbox row for an order instead of creating duplicate visible queue rows.
 - Admin Email Outbox table shows the latest outbox row per order to avoid duplicate rows for the same order number.
 - Admin Email Outbox table paginates at 20 latest rows per page.
-- Checkout now attempts to send the provider email automatically after creating the `EmailOutbox` row, using the current mock sender.
+- Checkout now attempts to send the provider email automatically after creating the `EmailOutbox` row.
 - Admin Email Outbox send button is now primarily for retry/manual recovery rather than the normal checkout path.
-- Real email delivery and real LINE notifications are intentionally deferred for a later implementation slice.
+- Provider email delivery can now use Resend when `EMAIL_PROVIDER=resend`, `RESEND_API_KEY`, `EMAIL_FROM`, and `APP_BASE_URL` are configured. Local development still supports mock email logging; production fails visibly if email delivery is not configured.
+- Real LINE notifications are intentionally deferred for a later implementation slice.
 
 ### Payment Flow Decision
 
@@ -200,6 +202,16 @@ It also stores rating/search fields imported from insurer CSV rows:
 - ESLint config was updated for ESLint 9 flat config compatibility.
 - `.gitignore` excludes local caches and uploaded slip files.
 - `.gitignore` excludes local uploaded logo, payment QR/image, and slip files.
+- Uploads now validate image MIME/content signatures, size limits, and sanitized filenames. Upload storage supports local files for development and S3-compatible object storage through `UPLOAD_STORAGE_DRIVER=s3`; production local uploads are blocked unless `ALLOW_LOCAL_UPLOADS_IN_PRODUCTION=true` is explicitly set.
+- Server-side form validation now covers customer phones/emails, Thai ID checksum, plate number, policy date range, provider contact fields, payment setup fields, admin status values, insurer notes, and CSV upload shape.
+- Customer, admin, and provider error pages now show friendlier Thai validation/recovery messages for common server-action failures.
+- Invalid or expired provider Magic Links now render a provider-facing explanation page instead of a generic 404.
+- Admin sessions now use signed, expiring cookie values instead of a static cookie marker.
+- Provider Magic Links are marked used after terminal provider statuses and the provider page blocks further updates with a used terminal token.
+- `/api/health` exists as a production smoke-test endpoint that checks database connectivity.
+- `/admin/readiness` shows production readiness checks for DB, app URL, admin session env, provider email, and upload storage.
+- `server.js`, `npm run smoke`, `DEPLOYMENT_CHECKLIST.md`, and `PLESK_DEPLOYMENT.md` document and support Plesk Node.js deployment.
+- `CSV_IMPORT_GUIDE.md` documents supported import columns and post-import QA.
 - Latest pushed commits:
   - `a4ccef4` - order checkout and Magic Link flow.
   - `502e6af` - removed first class insurance from customer flow.
@@ -208,7 +220,7 @@ It also stores rating/search fields imported from insurer CSV rows:
 
 ### Email / Notification
 
-- Replace mock provider email sender with real email sending to `providerEmail`.
+- Configure production email env and verify provider email delivery end to end.
 - Replace simulated broker email log with a real notification.
 - Replace simulated LINE push log with real LINE Messaging API integration.
 
@@ -218,7 +230,7 @@ It also stores rating/search fields imported from insurer CSV rows:
 
 ### Magic Link
 
-- Add token invalidation/rotation behavior after provider action, if needed.
+- Consider token rotation for non-terminal provider updates if insurers need multiple independent update links.
 - Add stronger provider identity fields on update.
 - Add provider-facing attachment/download views if insurer needs documents/slip.
 - Improve expired/invalid Magic Link error page.
@@ -230,19 +242,40 @@ It also stores rating/search fields imported from insurer CSV rows:
 
 ### Data / Imports
 
-- Document supported CSV columns more explicitly.
+- Keep `CSV_IMPORT_GUIDE.md` updated as new importer mappings are added.
 - Consider provider contact import fields if CSV sources include them.
 
 ## Current Bugs / Known Issues
 
 - Thai text appears mojibake in some files when read through PowerShell. Browser rendering may still be fine, but large Thai copy edits should be checked visually.
 - Compare year can show `-` if imported CSV/database rows have no `year`.
-- Uploaded slip/logo/payment QR files are local filesystem files under `public/uploads`; this is fine for local/dev but needs a production storage decision.
+- Uploaded slip/logo/payment QR files can use S3-compatible object storage in production. Existing local files under `public/uploads` remain local/dev files unless migrated.
 - `tsconfig.tsbuildinfo` may show as modified after typecheck/build. It is generated and should not be committed.
 - Build still shows Next lint warnings for `<img>` usage in compare pages and checkout QR/payment images.
 - Running `npm run build` and then dev mode can leave stale `.next` chunks on Windows; clearing `.next` and restarting dev fixes it.
 - Local database schema was synced with `npx prisma db push` after adding `EmailOutbox`; future environments need the same schema push or a proper migration.
 - Local database schema was synced again with `npx prisma db push` after adding `InsurancePackage` rating/search fields for SClass, sum insured, car age, and cubic capacity.
+
+## Latest Local Verification
+
+Last verified on 2026-05-17 using localhost production start.
+
+- `npm run smoke` passed:
+  - `/api/health` returned 200 with database `ok`.
+  - `/line-app/search` returned 200.
+  - `/admin` redirected to `/admin/login` with 307 as expected.
+- Browser flow passed:
+  - Search selected `110`, `2+`, `BYD`, `SEALION 6`, `2023`, `2000`, and `250000`.
+  - Results showed the filtered package and back navigation preserved all query values in `/line-app/search`.
+  - Policy Info form created a test order.
+  - Checkout via provider gateway reached success page.
+  - Provider Magic Link opened from `EmailOutbox.magicLinkPath`.
+  - Provider terminal update to `POLICY_ISSUED` wrote timeline history and marked the Magic Link as used.
+  - Reopened provider page showed the used-link blocked state instead of the update form.
+  - Customer tracking showed `ออกกรมธรรม์แล้ว`.
+- During browser QA, the one-result page sticky compare bar was found to obscure the package card on desktop. It was fixed by showing the sticky compare bar only when at least two packages are available.
+- Local test order created during QA: `IN-20260517-442935`.
+- Local production server was restarted after QA and `/admin` was confirmed reachable again.
 
 ## Important Decisions
 
@@ -259,14 +292,13 @@ It also stores rating/search fields imported from insurer CSV rows:
 - Online/gateway payment links out to the insurance company's own payment URL.
 - Payment instructions should be stored and managed at campaign level.
 - Insurance provider staff review uploaded bank transfer slips from the Magic Link page and decide policy status there.
-- Real email and LINE integrations are intentionally not implemented yet; logs/preview pages are used for local MVP testing.
+- Resend-backed provider email is implemented but must be configured in production env; real LINE integration is intentionally not implemented yet.
 
 ## Next Recommended Steps
 
-1. Connect a real email provider.
-   - Possible providers: SMTP, Resend, SendGrid, Amazon SES.
-   - Replace `sendProviderEmailMock` while keeping Email Outbox audit updates.
-   - This is intentionally deferred until after the current admin/data cleanup work.
+1. Configure and verify production email delivery.
+   - Set `EMAIL_PROVIDER=resend`, `RESEND_API_KEY`, `EMAIL_FROM`, and `APP_BASE_URL`.
+   - Send a real checkout/order email and confirm `EmailOutbox` status transitions to `SENT`.
 
 2. Implement LINE notification integration.
    - Start with message templates.

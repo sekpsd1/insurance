@@ -77,6 +77,7 @@ export default function CompareSelection({
 
   const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
   const failedLogoIdSet = useMemo(() => new Set(failedLogoIds), [failedLogoIds]);
+  const formQuerySuffix = baseQueryString ? `?${baseQueryString}` : '';
 
   function markLogoFailed(id: string) {
     setFailedLogoIds((current) => (current.includes(id) ? current : [...current, id]));
@@ -202,7 +203,7 @@ export default function CompareSelection({
                 </div>
 
                 <a
-                  href={`/line-app/form/${pkg.id}`}
+                  href={`/line-app/form/${pkg.id}${formQuerySuffix}`}
                   className="flex w-full items-center justify-center gap-2 bg-[#0052CC] py-4 font-[Kanit,sans-serif] text-base font-semibold text-white transition-colors hover:bg-[#0040a2]"
                 >
                   ดูรายละเอียด / เลือกแผนนี้
@@ -214,6 +215,7 @@ export default function CompareSelection({
         })}
       </div>
 
+      {packages.length >= 2 ? (
       <div className="sticky bottom-4 rounded-3xl bg-white p-4 shadow-[0_10px_30px_rgba(4,16,61,0.08)] ring-1 ring-white/70">
         {error ? <p className="mb-2 text-center text-sm font-medium text-red-600">{error}</p> : null}
         <button
@@ -227,6 +229,7 @@ export default function CompareSelection({
         <p className="mt-2 text-center text-xs text-[#4b5265]">เลือกอย่างน้อย 2 แผนจากการ์ดด้านบน</p>
         <p className="mt-1 text-center text-xs text-[#4b5265]">เลือกแล้ว {selectedCount} แผน</p>
       </div>
+      ) : null}
     </>
   );
 }

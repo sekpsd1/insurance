@@ -1,5 +1,30 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
+
+const ADMIN_SESSION_MAX_AGE_SECONDS = 60 * 60 * 8;
+
+function getAdminSessionSecret() {
+  return process.env.ADMIN_SESSION_SECRET?.trim() || process.env.ADMIN_PASSWORD?.trim() || '';
+}
+
+function signAdminSession(payload: string) {
+  return createHmac('sha256', getAdminSessionSecret()).update(payload).digest('base64url');
+}
+
+function createAdminSessionToken() {
+  const issuedAt = Math.floor(Date.now() / 1000);
+  const nonce = randomBytes(16).toString('base64url');
+  const payload = `${issuedAt}.${nonce}`;
+  return `${payload}.${signAdminSession(payload)}`;
+}
+
+function passwordsMatch(input: string, expected: string) {
+  const inputBuffer = Buffer.from(input);
+  const expectedBuffer = Buffer.from(expected);
+
+  return inputBuffer.length === expectedBuffer.length && timingSafeEqual(inputBuffer, expectedBuffer);
+}
 
 async function loginAction(formData: FormData) {
   'use server';
@@ -11,18 +36,18 @@ async function loginAction(formData: FormData) {
     redirect('/admin/login?error=missing-config');
   }
 
-  if (!password || password !== adminPassword) {
+  if (!password || !passwordsMatch(password, adminPassword)) {
     redirect('/admin/login?error=invalid');
   }
 
   const cookieStore = await cookies();
 
-  cookieStore.set('admin_token', 'authenticated', {
+  cookieStore.set('admin_token', createAdminSessionToken(), {
     httpOnly: true,
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
     path: '/',
-    maxAge: 60 * 60 * 8
+    maxAge: ADMIN_SESSION_MAX_AGE_SECONDS
   });
 
   redirect('/admin');

@@ -38,6 +38,13 @@ export default function AdminLayout({
             >
               Insurance Campaigns
             </Link>
+            <Link
+              href="/admin/readiness"
+              prefetch={false}
+              className="rounded-full border border-white/10 px-4 py-2 text-white transition hover:bg-white/10"
+            >
+              Readiness
+            </Link>
           </nav>
         </div>
       </header>

@@ -51,6 +51,29 @@ function normalizeSearchValue(value: string | string[] | undefined) {
   return value?.trim() ?? '';
 }
 
+function buildResultsHref(filters: {
+  sClass: string;
+  coverage: string;
+  brand: string;
+  model: string;
+  year: string;
+  cubicCapacity: string;
+  sumInsured: string;
+}) {
+  const params = new URLSearchParams();
+
+  if (filters.sClass) params.set('sClass', filters.sClass);
+  if (filters.coverage) params.set('coverage', filters.coverage);
+  if (filters.brand) params.set('brand', filters.brand);
+  if (filters.model) params.set('model', filters.model);
+  if (filters.year) params.set('year', filters.year);
+  if (filters.cubicCapacity) params.set('cubicCapacity', filters.cubicCapacity);
+  if (filters.sumInsured) params.set('sumInsured', filters.sumInsured);
+
+  const query = params.toString();
+  return query ? `/line-app?${query}` : '/line-app';
+}
+
 export default async function SearchInsurancePage({
   searchParams
 }: {
@@ -64,6 +87,15 @@ export default async function SearchInsurancePage({
   const selectedYear = normalizeSearchValue(resolvedSearchParams.year);
   const selectedCubicCapacity = normalizeSearchValue(resolvedSearchParams.cubicCapacity);
   const selectedSumInsured = normalizeSearchValue(resolvedSearchParams.sumInsured);
+  const resultsHref = buildResultsHref({
+    sClass: selectedSClass,
+    coverage: selectedCoverage,
+    brand: selectedBrand,
+    model: selectedModel,
+    year: selectedYear,
+    cubicCapacity: selectedCubicCapacity,
+    sumInsured: selectedSumInsured
+  });
 
   const optionRows = await prisma.$queryRaw<OptionRow[]>`
     SELECT DISTINCT
@@ -112,7 +144,7 @@ export default async function SearchInsurancePage({
     <main className="min-h-screen bg-[#f4f5ff] text-[#12131a]">
       <header className="sticky top-0 z-10 bg-[#0047BA] text-white shadow-[0_4px_16px_rgba(0,0,0,0.12)]">
         <div className="mx-auto flex max-w-md items-center justify-between px-4 py-4">
-          <Link href="/line-app" aria-label="ย้อนกลับ" className="rounded-full p-1.5 transition-colors hover:bg-white/10">
+          <Link href={resultsHref} aria-label="ย้อนกลับ" className="rounded-full p-1.5 transition-colors hover:bg-white/10">
             <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
             </svg>

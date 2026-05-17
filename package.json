@@ -6,6 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "plesk:start": "node server.js",
+    "smoke": "node scripts/smoke-test.cjs",
     "lint": "next lint",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",

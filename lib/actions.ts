@@ -2,7 +2,7 @@
 
 import { mkdir, unlink, writeFile } from 'fs/promises';
 import path from 'path';
-import { createHash, randomBytes, randomUUID } from 'crypto';
+import { createHash, createHmac, randomBytes, randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
@@ -26,6 +26,24 @@ export type OrderStatus =
 
 export type PaymentMethod = 'BANK_TRANSFER' | 'CARD_GATEWAY';
 
+const ALLOWED_IMAGE_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif']);
+const LOGO_MAX_BYTES = 2 * 1024 * 1024;
+const PAYMENT_QR_MAX_BYTES = 3 * 1024 * 1024;
+const SLIP_MAX_BYTES = 8 * 1024 * 1024;
+const CSV_MAX_BYTES = 15 * 1024 * 1024;
+const ALL_ORDER_STATUSES: OrderStatus[] = [
+  'DRAFT',
+  'PENDING_PAYMENT',
+  'PAYMENT_SUBMITTED',
+  'PAID',
+  'SENT_TO_INSURER',
+  'INSURER_REVIEWING',
+  'POLICY_APPROVED',
+  'POLICY_ISSUED',
+  'REJECTED',
+  'CANCELLED'
+];
+
 function formatOrderNumber(date = new Date()) {
   const ymd = date.toISOString().slice(0, 10).replace(/-/g, '');
   const suffix = Math.floor(Math.random() * 900000 + 100000);
@@ -38,6 +56,73 @@ function hashMagicToken(token: string) {
 
 function createRawMagicToken() {
   return randomBytes(32).toString('base64url');
+}
+
+function getPublicAppBaseUrl() {
+  const baseUrl = process.env.APP_BASE_URL?.trim();
+
+  if (!baseUrl) {
+    return '';
+  }
+
+  return baseUrl.replace(/\/+$/, '');
+}
+
+function getAbsoluteAppUrl(pathOrUrl: string | null | undefined) {
+  if (!pathOrUrl) {
+    return '';
+  }
+
+  if (/^https?:\/\//i.test(pathOrUrl)) {
+    return pathOrUrl;
+  }
+
+  const baseUrl = getPublicAppBaseUrl();
+  return baseUrl ? `${baseUrl}${pathOrUrl.startsWith('/') ? pathOrUrl : `/${pathOrUrl}`}` : pathOrUrl;
+}
+
+function isLocalUrl(url: URL) {
+  return ['localhost', '127.0.0.1', '::1'].includes(url.hostname);
+}
+
+function normalizeExternalUrl(value: string | null, fieldName: string) {
+  if (!value) {
+    return null;
+  }
+
+  let parsed: URL;
+
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw new Error(`${fieldName} must be a valid URL`);
+  }
+
+  if (parsed.protocol !== 'https:' && !(process.env.NODE_ENV !== 'production' && parsed.protocol === 'http:' && isLocalUrl(parsed))) {
+    throw new Error(`${fieldName} must use HTTPS`);
+  }
+
+  return parsed.toString();
+}
+
+async function readCsvUpload(file: File) {
+  const fileName = file.name.toLowerCase();
+
+  if (file.size > CSV_MAX_BYTES) {
+    throw new Error(`CSV file is too large. Maximum size is ${Math.floor(CSV_MAX_BYTES / 1024 / 1024)} MB.`);
+  }
+
+  if (!fileName.endsWith('.csv') && file.type && !['text/csv', 'application/vnd.ms-excel'].includes(file.type)) {
+    throw new Error('CSV import file must be a .csv file');
+  }
+
+  const text = await file.text();
+
+  if (text.includes('\u0000')) {
+    throw new Error('CSV import file is not a valid text file');
+  }
+
+  return text;
 }
 
 function getRequiredFormValue(formData: FormData, key: string) {
@@ -53,6 +138,132 @@ function getRequiredFormValue(formData: FormData, key: string) {
 function getOptionalFormValue(formData: FormData, key: string) {
   const value = String(formData.get(key) ?? '').trim();
   return value || null;
+}
+
+function normalizeWhitespace(value: string | null | undefined) {
+  return value?.replace(/\s+/g, ' ').trim() || null;
+}
+
+function assertMaxLength(value: string | null, maxLength: number, fieldName: string) {
+  if (value && value.length > maxLength) {
+    throw new Error(`${fieldName} must be ${maxLength} characters or fewer`);
+  }
+}
+
+function normalizePhone(value: string | null, fieldName: string) {
+  const normalized = normalizeWhitespace(value);
+
+  if (!normalized) {
+    return null;
+  }
+
+  const digits = normalized.replace(/\D/g, '');
+
+  if (digits.length < 9 || digits.length > 15) {
+    throw new Error(`${fieldName} must contain 9-15 digits`);
+  }
+
+  return normalized;
+}
+
+function normalizeEmail(value: string | null, fieldName: string) {
+  const normalized = normalizeWhitespace(value)?.toLowerCase() ?? null;
+
+  if (!normalized) {
+    return null;
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized) || normalized.length > 254) {
+    throw new Error(`${fieldName} must be a valid email address`);
+  }
+
+  return normalized;
+}
+
+function normalizeThaiIdCard(value: string | null) {
+  const normalized = normalizeWhitespace(value);
+
+  if (!normalized) {
+    return null;
+  }
+
+  const digits = normalized.replace(/\D/g, '');
+
+  if (!/^\d{13}$/.test(digits)) {
+    throw new Error('ID card number must contain 13 digits');
+  }
+
+  const checksum =
+    (11 -
+      digits
+        .slice(0, 12)
+        .split('')
+        .reduce((total, digit, index) => total + Number(digit) * (13 - index), 0) %
+        11) %
+    10;
+
+  if (checksum !== Number(digits[12])) {
+    throw new Error('ID card number checksum is invalid');
+  }
+
+  return digits;
+}
+
+function normalizePlateNumber(value: string) {
+  const normalized = normalizeWhitespace(value);
+
+  if (!normalized) {
+    throw new Error('Plate number is required');
+  }
+
+  if (normalized.length > 20 || !/^[0-9A-Za-zก-ฮ.\-\s]+$/.test(normalized)) {
+    throw new Error('Plate number contains invalid characters');
+  }
+
+  return normalized.toUpperCase();
+}
+
+function parseCarYear(value: string | null, fallback: number | null | undefined) {
+  const parsed = parseOptionalInt(value) ?? fallback ?? null;
+
+  if (parsed === null) {
+    return null;
+  }
+
+  const nextYear = new Date().getFullYear() + 1;
+
+  if (parsed < 1950 || parsed > nextYear) {
+    throw new Error(`Car year must be between 1950 and ${nextYear}`);
+  }
+
+  return parsed;
+}
+
+function parsePolicyStartDate(value: string | null) {
+  const parsed = parseOptionalDate(value);
+
+  if (!parsed) {
+    return null;
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const minDate = new Date(today);
+  minDate.setDate(minDate.getDate() - 30);
+  const maxDate = new Date(today);
+  maxDate.setFullYear(maxDate.getFullYear() + 1);
+
+  if (parsed < minDate || parsed > maxDate) {
+    throw new Error('Policy start date must be within 30 days in the past and 1 year in the future');
+  }
+
+  return parsed;
+}
+
+function normalizeShortText(value: string | null, maxLength: number, fieldName: string) {
+  const normalized = normalizeWhitespace(value);
+  assertMaxLength(normalized, maxLength, fieldName);
+  return normalized;
 }
 
 function parseOptionalInt(value: string | null) {
@@ -138,6 +349,9 @@ function buildProviderEmail(input: {
   magicLinkPath: string;
 }) {
   const { order, magicLinkPath } = input;
+  const magicLinkUrl = getAbsoluteAppUrl(magicLinkPath);
+  const slipUrl = getAbsoluteAppUrl(order.slipUrl);
+  const gatewayUrl = getAbsoluteAppUrl(order.gatewayUrl);
   const customerName = order.customerName ?? order.user.name ?? '-';
   const customerPhone = order.customerPhone ?? order.user.phone ?? '-';
   const car = [order.carBrand, order.carModel, order.carYear].filter(Boolean).join(' / ') || '-';
@@ -157,10 +371,10 @@ function buildProviderEmail(input: {
     `Package: ${order.pkg.name}`,
     `Payment method: ${getPaymentMethodLabel(order.paymentMethod)}`,
     `Payment status: ${getPaymentStatusLabel(order.paymentStatus)}`,
-    order.slipUrl ? `Payment slip: ${order.slipUrl}` : null,
-    order.gatewayUrl ? `Gateway URL: ${order.gatewayUrl}` : null,
+    slipUrl ? `Payment slip: ${slipUrl}` : null,
+    gatewayUrl ? `Gateway URL: ${gatewayUrl}` : null,
     '',
-    `Update policy status here: ${magicLinkPath}`,
+    `Update policy status here: ${magicLinkUrl}`,
     '',
     'This is an automated broker system message.'
   ]
@@ -298,12 +512,49 @@ async function createProviderEmailOutbox(input: {
   return outbox;
 }
 
-async function sendProviderEmailMock(input: {
+async function sendProviderEmail(input: {
   recipient: string;
   subject: string;
   body: string;
   magicLinkPath: string | null;
 }) {
+  const emailProvider = process.env.EMAIL_PROVIDER?.trim().toLowerCase() || 'mock';
+  const from = process.env.EMAIL_FROM?.trim();
+
+  if (emailProvider === 'resend') {
+    const apiKey = process.env.RESEND_API_KEY?.trim();
+    const appBaseUrl = getPublicAppBaseUrl();
+
+    if (!apiKey || !from || !appBaseUrl) {
+      throw new Error('RESEND_API_KEY, EMAIL_FROM, and APP_BASE_URL are required when EMAIL_PROVIDER=resend');
+    }
+
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from,
+        to: input.recipient,
+        subject: input.subject,
+        text: input.body
+      })
+    });
+
+    if (!response.ok) {
+      const responseText = await response.text();
+      throw new Error(`Resend email failed (${response.status}): ${responseText.slice(0, 500)}`);
+    }
+
+    return;
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('EMAIL_PROVIDER must be configured for production email delivery');
+  }
+
   console.log('[Mock Provider Email Send]', {
     recipient: input.recipient,
     subject: input.subject,
@@ -357,7 +608,7 @@ async function deliverEmailOutboxItem(emailOutboxId: string) {
   }
 
   try {
-    await sendProviderEmailMock({
+    await sendProviderEmail({
       recipient: email.recipient,
       subject: email.subject,
       body: email.body,
@@ -411,37 +662,235 @@ async function deliverEmailOutboxItem(emailOutboxId: string) {
   }
 }
 
-async function saveUploadFile(file: File, options: { directory: string; publicPath: string; prefix: string }) {
-  if (!file.type.startsWith('image/')) {
-    throw new Error('Upload file must be an image');
+function sanitizeFilePrefix(prefix: string) {
+  return prefix
+    .trim()
+    .replace(/[^a-zA-Z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80) || 'upload';
+}
+
+function detectImageMime(buffer: Buffer) {
+  if (buffer.length >= 8 && buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) {
+    return 'image/png';
   }
+
+  if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+    return 'image/jpeg';
+  }
+
+  if (
+    buffer.length >= 12 &&
+    buffer.subarray(0, 4).toString('ascii') === 'RIFF' &&
+    buffer.subarray(8, 12).toString('ascii') === 'WEBP'
+  ) {
+    return 'image/webp';
+  }
+
+  if (buffer.length >= 6 && ['GIF87a', 'GIF89a'].includes(buffer.subarray(0, 6).toString('ascii'))) {
+    return 'image/gif';
+  }
+
+  return null;
+}
+
+function getExtensionForMime(mimeType: string) {
+  if (mimeType === 'image/png') return '.png';
+  if (mimeType === 'image/jpeg') return '.jpg';
+  if (mimeType === 'image/webp') return '.webp';
+  if (mimeType === 'image/gif') return '.gif';
+  return '.bin';
+}
+
+function assertLocalUploadsAllowed() {
+  if (process.env.NODE_ENV === 'production' && process.env.ALLOW_LOCAL_UPLOADS_IN_PRODUCTION !== 'true') {
+    throw new Error('Local uploads are disabled in production. Configure object storage or set ALLOW_LOCAL_UPLOADS_IN_PRODUCTION=true only if the host has persistent storage.');
+  }
+}
+
+function getUploadStorageDriver() {
+  return process.env.UPLOAD_STORAGE_DRIVER?.trim().toLowerCase() || 'local';
+}
+
+function getS3Config() {
+  const endpoint = process.env.S3_ENDPOINT?.trim();
+  const region = process.env.S3_REGION?.trim() || 'auto';
+  const bucket = process.env.S3_BUCKET?.trim();
+  const accessKeyId = process.env.S3_ACCESS_KEY_ID?.trim();
+  const secretAccessKey = process.env.S3_SECRET_ACCESS_KEY?.trim();
+  const publicBaseUrl = process.env.S3_PUBLIC_BASE_URL?.trim().replace(/\/+$/, '');
+
+  if (!endpoint || !bucket || !accessKeyId || !secretAccessKey || !publicBaseUrl) {
+    throw new Error('S3_ENDPOINT, S3_BUCKET, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY, and S3_PUBLIC_BASE_URL are required when UPLOAD_STORAGE_DRIVER=s3');
+  }
+
+  return {
+    endpoint: endpoint.replace(/\/+$/, ''),
+    region,
+    bucket,
+    accessKeyId,
+    secretAccessKey,
+    publicBaseUrl
+  };
+}
+
+function sha256Hex(input: Buffer | string) {
+  return createHash('sha256').update(input).digest('hex');
+}
+
+function hmac(key: Buffer | string, value: string) {
+  return createHmac('sha256', key).update(value).digest();
+}
+
+function getS3SigningKey(secretAccessKey: string, dateStamp: string, region: string) {
+  const dateKey = hmac(`AWS4${secretAccessKey}`, dateStamp);
+  const dateRegionKey = hmac(dateKey, region);
+  const dateRegionServiceKey = hmac(dateRegionKey, 's3');
+  return hmac(dateRegionServiceKey, 'aws4_request');
+}
+
+function encodeS3PathSegment(value: string) {
+  return encodeURIComponent(value).replace(/[!'()*]/g, (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`);
+}
+
+function buildS3CanonicalUri(bucket: string, key: string) {
+  return `/${encodeS3PathSegment(bucket)}/${key.split('/').map(encodeS3PathSegment).join('/')}`;
+}
+
+async function requestS3Object(input: {
+  method: 'PUT' | 'DELETE';
+  key: string;
+  body?: Buffer;
+  contentType?: string;
+}) {
+  const config = getS3Config();
+  const endpointUrl = new URL(config.endpoint);
+  const now = new Date();
+  const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, '');
+  const dateStamp = amzDate.slice(0, 8);
+  const payloadHash = sha256Hex(input.body ?? '');
+  const canonicalUri = buildS3CanonicalUri(config.bucket, input.key);
+  const canonicalHeaders = [
+    input.contentType ? `content-type:${input.contentType}` : null,
+    `host:${endpointUrl.host}`,
+    `x-amz-content-sha256:${payloadHash}`,
+    `x-amz-date:${amzDate}`
+  ]
+    .filter((header): header is string => Boolean(header))
+    .join('\n');
+  const signedHeaders = input.contentType
+    ? 'content-type;host;x-amz-content-sha256;x-amz-date'
+    : 'host;x-amz-content-sha256;x-amz-date';
+  const canonicalRequest = [
+    input.method,
+    canonicalUri,
+    '',
+    `${canonicalHeaders}\n`,
+    signedHeaders,
+    payloadHash
+  ].join('\n');
+  const credentialScope = `${dateStamp}/${config.region}/s3/aws4_request`;
+  const stringToSign = [
+    'AWS4-HMAC-SHA256',
+    amzDate,
+    credentialScope,
+    sha256Hex(canonicalRequest)
+  ].join('\n');
+  const signature = createHmac('sha256', getS3SigningKey(config.secretAccessKey, dateStamp, config.region))
+    .update(stringToSign)
+    .digest('hex');
+  const authorization = `AWS4-HMAC-SHA256 Credential=${config.accessKeyId}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
+
+  const response = await fetch(`${config.endpoint}${canonicalUri}`, {
+    method: input.method,
+    headers: {
+      ...(input.contentType ? { 'Content-Type': input.contentType } : {}),
+      Authorization: authorization,
+      'x-amz-content-sha256': payloadHash,
+      'x-amz-date': amzDate
+    },
+    body: input.body ? new Blob([new Uint8Array(input.body)]) : undefined
+  });
+
+  if (!response.ok) {
+    const responseText = await response.text();
+    throw new Error(`Object storage ${input.method} failed (${response.status}): ${responseText.slice(0, 500)}`);
+  }
+}
+
+async function saveObjectUploadFile(key: string, buffer: Buffer, contentType: string) {
+  const config = getS3Config();
+
+  await requestS3Object({
+    method: 'PUT',
+    key,
+    body: buffer,
+    contentType
+  });
+
+  return `${config.publicBaseUrl}/${key.split('/').map(encodeS3PathSegment).join('/')}`;
+}
+
+async function saveUploadFile(file: File, options: { directory: string; publicPath: string; prefix: string; maxBytes: number }) {
+  if (!ALLOWED_IMAGE_MIME_TYPES.has(file.type)) {
+    throw new Error('Upload file must be a PNG, JPG, WebP, or GIF image');
+  }
+
+  if (file.size > options.maxBytes) {
+    throw new Error(`Upload file is too large. Maximum size is ${Math.floor(options.maxBytes / 1024 / 1024)} MB.`);
+  }
+
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const detectedMime = detectImageMime(buffer);
+
+  if (!detectedMime || detectedMime !== file.type) {
+    throw new Error('Upload file content does not match the selected image type');
+  }
+
+  const fileName = `${sanitizeFilePrefix(options.prefix)}-${randomUUID()}${getExtensionForMime(detectedMime)}`;
+  const objectKey = `${options.publicPath}/${fileName}`;
+
+  if (getUploadStorageDriver() === 's3') {
+    return saveObjectUploadFile(objectKey, buffer, detectedMime);
+  }
+
+  assertLocalUploadsAllowed();
 
   const uploadDirectory = path.join(process.cwd(), 'public', 'uploads', options.directory);
   await mkdir(uploadDirectory, { recursive: true });
-
-  const originalName = file.name || 'upload';
-  const extensionFromName = path.extname(originalName).toLowerCase();
-  const extensionFromMime =
-    file.type === 'image/png'
-      ? '.png'
-      : file.type === 'image/jpeg'
-        ? '.jpg'
-        : file.type === 'image/webp'
-          ? '.webp'
-          : extensionFromName;
-
-  const safeExtension = ['.png', '.jpg', '.jpeg', '.webp', '.gif'].includes(extensionFromMime)
-    ? extensionFromMime
-    : '.png';
-  const fileName = `${options.prefix}-${randomUUID()}${safeExtension}`;
   const filePath = path.join(uploadDirectory, fileName);
-  const buffer = Buffer.from(await file.arrayBuffer());
 
   await writeFile(filePath, buffer);
   return `/uploads/${options.publicPath}/${fileName}`;
 }
 
 async function deletePublicUploadFile(publicUrl: string | null | undefined) {
+  const s3PublicBaseUrl = process.env.S3_PUBLIC_BASE_URL?.trim().replace(/\/+$/, '');
+
+  if (publicUrl && s3PublicBaseUrl && publicUrl.startsWith(`${s3PublicBaseUrl}/`)) {
+    const key = publicUrl
+      .slice(s3PublicBaseUrl.length + 1)
+      .split('/')
+      .map((segment) => decodeURIComponent(segment))
+      .join('/');
+
+    if (!key.includes('..')) {
+      try {
+        await requestS3Object({
+          method: 'DELETE',
+          key
+        });
+      } catch (error) {
+        console.warn('[Object Storage Cleanup Failed]', {
+          publicUrl,
+          error: error instanceof Error ? error.message : String(error)
+        });
+      }
+    }
+
+    return;
+  }
+
   if (!publicUrl?.startsWith('/uploads/')) {
     return;
   }
@@ -489,7 +938,8 @@ async function saveLogoFile(logoFile: File, prefix: string): Promise<string> {
   return saveUploadFile(logoFile, {
     directory: 'logos',
     publicPath: 'logos',
-    prefix
+    prefix,
+    maxBytes: LOGO_MAX_BYTES
   });
 }
 
@@ -497,7 +947,8 @@ async function savePaymentQrFile(qrFile: File, prefix: string): Promise<string> 
   return saveUploadFile(qrFile, {
     directory: 'payment-qrs',
     publicPath: 'payment-qrs',
-    prefix
+    prefix,
+    maxBytes: PAYMENT_QR_MAX_BYTES
   });
 }
 
@@ -505,7 +956,8 @@ async function saveSlipFile(slipFile: File, prefix: string): Promise<string> {
   return saveUploadFile(slipFile, {
     directory: 'slips',
     publicPath: 'slips',
-    prefix
+    prefix,
+    maxBytes: SLIP_MAX_BYTES
   });
 }
 
@@ -515,6 +967,10 @@ export async function updateOrderStatus(formData: FormData): Promise<void> {
 
   if (!orderId || !status) {
     throw new Error('Missing orderId or status');
+  }
+
+  if (!ALL_ORDER_STATUSES.includes(status)) {
+    throw new Error('Invalid order status');
   }
 
   const updatedOrder = await prisma.order.update({
@@ -597,22 +1053,21 @@ export async function createInsurerMagicLinkPreview(formData: FormData): Promise
 
 export async function createPolicyDraftOrder(formData: FormData): Promise<void> {
   const packageId = getRequiredFormValue(formData, 'packageId');
-  const lineId = getRequiredFormValue(formData, 'lineId');
-  const customerName = getRequiredFormValue(formData, 'customerName');
-  const customerPhone = getRequiredFormValue(formData, 'customerPhone');
-  const plateNumber = getRequiredFormValue(formData, 'plateNumber');
-  const customerEmail = getOptionalFormValue(formData, 'customerEmail');
-  const customerAddress = getOptionalFormValue(formData, 'customerAddress');
-  const province = getOptionalFormValue(formData, 'province');
-  const district = getOptionalFormValue(formData, 'district');
-  const subDistrict = getOptionalFormValue(formData, 'subDistrict');
-  const postalCode = getOptionalFormValue(formData, 'postalCode');
-  const idCardNumber = getOptionalFormValue(formData, 'idCardNumber');
-  const carBrand = getOptionalFormValue(formData, 'carBrand');
-  const carModel = getOptionalFormValue(formData, 'carModel');
-  const carYear = parseOptionalInt(getOptionalFormValue(formData, 'carYear'));
-  const plateProvince = getOptionalFormValue(formData, 'plateProvince');
-  const policyStartDate = parseOptionalDate(getOptionalFormValue(formData, 'policyStartDate'));
+  const lineId = normalizeShortText(getRequiredFormValue(formData, 'lineId'), 120, 'LINE ID') ?? '';
+  const customerName = normalizeShortText(getRequiredFormValue(formData, 'customerName'), 120, 'Customer name') ?? '';
+  const customerPhone = normalizePhone(getRequiredFormValue(formData, 'customerPhone'), 'Customer phone') ?? '';
+  const plateNumber = normalizePlateNumber(getRequiredFormValue(formData, 'plateNumber'));
+  const customerEmail = normalizeEmail(getOptionalFormValue(formData, 'customerEmail'), 'Customer email');
+  const customerAddress = normalizeShortText(getOptionalFormValue(formData, 'customerAddress'), 1000, 'Customer address');
+  const province = normalizeShortText(getOptionalFormValue(formData, 'province'), 80, 'Province');
+  const district = normalizeShortText(getOptionalFormValue(formData, 'district'), 80, 'District');
+  const subDistrict = normalizeShortText(getOptionalFormValue(formData, 'subDistrict'), 80, 'Subdistrict');
+  const postalCode = normalizeShortText(getOptionalFormValue(formData, 'postalCode'), 10, 'Postal code');
+  const idCardNumber = normalizeThaiIdCard(getOptionalFormValue(formData, 'idCardNumber'));
+  const carBrand = normalizeShortText(getOptionalFormValue(formData, 'carBrand'), 80, 'Car brand');
+  const carModel = normalizeShortText(getOptionalFormValue(formData, 'carModel'), 120, 'Car model');
+  const plateProvince = normalizeShortText(getOptionalFormValue(formData, 'plateProvince'), 80, 'Plate province');
+  const policyStartDate = parsePolicyStartDate(getOptionalFormValue(formData, 'policyStartDate'));
 
   const selectedPackage = await prisma.insurancePackage.findUnique({
     where: { id: packageId }
@@ -658,7 +1113,7 @@ export async function createPolicyDraftOrder(formData: FormData): Promise<void> 
       idCardNumber,
       carBrand: carBrand ?? selectedPackage.brand,
       carModel: carModel ?? selectedPackage.model,
-      carYear: carYear ?? selectedPackage.year,
+      carYear: parseCarYear(getOptionalFormValue(formData, 'carYear'), selectedPackage.year),
       plateNumber,
       plateProvince,
       policyStartDate,
@@ -765,8 +1220,8 @@ export async function submitCheckout(formData: FormData): Promise<void> {
 export async function updateOrderFromMagicLink(formData: FormData): Promise<void> {
   const token = getRequiredFormValue(formData, 'token');
   const status = getRequiredFormValue(formData, 'status') as OrderStatus;
-  const insurerNote = getOptionalFormValue(formData, 'insurerNote');
-  const actorName = getOptionalFormValue(formData, 'actorName') ?? 'Insurance provider';
+  const insurerNote = normalizeShortText(getOptionalFormValue(formData, 'insurerNote'), 2000, 'Insurer note');
+  const actorName = normalizeShortText(getOptionalFormValue(formData, 'actorName'), 120, 'Actor name') ?? 'Insurance provider';
 
   const allowedStatuses: OrderStatus[] = [
     'INSURER_REVIEWING',
@@ -793,19 +1248,36 @@ export async function updateOrderFromMagicLink(formData: FormData): Promise<void
     }
   });
 
-  if (!magicToken || magicToken.expiresAt < new Date()) {
+  if (!magicToken || magicToken.expiresAt < new Date() || magicToken.usedAt) {
     throw new Error('Magic link is invalid or expired');
   }
 
-  await prisma.order.update({
-    where: {
-      id: magicToken.orderId
-    },
-    data: {
-      status,
-      insurerStatus: status,
-      insurerNote,
-      insurerUpdatedAt: new Date()
+  const isTerminalStatus = status === 'POLICY_APPROVED' || status === 'POLICY_ISSUED' || status === 'REJECTED';
+
+  await prisma.$transaction(async (tx) => {
+    await tx.order.update({
+      where: {
+        id: magicToken.orderId
+      },
+      data: {
+        status,
+        insurerStatus: status,
+        insurerNote,
+        insurerUpdatedAt: new Date()
+      }
+    });
+
+    if (isTerminalStatus) {
+      await tx.magicLinkToken.updateMany({
+        where: {
+          orderId: magicToken.orderId,
+          purpose: magicToken.purpose,
+          usedAt: null
+        },
+        data: {
+          usedAt: new Date()
+        }
+      });
     }
   });
 
@@ -835,8 +1307,8 @@ export async function updateOrderFromMagicLink(formData: FormData): Promise<void
 
 export async function updateInsurancePackage(formData: FormData): Promise<void> {
   const packageId = String(formData.get('packageId') ?? '').trim();
-  const repairType = String(formData.get('repairType') ?? '').trim();
-  const coverage = String(formData.get('coverage') ?? '').trim();
+  const repairType = normalizeShortText(String(formData.get('repairType') ?? ''), 120, 'Repair type') ?? '';
+  const coverage = normalizeShortText(String(formData.get('coverage') ?? ''), 2000, 'Coverage') ?? '';
   const logoFile = formData.get('logoFile');
 
   if (!packageId) {
@@ -938,10 +1410,10 @@ export async function deleteInsuranceCampaignLogo(formData: FormData): Promise<v
 export async function updateInsuranceCampaignProviderContact(formData: FormData): Promise<void> {
   const companyCode = String(formData.get('companyCode') ?? '').trim();
   const campaignCode = String(formData.get('campaignCode') ?? '').trim();
-  const providerName = String(formData.get('providerName') ?? '').trim();
-  const providerEmail = String(formData.get('providerEmail') ?? '').trim();
-  const providerContactName = String(formData.get('providerContactName') ?? '').trim();
-  const providerPhone = String(formData.get('providerPhone') ?? '').trim();
+  const providerName = normalizeShortText(String(formData.get('providerName') ?? ''), 160, 'Provider name');
+  const providerEmail = normalizeEmail(String(formData.get('providerEmail') ?? ''), 'Provider email');
+  const providerContactName = normalizeShortText(String(formData.get('providerContactName') ?? ''), 120, 'Provider contact name');
+  const providerPhone = normalizePhone(String(formData.get('providerPhone') ?? ''), 'Provider phone');
 
   if (!companyCode || !campaignCode) {
     throw new Error('Missing companyCode or campaignCode');
@@ -953,10 +1425,10 @@ export async function updateInsuranceCampaignProviderContact(formData: FormData)
       campaignCode
     },
     data: {
-      providerName: providerName || null,
-      providerEmail: providerEmail || null,
-      providerContactName: providerContactName || null,
-      providerPhone: providerPhone || null
+      providerName,
+      providerEmail,
+      providerContactName,
+      providerPhone
     }
   });
 
@@ -968,11 +1440,11 @@ export async function updateInsuranceCampaignProviderContact(formData: FormData)
 export async function updateInsuranceCampaignPaymentSetup(formData: FormData): Promise<void> {
   const companyCode = String(formData.get('companyCode') ?? '').trim();
   const campaignCode = String(formData.get('campaignCode') ?? '').trim();
-  const paymentBankName = String(formData.get('paymentBankName') ?? '').trim();
-  const paymentAccountName = String(formData.get('paymentAccountName') ?? '').trim();
-  const paymentAccountNumber = String(formData.get('paymentAccountNumber') ?? '').trim();
-  const paymentUrl = String(formData.get('paymentUrl') ?? '').trim();
-  const paymentNotes = String(formData.get('paymentNotes') ?? '').trim();
+  const paymentBankName = normalizeShortText(String(formData.get('paymentBankName') ?? ''), 120, 'Payment bank name');
+  const paymentAccountName = normalizeShortText(String(formData.get('paymentAccountName') ?? ''), 160, 'Payment account name');
+  const paymentAccountNumber = normalizeShortText(String(formData.get('paymentAccountNumber') ?? ''), 40, 'Payment account number');
+  const paymentUrl = normalizeExternalUrl(String(formData.get('paymentUrl') ?? '').trim() || null, 'Payment URL');
+  const paymentNotes = normalizeShortText(String(formData.get('paymentNotes') ?? ''), 2000, 'Payment notes');
   const paymentQrFile = formData.get('paymentQrFile');
 
   if (!companyCode || !campaignCode) {
@@ -992,11 +1464,11 @@ export async function updateInsuranceCampaignPaymentSetup(formData: FormData): P
       campaignCode
     },
     data: {
-      paymentBankName: paymentBankName || null,
-      paymentAccountName: paymentAccountName || null,
-      paymentAccountNumber: paymentAccountNumber || null,
-      paymentUrl: paymentUrl || null,
-      paymentNotes: paymentNotes || null,
+      paymentBankName,
+      paymentAccountName,
+      paymentAccountNumber,
+      paymentUrl,
+      paymentNotes,
       ...(paymentQrUrl !== undefined ? { paymentQrUrl } : {})
     }
   });
@@ -1041,9 +1513,9 @@ export async function deleteInsuranceCampaignPaymentQr(formData: FormData): Prom
 
 export async function importInsuranceCampaign(formData: FormData): Promise<void> {
   const csvFile = formData.get('csvFile');
-  const companyCode = String(formData.get('companyCode') ?? '').trim();
-  const campaignCode = String(formData.get('campaignCode') ?? '').trim();
-  const campaignName = String(formData.get('campaignName') ?? '').trim();
+  const companyCode = normalizeShortText(String(formData.get('companyCode') ?? ''), 80, 'Company code') ?? '';
+  const campaignCode = normalizeShortText(String(formData.get('campaignCode') ?? ''), 80, 'Campaign code') ?? '';
+  const campaignName = normalizeShortText(String(formData.get('campaignName') ?? ''), 160, 'Campaign name') ?? '';
   const replaceExisting = String(formData.get('replaceExisting') ?? '').trim() === 'on';
   const logoFile = formData.get('logoFile');
 
@@ -1057,7 +1529,7 @@ export async function importInsuranceCampaign(formData: FormData): Promise<void>
     logoUrl = await saveLogoFile(logoFile, `${companyCode}-${campaignCode || campaignName || 'campaign'}`);
   }
 
-  const csvText = await csvFile.text();
+  const csvText = await readCsvUpload(csvFile);
   await importInsuranceCampaignFromCsv({
     csvText,
     companyCode,

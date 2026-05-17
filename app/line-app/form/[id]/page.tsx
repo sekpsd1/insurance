@@ -6,7 +6,16 @@ import { createPolicyDraftOrder } from '@/lib/actions';
 
 type FormPageProps = {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<{ lineId?: string }>;
+  searchParams?: Promise<{
+    lineId?: string;
+    sClass?: string;
+    coverage?: string;
+    brand?: string;
+    model?: string;
+    year?: string;
+    cubicCapacity?: string;
+    sumInsured?: string;
+  }>;
 };
 
 export async function generateMetadata({ params }: FormPageProps): Promise<Metadata> {
@@ -98,9 +107,34 @@ function SectionCard({
   );
 }
 
+function normalizeSearchValue(value: string | string[] | undefined) {
+  if (Array.isArray(value)) {
+    return value[0]?.trim() ?? '';
+  }
+
+  return value?.trim() ?? '';
+}
+
+function buildResultsHref(searchParams: Awaited<NonNullable<FormPageProps['searchParams']>>) {
+  const params = new URLSearchParams();
+  const filterKeys = ['sClass', 'coverage', 'brand', 'model', 'year', 'cubicCapacity', 'sumInsured'] as const;
+
+  filterKeys.forEach((key) => {
+    const value = normalizeSearchValue(searchParams[key]);
+
+    if (value) {
+      params.set(key, value);
+    }
+  });
+
+  const query = params.toString();
+  return query ? `/line-app?${query}` : '/line-app';
+}
+
 export default async function PackageFormPage({ params, searchParams }: FormPageProps) {
   const { id: packageId } = await params;
   const resolvedSearchParams = (await searchParams) ?? {};
+  const resultsHref = buildResultsHref(resolvedSearchParams);
   const packageItem = await prisma.insurancePackage.findUnique({
     where: { id: packageId }
   });
@@ -119,7 +153,7 @@ export default async function PackageFormPage({ params, searchParams }: FormPage
       <header className="sticky top-0 z-10 bg-[#0648ad] text-white shadow-sm">
         <div className="mx-auto flex h-[102px] max-w-md items-center justify-center px-7">
           <Link
-            href="/line-app"
+            href={resultsHref}
             aria-label="กลับ"
             className="absolute left-7 flex h-11 w-11 items-center justify-center rounded-full text-white transition hover:bg-white/10"
           >
