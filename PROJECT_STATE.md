@@ -102,6 +102,11 @@ It also stores rating/search fields imported from insurer CSV rows:
   - Personal information card.
   - Vehicle information card.
   - Name, phone, delivery address, plate number, plate province.
+- Policy Info page UI was refined for a cleaner mobile form:
+  - Shorter header and tighter section cards.
+  - Compact white input/select fields with lighter borders.
+  - Smaller textarea and label spacing.
+  - Sticky bottom submit action bar.
 - Checkout page supports:
   - Bank transfer with slip upload.
   - Gateway mock link flow.
@@ -260,6 +265,11 @@ It also stores rating/search fields imported from insurer CSV rows:
 
 Last verified on 2026-05-17 using localhost production start.
 
+- After the Policy Info UI refinement:
+  - `npx tsc --noEmit` passed.
+  - `npm run build` passed.
+  - Build still shows the known acceptable `<img>` warnings in checkout/compare areas.
+
 - `npm run smoke` passed:
   - `/api/health` returned 200 with database `ok`.
   - `/line-app/search` returned 200.
@@ -296,16 +306,22 @@ Last verified on 2026-05-17 using localhost production start.
 
 ## Next Recommended Steps
 
-1. Configure and verify production email delivery.
+1. Deploy to the production host and run production QA.
+   - Configure Plesk Node.js with `server.js` as the startup file and `public` as document root.
+   - Set production env values for DB, admin session, app base URL, Resend email, and S3/R2 uploads.
+   - Apply the production database schema through the approved migration or schema push workflow.
+   - Open `/admin/readiness`, verify `/api/health`, run `npm run smoke`, and complete one full customer checkout/provider Magic Link/tracking flow on the real domain.
+
+2. Configure and verify production email delivery.
    - Set `EMAIL_PROVIDER=resend`, `RESEND_API_KEY`, `EMAIL_FROM`, and `APP_BASE_URL`.
    - Send a real checkout/order email and confirm `EmailOutbox` status transitions to `SENT`.
 
-2. Implement LINE notification integration.
+3. Implement LINE notification integration.
    - Start with message templates.
    - Then add real LINE Messaging API push using customer `lineId`.
    - This is intentionally deferred until after the current admin/data cleanup work.
 
-3. Improve admin order monitor.
+4. Improve admin order monitor.
    - Consider export/report views for filtered results.
 
-4. Commit/push after each coherent slice.
+5. Commit/push after each coherent slice.

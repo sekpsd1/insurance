@@ -47,11 +47,11 @@ function Field({
   inputMode?: 'text' | 'tel' | 'numeric';
 }) {
   const baseClass =
-    'w-full rounded-lg border-0 bg-[#dedfe8] px-5 text-[16px] font-semibold text-slate-900 outline-none placeholder:text-[#777b89] focus:bg-white focus:ring-4 focus:ring-blue-100';
+    'w-full rounded-md border border-slate-200 bg-white px-3.5 text-[14px] font-semibold text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-[#0b58c6] focus:ring-4 focus:ring-blue-100';
 
   return (
     <div>
-      <label htmlFor={name} className="mb-3 block text-[15px] font-bold text-[#2f3442]">
+      <label htmlFor={name} className="mb-2 block text-[14px] font-bold text-[#2f3442]">
         {label}
       </label>
       {multiline ? (
@@ -61,7 +61,7 @@ function Field({
           rows={4}
           placeholder={placeholder}
           required={required}
-          className={`${baseClass} min-h-[116px] py-4 leading-7`}
+          className={`${baseClass} min-h-[78px] py-2.5 leading-6`}
         />
       ) : (
         <input
@@ -71,7 +71,7 @@ function Field({
           inputMode={inputMode}
           placeholder={placeholder}
           required={required}
-          className={`${baseClass} h-[76px] py-4`}
+          className={`${baseClass} h-11 py-2`}
         />
       )}
     </div>
@@ -88,21 +88,23 @@ function SectionCard({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-[14px] bg-white px-6 py-8 shadow-[0_18px_42px_rgba(13,35,87,0.08)] sm:px-9 sm:py-10">
-      <div className="flex items-center gap-4 text-[#0648ad]">
-        {icon === 'person' ? (
-          <svg viewBox="0 0 24 24" className="h-8 w-8 fill-current" aria-hidden="true">
-            <path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-4.42 0-8 2.02-8 4.5V21h16v-2.5c0-2.48-3.58-4.5-8-4.5Z" />
-          </svg>
-        ) : (
-          <svg viewBox="0 0 24 24" className="h-8 w-8 fill-current" aria-hidden="true">
-            <path d="M18.92 6.01A2.99 2.99 0 0 0 16.08 4H7.92a2.99 2.99 0 0 0-2.84 2.01L3 12v8h3v-2h12v2h3v-8l-2.08-5.99ZM7.92 6h8.16c.43 0 .81.27.95.68L18.2 10H5.8l1.17-3.32c.14-.41.52-.68.95-.68ZM6.5 15.5A1.5 1.5 0 1 1 8 14a1.5 1.5 0 0 1-1.5 1.5Zm11 0A1.5 1.5 0 1 1 19 14a1.5 1.5 0 0 1-1.5 1.5Z" />
-          </svg>
-        )}
-        <h2 className="text-[27px] font-black leading-none tracking-[-0.01em]">{title}</h2>
+    <section className="rounded-lg border border-slate-100 bg-white px-5 py-5 shadow-[0_16px_36px_rgba(15,23,42,0.07)] sm:px-6">
+      <div className="flex items-center gap-3 text-[#0648ad]">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-blue-50 ring-1 ring-blue-100">
+          {icon === 'person' ? (
+            <svg viewBox="0 0 24 24" className="h-6 w-6 fill-current" aria-hidden="true">
+              <path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-4.42 0-8 2.02-8 4.5V21h16v-2.5c0-2.48-3.58-4.5-8-4.5Z" />
+            </svg>
+          ) : (
+            <svg viewBox="0 0 24 24" className="h-6 w-6 fill-current" aria-hidden="true">
+              <path d="M18.92 6.01A2.99 2.99 0 0 0 16.08 4H7.92a2.99 2.99 0 0 0-2.84 2.01L3 12v8h3v-2h12v2h3v-8l-2.08-5.99ZM7.92 6h8.16c.43 0 .81.27.95.68L18.2 10H5.8l1.17-3.32c.14-.41.52-.68.95-.68ZM6.5 15.5A1.5 1.5 0 1 1 8 14a1.5 1.5 0 0 1-1.5 1.5Zm11 0A1.5 1.5 0 1 1 19 14a1.5 1.5 0 0 1-1.5 1.5Z" />
+            </svg>
+          )}
+        </div>
+        <h2 className="text-[22px] font-black leading-none tracking-[-0.01em] sm:text-[24px]">{title}</h2>
       </div>
-      <div className="mt-7 border-t border-[#dde1ed]" />
-      <div className="mt-7 space-y-6">{children}</div>
+      <div className="mt-4 border-t border-slate-100" />
+      <div className="mt-5 space-y-4">{children}</div>
     </section>
   );
 }
@@ -149,23 +151,23 @@ export default async function PackageFormPage({ params, searchParams }: FormPage
     `demo-${packageId}`;
 
   return (
-    <main className="min-h-screen bg-[#f4f5ff] pb-10 text-[#101828]">
-      <header className="sticky top-0 z-10 bg-[#0648ad] text-white shadow-sm">
-        <div className="mx-auto flex h-[102px] max-w-md items-center justify-center px-7">
+    <main className="min-h-screen bg-gradient-to-b from-[#f7f9ff] via-[#f3f6ff] to-white pb-6 text-[#101828]">
+      <header className="sticky top-0 z-10 bg-[#0648ad] text-white shadow-[0_10px_30px_rgba(6,72,173,0.18)]">
+        <div className="mx-auto flex h-[82px] max-w-md items-center justify-center px-5">
           <Link
             href={resultsHref}
             aria-label="กลับ"
-            className="absolute left-7 flex h-11 w-11 items-center justify-center rounded-full text-white transition hover:bg-white/10"
+            className="absolute left-4 flex h-10 w-10 items-center justify-center rounded-full text-white transition hover:bg-white/10"
           >
-            <svg viewBox="0 0 24 24" className="h-10 w-10" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+            <svg viewBox="0 0 24 24" className="h-8 w-8" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19 8 12l7-7" />
             </svg>
           </Link>
-          <h1 className="text-center text-[27px] font-black leading-tight tracking-[-0.01em]">กรอกข้อมูลผู้เอาประกัน</h1>
+          <h1 className="px-10 text-center text-[22px] font-black leading-tight tracking-[-0.01em] sm:text-[24px]">กรอกข้อมูลผู้เอาประกัน</h1>
         </div>
       </header>
 
-      <form action={createPolicyDraftOrder} className="mx-auto flex max-w-md flex-col gap-8 px-4 pt-7 sm:gap-11 sm:px-7">
+      <form action={createPolicyDraftOrder} className="mx-auto flex max-w-md flex-col gap-5 px-4 pb-28 pt-5 sm:px-6">
         <input type="hidden" name="packageId" value={packageItem.id} />
         <input type="hidden" name="lineId" value={lineId} />
         <input type="hidden" name="carBrand" value={packageItem.brand ?? ''} />
@@ -186,7 +188,7 @@ export default async function PackageFormPage({ params, searchParams }: FormPage
         <SectionCard icon="car" title="ข้อมูลรถยนต์">
           <Field label="ทะเบียนรถ" name="plateNumber" placeholder="เช่น กค 1234" />
           <div>
-            <label htmlFor="plateProvince" className="mb-3 block text-[15px] font-bold text-[#2f3442]">
+            <label htmlFor="plateProvince" className="mb-2 block text-[14px] font-bold text-[#2f3442]">
               จังหวัดที่จดทะเบียน
             </label>
             <div className="relative">
@@ -195,7 +197,7 @@ export default async function PackageFormPage({ params, searchParams }: FormPage
                 name="plateProvince"
                 required
                 defaultValue=""
-                className="h-[76px] w-full appearance-none rounded-lg border-0 bg-[#dedfe8] px-5 pr-14 text-[16px] font-semibold text-slate-900 outline-none focus:bg-white focus:ring-4 focus:ring-blue-100"
+                className="h-11 w-full appearance-none rounded-md border border-slate-200 bg-white px-3.5 pr-11 text-[14px] font-semibold text-slate-900 shadow-sm outline-none transition focus:border-[#0b58c6] focus:ring-4 focus:ring-blue-100"
               >
                 <option value="" disabled>
                   เลือกจังหวัด
@@ -222,19 +224,23 @@ export default async function PackageFormPage({ params, searchParams }: FormPage
                   </option>
                 ))}
               </select>
-              <svg viewBox="0 0 24 24" className="pointer-events-none absolute right-5 top-1/2 h-8 w-8 -translate-y-1/2 text-[#4f5564]" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+              <svg viewBox="0 0 24 24" className="pointer-events-none absolute right-4 top-1/2 h-6 w-6 -translate-y-1/2 text-[#4f5564]" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" d="m6 9 6 6 6-6" />
               </svg>
             </div>
           </div>
         </SectionCard>
 
-        <button
-          type="submit"
-          className="mt-7 h-[78px] rounded-xl bg-[#0648ad] px-4 text-[20px] font-black text-white shadow-[0_8px_18px_rgba(6,72,173,0.24)] transition hover:bg-[#003f98] active:scale-[0.99] sm:mt-10 sm:h-[102px] sm:text-[22px]"
-        >
-          ยืนยันข้อมูลและชำระเงิน
-        </button>
+        <div className="fixed inset-x-0 bottom-0 z-10 border-t border-slate-200/80 bg-white/90 px-4 py-4 shadow-[0_-14px_30px_rgba(15,23,42,0.08)] backdrop-blur">
+          <div className="mx-auto max-w-md">
+            <button
+              type="submit"
+              className="flex h-14 w-full items-center justify-center rounded-lg bg-[#0648ad] px-4 text-[18px] font-black text-white shadow-[0_10px_22px_rgba(6,72,173,0.24)] transition hover:bg-[#003f98] active:scale-[0.99]"
+            >
+              ยืนยันข้อมูลและชำระเงิน
+            </button>
+          </div>
+        </div>
       </form>
     </main>
   );
