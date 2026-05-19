@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { getCtpOptionForSClass } from '@/lib/ctp';
 
 type ComparePackageCard = {
   id: string;
@@ -70,14 +71,15 @@ export default function CompareSelection({
 }: CompareSelectionProps) {
   const router = useRouter();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [ctpPackageIds, setCtpPackageIds] = useState<string[]>([]);
   const [failedLogoIds, setFailedLogoIds] = useState<string[]>([]);
   const [error, setError] = useState('');
 
   const selectedCount = selectedIds.length;
 
   const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const ctpPackageIdSet = useMemo(() => new Set(ctpPackageIds), [ctpPackageIds]);
   const failedLogoIdSet = useMemo(() => new Set(failedLogoIds), [failedLogoIds]);
-  const formQuerySuffix = baseQueryString ? `?${baseQueryString}` : '';
 
   function markLogoFailed(id: string) {
     setFailedLogoIds((current) => (current.includes(id) ? current : [...current, id]));
@@ -99,6 +101,23 @@ export default function CompareSelection({
     });
   }
 
+  function toggleCtp(id: string) {
+    setCtpPackageIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
+  }
+
+  function buildFormHref(id: string, includeCtp: boolean) {
+    const params = new URLSearchParams(baseQueryString);
+
+    if (includeCtp) {
+      params.set('includeCtp', '1');
+    } else {
+      params.delete('includeCtp');
+    }
+
+    const query = params.toString();
+    return query ? `/line-app/form/${id}?${query}` : `/line-app/form/${id}`;
+  }
+
   function handleCompare() {
     if (selectedIds.length < 2) {
       setError('กรุณาเลือกอย่างน้อย 2 แผนเพื่อเปรียบเทียบ');
@@ -115,6 +134,9 @@ export default function CompareSelection({
       <div className="space-y-4">
         {packages.map((pkg) => {
           const isSelected = selectedIdSet.has(pkg.id);
+          const ctpOption = getCtpOptionForSClass(pkg.sClass);
+          const isCtpSelected = ctpPackageIdSet.has(pkg.id);
+          const totalPrice = pkg.netPrice + (isCtpSelected && ctpOption ? ctpOption.total : 0);
 
           return (
             <div
@@ -196,14 +218,31 @@ export default function CompareSelection({
 
                   <div className="my-2 h-px w-full bg-[rgba(195,198,214,0.2)]" />
 
+                  {ctpOption ? (
+                    <label className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-[#b8d9de] bg-white px-3 py-3 text-sm font-semibold text-[#074a52] transition hover:border-[#00899a]">
+                      <span className="flex min-w-0 items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={isCtpSelected}
+                          onChange={() => toggleCtp(pkg.id)}
+                          className="h-4 w-4 rounded border-slate-300 text-[#00899a] focus:ring-[#00899a]"
+                        />
+                        <span className="truncate">+ เพิ่ม พ.ร.บ. {ctpOption.rateCode}</span>
+                      </span>
+                      <span className="shrink-0 text-base font-bold text-[#00899a]">฿ {formatMoney(ctpOption.total)}</span>
+                    </label>
+                  ) : null}
+
+                  {ctpOption ? <div className="my-2 h-px w-full bg-[rgba(195,198,214,0.2)]" /> : null}
+
                   <div className="flex items-center justify-between gap-4 text-lg font-bold text-[#0052CC]">
                     <span>ยอดรวมสุทธิ:</span>
-                    <span>{formatMoney(pkg.netPrice)} บาท</span>
+                    <span>{formatMoney(totalPrice)} บาท</span>
                   </div>
                 </div>
 
                 <a
-                  href={`/line-app/form/${pkg.id}${formQuerySuffix}`}
+                  href={buildFormHref(pkg.id, isCtpSelected)}
                   className="flex w-full items-center justify-center gap-2 bg-[#0052CC] py-4 font-[Kanit,sans-serif] text-base font-semibold text-white transition-colors hover:bg-[#0040a2]"
                 >
                   ดูรายละเอียด / เลือกแผนนี้

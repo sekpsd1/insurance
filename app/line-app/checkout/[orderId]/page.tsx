@@ -7,12 +7,12 @@ type CheckoutPageProps = {
   params: Promise<{ orderId: string }>;
 };
 
-function formatCurrency(value: number) {
+function formatCurrency(value: number | null | undefined) {
   return new Intl.NumberFormat('th-TH', {
     style: 'currency',
     currency: 'THB',
-    maximumFractionDigits: 0
-  }).format(value);
+    maximumFractionDigits: 2
+  }).format(value ?? 0);
 }
 
 export default async function CheckoutPage({ params }: CheckoutPageProps) {
@@ -48,6 +48,18 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
             <div className="mt-1 font-semibold text-slate-950">{order.orderNumber}</div>
             <div className="mt-3 text-sm text-slate-600">ยอดชำระ</div>
             <div className="mt-1 text-2xl font-bold text-[#0052CC]">{formatCurrency(amount)}</div>
+            {order.ctpSelected ? (
+              <div className="mt-3 rounded-xl bg-white p-3 text-sm text-slate-700 ring-1 ring-blue-100">
+                <div className="flex justify-between gap-3">
+                  <span>เบี้ยประกันหลัก</span>
+                  <span className="font-semibold">{formatCurrency(order.pkg.netPrice)}</span>
+                </div>
+                <div className="mt-1 flex justify-between gap-3">
+                  <span>พ.ร.บ. {order.ctpRateCode ?? ''}</span>
+                  <span className="font-semibold">{formatCurrency(order.ctpTotal)}</span>
+                </div>
+              </div>
+            ) : null}
           </div>
         </section>
 
@@ -134,7 +146,7 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
           )}
         </section>
 
-        <Link href={`/line-app/form/${order.packageId}`} className="rounded-2xl bg-white px-4 py-3 text-center font-semibold text-[#0052CC] ring-1 ring-blue-100">
+        <Link href={`/line-app/form/${order.packageId}${order.ctpSelected ? '?includeCtp=1' : ''}`} className="rounded-2xl bg-white px-4 py-3 text-center font-semibold text-[#0052CC] ring-1 ring-blue-100">
           กลับไปแก้ไขข้อมูลกรมธรรม์
         </Link>
       </div>

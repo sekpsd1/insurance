@@ -22,7 +22,7 @@ function formatCurrency(value: number | null | undefined) {
   return new Intl.NumberFormat('th-TH', {
     style: 'currency',
     currency: 'THB',
-    maximumFractionDigits: 0
+    maximumFractionDigits: 2
   }).format(value ?? 0);
 }
 
@@ -176,6 +176,14 @@ export default async function InsurerUpdatePage({ params, searchParams }: Insure
                   <div className="text-xs text-slate-500">ความคุ้มครอง</div>
                   <div className="font-semibold text-slate-900">{order.pkg.coverage ?? '-'}</div>
                 </div>
+                {order.ctpSelected ? (
+                  <div>
+                    <div className="text-xs text-slate-500">พ.ร.บ.</div>
+                    <div className="font-semibold text-slate-900">
+                      {order.ctpRateCode ?? '-'} / {formatCurrency(order.ctpTotal)}
+                    </div>
+                  </div>
+                ) : null}
                 <div>
                   <div className="text-xs text-slate-500">ยอดชำระ</div>
                   <div className="font-semibold text-slate-900">{formatCurrency(order.paymentAmount ?? order.pkg.netPrice)}</div>

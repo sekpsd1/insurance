@@ -1,6 +1,6 @@
 # Project State
 
-Last updated: 2026-05-17
+Last updated: 2026-05-19
 
 ## Current Architecture
 
@@ -79,6 +79,16 @@ It also stores rating/search fields imported from insurer CSV rows:
 
 `Order` stores customer policy info, vehicle info, payment method/status, slip/gateway fields, insurer status/note, and links to status history and magic links.
 
+`Order` also stores optional CTP/CMI add-on details when the customer adds compulsory insurance:
+
+- `ctpSelected`
+- `ctpRateCode`
+- `ctpVehicleTypeCode`
+- `ctpPremium`
+- `ctpStamp`
+- `ctpVat`
+- `ctpTotal`
+
 `EmailOutbox` stores provider email audit records, including recipient, subject, body, Magic Link path, queue/error status, and sent/error timestamps.
 
 ## Completed Tasks
@@ -107,9 +117,15 @@ It also stores rating/search fields imported from insurer CSV rows:
   - Compact white input/select fields with lighter borders.
   - Smaller textarea and label spacing.
   - Sticky bottom submit action bar.
+- Customer results now support an optional CTP/CMI add-on checkbox for eligible vehicle classes:
+  - `SClass 110` sells CTP rate `1.10` at total `645.21`.
+  - `SClass 320` sells CTP rate `1.40A` at total `967.28`.
+  - Other vehicle classes cannot select the CTP add-on.
+- Selected CTP/CMI add-ons are carried into Policy Info, stored on `Order`, and included in `paymentAmount`.
 - Checkout page supports:
   - Bank transfer with slip upload.
   - Gateway mock link flow.
+- Checkout, success, tracking, admin order detail, provider Magic Link, provider email preview, and provider email body now show selected CTP/CMI details when present.
 - Success page shows order summary, payment method, and timeline.
 - Tracking page supports lookup and direct tracking by order number.
 - First class insurance has been removed from customer-facing selection/results/compare flow.
@@ -260,13 +276,16 @@ It also stores rating/search fields imported from insurer CSV rows:
 - Running `npm run build` and then dev mode can leave stale `.next` chunks on Windows; clearing `.next` and restarting dev fixes it.
 - Local database schema was synced with `npx prisma db push` after adding `EmailOutbox`; future environments need the same schema push or a proper migration.
 - Local database schema was synced again with `npx prisma db push` after adding `InsurancePackage` rating/search fields for SClass, sum insured, car age, and cubic capacity.
+- Local database schema was synced again with `npx prisma db push` after adding optional CTP/CMI fields to `Order`.
 
 ## Latest Local Verification
 
 Last verified on 2026-05-17 using localhost production start.
 
-- After the Policy Info UI refinement:
+- After the Policy Info UI refinement and CTP/CMI add-on slice:
   - `npx tsc --noEmit` passed.
+  - `npx prisma validate` passed.
+  - `npx prisma db push` synced the local MySQL schema.
   - `npm run build` passed.
   - Build still shows the known acceptable `<img>` warnings in checkout/compare areas.
 

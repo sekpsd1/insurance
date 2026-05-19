@@ -6,6 +6,7 @@ import { createHash, createHmac, randomBytes, randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
+import { getCtpOptionForSClass, isCtpSelected } from '@/lib/ctp';
 import { getOrderStatusLabel, getPaymentMethodLabel, getPaymentStatusLabel } from '@/lib/status-labels';
 import {
   deleteInsuranceCampaignByCode,
@@ -332,6 +333,9 @@ function buildProviderEmail(input: {
     paymentStatus: string;
     slipUrl: string | null;
     gatewayUrl: string | null;
+    ctpSelected: boolean;
+    ctpRateCode: string | null;
+    ctpTotal: number | null;
     user: {
       name: string | null;
       phone: string | null;
@@ -369,6 +373,7 @@ function buildProviderEmail(input: {
     `Vehicle: ${car}`,
     `Plate: ${plate}`,
     `Package: ${order.pkg.name}`,
+    order.ctpSelected ? `CTP/CMI: ${order.ctpRateCode ?? '-'} (${order.ctpTotal ?? 0} THB)` : null,
     `Payment method: ${getPaymentMethodLabel(order.paymentMethod)}`,
     `Payment status: ${getPaymentStatusLabel(order.paymentStatus)}`,
     slipUrl ? `Payment slip: ${slipUrl}` : null,
@@ -1077,6 +1082,16 @@ export async function createPolicyDraftOrder(formData: FormData): Promise<void> 
     throw new Error('Selected package was not found');
   }
 
+  const ctpOption = getCtpOptionForSClass(selectedPackage.sClass);
+  const includeCtp = isCtpSelected(formData.get('includeCtp'));
+
+  if (includeCtp && !ctpOption) {
+    throw new Error('CTP is available only for vehicle class 110 or 320');
+  }
+
+  const ctpTotal = includeCtp && ctpOption ? ctpOption.total : 0;
+  const paymentAmount = selectedPackage.netPrice + ctpTotal;
+
   const user = await prisma.user.upsert({
     where: {
       lineId
@@ -1101,7 +1116,14 @@ export async function createPolicyDraftOrder(formData: FormData): Promise<void> 
       orderNumber: formatOrderNumber(),
       status: 'PENDING_PAYMENT',
       paymentStatus: 'UNPAID',
-      paymentAmount: selectedPackage.netPrice,
+      paymentAmount,
+      ctpSelected: includeCtp,
+      ctpRateCode: includeCtp && ctpOption ? ctpOption.rateCode : null,
+      ctpVehicleTypeCode: includeCtp && ctpOption ? ctpOption.cmiVehicleTypeCode : null,
+      ctpPremium: includeCtp && ctpOption ? ctpOption.premium : null,
+      ctpStamp: includeCtp && ctpOption ? ctpOption.stamp : null,
+      ctpVat: includeCtp && ctpOption ? ctpOption.vat : null,
+      ctpTotal: includeCtp && ctpOption ? ctpOption.total : null,
       customerName,
       customerPhone,
       customerEmail,

@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { createPolicyDraftOrder } from '@/lib/actions';
+import { getCtpOptionForSClass, isCtpSelected } from '@/lib/ctp';
 
 type FormPageProps = {
   params: Promise<{ id: string }>;
@@ -15,6 +16,7 @@ type FormPageProps = {
     year?: string;
     cubicCapacity?: string;
     sumInsured?: string;
+    includeCtp?: string;
   }>;
 };
 
@@ -149,6 +151,8 @@ export default async function PackageFormPage({ params, searchParams }: FormPage
     resolvedSearchParams.lineId?.trim() ||
     process.env.DEMO_LINE_ID?.trim() ||
     `demo-${packageId}`;
+  const ctpOption = getCtpOptionForSClass(packageItem.sClass);
+  const includeCtp = isCtpSelected(resolvedSearchParams.includeCtp) && Boolean(ctpOption);
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-[#f7f9ff] via-[#f3f6ff] to-white pb-6 text-[#101828]">
@@ -173,6 +177,19 @@ export default async function PackageFormPage({ params, searchParams }: FormPage
         <input type="hidden" name="carBrand" value={packageItem.brand ?? ''} />
         <input type="hidden" name="carModel" value={packageItem.model ?? ''} />
         <input type="hidden" name="carYear" value={packageItem.year ?? ''} />
+        {includeCtp ? <input type="hidden" name="includeCtp" value="1" /> : null}
+
+        {includeCtp && ctpOption ? (
+          <section className="rounded-lg border border-[#b8d9de] bg-white px-5 py-4 text-sm shadow-[0_16px_36px_rgba(15,23,42,0.07)]">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="font-bold text-[#074a52]">เพิ่ม พ.ร.บ. {ctpOption.rateCode}</div>
+                <div className="mt-1 text-xs text-slate-500">{ctpOption.eligibilityLabel}</div>
+              </div>
+              <div className="text-lg font-black text-[#00899a]">฿ {ctpOption.total.toLocaleString('th-TH')}</div>
+            </div>
+          </section>
+        ) : null}
 
         <SectionCard icon="person" title="ข้อมูลส่วนตัว">
           <Field label="ชื่อ - นามสกุล" name="customerName" placeholder="ระบุชื่อและนามสกุลตามบัตรประชาชน" />

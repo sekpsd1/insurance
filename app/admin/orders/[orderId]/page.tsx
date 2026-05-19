@@ -26,7 +26,7 @@ function formatCurrency(value: number | null | undefined) {
   return new Intl.NumberFormat('th-TH', {
     style: 'currency',
     currency: 'THB',
-    maximumFractionDigits: 0
+    maximumFractionDigits: 2
   }).format(value ?? 0);
 }
 
@@ -190,6 +190,9 @@ export default async function AdminOrderDetailPage({ params }: AdminOrderDetailP
               <InfoItem label="บริษัทประกัน" value={order.pkg.providerName ?? order.pkg.company} />
               <InfoItem label="ประเภทซ่อม" value={order.pkg.repairType ?? '-'} />
               <InfoItem label="ความคุ้มครอง" value={order.pkg.coverage ?? '-'} />
+              {order.ctpSelected ? (
+                <InfoItem label="พ.ร.บ." value={`${order.ctpRateCode ?? '-'} / ${formatCurrency(order.ctpTotal)}`} />
+              ) : null}
               <InfoItem label="ยอดชำระ" value={formatCurrency(order.paymentAmount ?? order.pkg.netPrice)} />
               <InfoItem label="วิธีชำระเงิน" value={getPaymentMethodLabel(order.paymentMethod)} />
             </div>

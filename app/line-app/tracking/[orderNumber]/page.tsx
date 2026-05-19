@@ -34,6 +34,14 @@ function getStepStyles(isActive: boolean) {
   return isActive ? 'bg-[#0052CC] text-white' : 'bg-slate-100 text-slate-500';
 }
 
+function formatCurrency(value: number | null | undefined) {
+  return new Intl.NumberFormat('th-TH', {
+    style: 'currency',
+    currency: 'THB',
+    maximumFractionDigits: 2
+  }).format(value ?? 0);
+}
+
 export default async function TrackingDetailPage({ params }: TrackingPageProps) {
   const { orderNumber } = await params;
   const order = await prisma.order.findUnique({
@@ -70,6 +78,11 @@ export default async function TrackingDetailPage({ params }: TrackingPageProps) 
             <div className="text-sm text-slate-600">สถานะปัจจุบัน</div>
             <div className="mt-1 text-xl font-bold text-[#0052CC]">{getStatusLabel(order.status)}</div>
             <div className="mt-2 text-sm text-slate-600">การชำระเงิน: {getPaymentStatusLabel(order.paymentStatus)}</div>
+            {order.ctpSelected ? (
+              <div className="mt-2 text-sm text-slate-600">
+                พ.ร.บ. {order.ctpRateCode ?? '-'}: {formatCurrency(order.ctpTotal)}
+              </div>
+            ) : null}
           </div>
         </section>
 

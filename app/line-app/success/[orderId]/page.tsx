@@ -15,7 +15,7 @@ function formatCurrency(value: number | null | undefined) {
   return new Intl.NumberFormat('th-TH', {
     style: 'currency',
     currency: 'THB',
-    maximumFractionDigits: 0
+    maximumFractionDigits: 2
   }).format(value ?? 0);
 }
 
@@ -110,6 +110,14 @@ export default async function OrderSuccessPage({ params }: SuccessPageProps) {
                 <dt className="text-sm text-slate-500">ยอดชำระ</dt>
                 <dd className="text-right text-sm font-semibold text-slate-900">{formatCurrency(order.paymentAmount)}</dd>
               </div>
+              {order.ctpSelected ? (
+                <div className="flex items-start justify-between gap-6">
+                  <dt className="text-sm text-slate-500">พ.ร.บ.</dt>
+                  <dd className="text-right text-sm font-semibold text-slate-900">
+                    {order.ctpRateCode ?? '-'} / {formatCurrency(order.ctpTotal)}
+                  </dd>
+                </div>
+              ) : null}
               <div className="flex items-start justify-between gap-6">
                 <dt className="text-sm text-slate-500">วิธีชำระเงิน</dt>
                 <dd className="text-right text-sm font-semibold text-slate-900">
