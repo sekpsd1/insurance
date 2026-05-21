@@ -5,6 +5,7 @@ coverage/
 dist/
 .cache/
 tsconfig.tsbuildinfo
+next-*.log
 
 # Environment secrets
 .env

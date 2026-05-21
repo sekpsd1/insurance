@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getCtpOptionForSClass } from '@/lib/ctp';
 
@@ -26,9 +26,14 @@ type ComparePackageCard = {
 type CompareSelectionProps = {
   packages: ComparePackageCard[];
   baseQueryString: string;
+  vehicleTypeLabel: string;
+  registrationYear: string;
+  cubicCapacityLabel: string;
 };
 
 const MAX_COMPARE_PACKAGES = 4;
+const COMPARE_STORAGE_KEY = 'insurance.comparePackageIds';
+const CART_STORAGE_KEY = 'insurance.cartPackageIds';
 
 function formatMoney(value: number) {
   return value.toLocaleString('th-TH');
@@ -40,13 +45,18 @@ function getText(value: string | null | undefined, fallback: string) {
 }
 
 function getCoverageLabel(value: string) {
-  if (value === '2+') return 'ประกัน 2+';
-  if (value === '3+') return 'ประกัน 3+';
-  if (value === '3') return 'ประกันชั้น 3';
+  if (value === '1') return 'ประเภท 1';
+  if (value === '2+') return 'ประเภท 2 พลัส';
+  if (value === '3+') return 'ประเภท 3 พลัส';
+  if (value === '3') return 'ประเภท 3';
   return value;
 }
 
 function formatSumInsuredRange(min: number | null | undefined, max: number | null | undefined) {
+  if (min === 0 && max === 0) {
+    return 'ไม่มีทุนประกัน';
+  }
+
   if (!min && !max) {
     return '-';
   }
@@ -67,19 +77,68 @@ function encodeLogoUrl(logoUrl: string) {
 
 export default function CompareSelection({
   packages,
-  baseQueryString
+  baseQueryString,
+  vehicleTypeLabel,
+  registrationYear,
+  cubicCapacityLabel
 }: CompareSelectionProps) {
   const router = useRouter();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [cartIds, setCartIds] = useState<string[]>([]);
   const [ctpPackageIds, setCtpPackageIds] = useState<string[]>([]);
   const [failedLogoIds, setFailedLogoIds] = useState<string[]>([]);
   const [error, setError] = useState('');
+  const [isCompareStorageLoaded, setIsCompareStorageLoaded] = useState(false);
+  const [isCartStorageLoaded, setIsCartStorageLoaded] = useState(false);
 
   const selectedCount = selectedIds.length;
 
   const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const cartIdSet = useMemo(() => new Set(cartIds), [cartIds]);
   const ctpPackageIdSet = useMemo(() => new Set(ctpPackageIds), [ctpPackageIds]);
   const failedLogoIdSet = useMemo(() => new Set(failedLogoIds), [failedLogoIds]);
+
+  useEffect(() => {
+    try {
+      const rawValue = window.localStorage.getItem(COMPARE_STORAGE_KEY);
+      const parsed = rawValue ? JSON.parse(rawValue) : [];
+      if (Array.isArray(parsed)) {
+        setSelectedIds(parsed.filter((value): value is string => typeof value === 'string').slice(0, MAX_COMPARE_PACKAGES));
+      }
+    } catch {
+      window.localStorage.removeItem(COMPARE_STORAGE_KEY);
+    }
+    setIsCompareStorageLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isCompareStorageLoaded) {
+      return;
+    }
+
+    window.localStorage.setItem(COMPARE_STORAGE_KEY, JSON.stringify(selectedIds));
+  }, [isCompareStorageLoaded, selectedIds]);
+
+  useEffect(() => {
+    try {
+      const rawValue = window.localStorage.getItem(CART_STORAGE_KEY);
+      const parsed = rawValue ? JSON.parse(rawValue) : [];
+      if (Array.isArray(parsed)) {
+        setCartIds(parsed.filter((value): value is string => typeof value === 'string'));
+      }
+    } catch {
+      window.localStorage.removeItem(CART_STORAGE_KEY);
+    }
+    setIsCartStorageLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isCartStorageLoaded) {
+      return;
+    }
+
+    window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartIds));
+  }, [cartIds, isCartStorageLoaded]);
 
   function markLogoFailed(id: string) {
     setFailedLogoIds((current) => (current.includes(id) ? current : [...current, id]));
@@ -101,6 +160,15 @@ export default function CompareSelection({
     });
   }
 
+  function clearCompareSelection() {
+    setError('');
+    setSelectedIds([]);
+  }
+
+  function toggleCart(id: string) {
+    setCartIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
+  }
+
   function toggleCtp(id: string) {
     setCtpPackageIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
   }
@@ -120,7 +188,7 @@ export default function CompareSelection({
 
   function handleCompare() {
     if (selectedIds.length < 2) {
-      setError('กรุณาเลือกอย่างน้อย 2 แผนเพื่อเปรียบเทียบ');
+      setError('กรุณาเก็บอย่างน้อย 2 แผนเพื่อเปรียบเทียบ');
       return;
     }
 
@@ -134,6 +202,7 @@ export default function CompareSelection({
       <div className="space-y-4">
         {packages.map((pkg) => {
           const isSelected = selectedIdSet.has(pkg.id);
+          const isInCart = cartIdSet.has(pkg.id);
           const ctpOption = getCtpOptionForSClass(pkg.sClass);
           const isCtpSelected = ctpPackageIdSet.has(pkg.id);
           const totalPrice = pkg.netPrice + (isCtpSelected && ctpOption ? ctpOption.total : 0);
@@ -191,9 +260,32 @@ export default function CompareSelection({
                     }`}
                   >
                     <span aria-hidden="true">{isSelected ? '✓' : '+'}</span>
-                    {isSelected ? 'เลือกแล้ว' : 'เปรียบเทียบ'}
+                    {isSelected ? 'เลือกเทียบแล้ว' : 'เลือกเทียบ'}
                   </button>
                 </div>
+
+                {vehicleTypeLabel || registrationYear || cubicCapacityLabel ? (
+                  <div className="mb-4 grid gap-1.5 text-xs leading-5 text-[#434654]">
+                    {vehicleTypeLabel ? (
+                      <div className="grid grid-cols-[4.5rem_minmax(0,1fr)] gap-2">
+                        <span className="text-right font-semibold text-[#24406f]">ประเภทรถ:</span>
+                        <span>{vehicleTypeLabel}</span>
+                      </div>
+                    ) : null}
+                    {registrationYear ? (
+                      <div className="grid grid-cols-[4.5rem_minmax(0,1fr)] gap-2">
+                        <span className="text-right font-semibold text-[#24406f]">ปี:</span>
+                        <span>{registrationYear}</span>
+                      </div>
+                    ) : null}
+                    {cubicCapacityLabel ? (
+                      <div className="grid grid-cols-[4.5rem_minmax(0,1fr)] gap-2">
+                        <span className="text-right font-semibold text-[#24406f]">ซีซี:</span>
+                        <span>{cubicCapacityLabel}</span>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
 
                 <div className="mb-5 space-y-2 rounded-lg bg-[#faf8ff] p-4">
                   <div className="flex items-center justify-between gap-4 text-sm text-[#434654]">
@@ -241,6 +333,20 @@ export default function CompareSelection({
                   </div>
                 </div>
 
+                <button
+                  type="button"
+                  onClick={() => toggleCart(pkg.id)}
+                  aria-pressed={isInCart}
+                  className={`mb-3 flex w-full items-center justify-center gap-2 border py-3 font-[Kanit,sans-serif] text-base font-semibold transition-colors ${
+                    isInCart
+                      ? 'border-[#0052CC] bg-[#eef3ff] text-[#0052CC]'
+                      : 'border-[#0052CC] bg-white text-[#0052CC] hover:bg-[#eef3ff]'
+                  }`}
+                >
+                  <span aria-hidden="true">{isInCart ? '✓' : '+'}</span>
+                  {isInCart ? 'อยู่ในตะกร้าแล้ว' : 'เก็บใส่ตะกร้า'}
+                </button>
+
                 <a
                   href={buildFormHref(pkg.id, isCtpSelected)}
                   className="flex w-full items-center justify-center gap-2 bg-[#0052CC] py-4 font-[Kanit,sans-serif] text-base font-semibold text-white transition-colors hover:bg-[#0040a2]"
@@ -254,19 +360,27 @@ export default function CompareSelection({
         })}
       </div>
 
-      {packages.length >= 2 ? (
+      {selectedCount > 0 ? (
       <div className="sticky bottom-4 rounded-3xl bg-white p-4 shadow-[0_10px_30px_rgba(4,16,61,0.08)] ring-1 ring-white/70">
         {error ? <p className="mb-2 text-center text-sm font-medium text-red-600">{error}</p> : null}
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-[#1f2a44]">เก็บไว้เปรียบเทียบ {selectedCount} แผน</p>
+            <p className="mt-0.5 text-xs text-[#4b5265]">เก็บได้สูงสุด {MAX_COMPARE_PACKAGES} แผน</p>
+          </div>
+          <button type="button" onClick={clearCompareSelection} className="shrink-0 text-xs font-semibold text-[#6b7280] underline-offset-4 hover:underline">
+            ล้าง
+          </button>
+        </div>
         <button
           type="button"
           onClick={handleCompare}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#0047BA] px-4 py-4 text-base font-semibold text-white transition hover:bg-[#003c9d]"
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#0047BA] px-4 py-4 text-base font-semibold text-white transition hover:bg-[#003c9d]"
         >
-          เปรียบเทียบแผนที่เลือก
+          ดูรายการเปรียบเทียบ
           <span aria-hidden="true">→</span>
         </button>
-        <p className="mt-2 text-center text-xs text-[#4b5265]">เลือกอย่างน้อย 2 แผนจากการ์ดด้านบน</p>
-        <p className="mt-1 text-center text-xs text-[#4b5265]">เลือกแล้ว {selectedCount} แผน</p>
+        <p className="mt-2 text-center text-xs text-[#4b5265]">เลือกอย่างน้อย 2 แผนเพื่อเปิดตารางเปรียบเทียบ</p>
       </div>
       ) : null}
     </>

@@ -11,6 +11,7 @@ type FormPageProps = {
     lineId?: string;
     sClass?: string;
     coverage?: string;
+    repairType?: string;
     brand?: string;
     model?: string;
     year?: string;
@@ -121,7 +122,7 @@ function normalizeSearchValue(value: string | string[] | undefined) {
 
 function buildResultsHref(searchParams: Awaited<NonNullable<FormPageProps['searchParams']>>) {
   const params = new URLSearchParams();
-  const filterKeys = ['sClass', 'coverage', 'brand', 'model', 'year', 'cubicCapacity', 'sumInsured'] as const;
+  const filterKeys = ['sClass', 'coverage', 'repairType', 'brand', 'model', 'year', 'cubicCapacity', 'sumInsured'] as const;
 
   filterKeys.forEach((key) => {
     const value = normalizeSearchValue(searchParams[key]);

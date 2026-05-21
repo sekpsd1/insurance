@@ -5,6 +5,7 @@ import SearchPremiumForm from './search-premium-form';
 type SearchPremiumSearchParams = {
   sClass?: string;
   coverage?: string;
+  repairType?: string;
   brand?: string;
   model?: string;
   year?: string;
@@ -15,28 +16,33 @@ type SearchPremiumSearchParams = {
 type OptionRow = {
   sClass: string | null;
   coverageCode: string | null;
+  repairType: 'dealer' | 'garage' | null;
   brand: string | null;
   model: string | null;
   minCarAge: number | null;
   maxCarAge: number | null;
   minCubicCapacity: number | null;
   maxCubicCapacity: number | null;
-  minSumInsured: number | null;
-  maxSumInsured: number | null;
+  minSumInsuredValues: string | null;
+  maxSumInsuredValues: string | null;
 };
 
 function normalizeCoverageType(value: string | null | undefined) {
   const normalized = value?.trim() ?? '';
 
-  if (normalized === '2.2') {
+  if (normalized === '1') {
+    return '1';
+  }
+
+  if (normalized === '2.1' || normalized === '2.2' || normalized === '2+') {
     return '2+';
   }
 
-  if (normalized === '3.2') {
+  if (normalized === '3.1' || normalized === '3.2' || normalized === '3+') {
     return '3+';
   }
 
-  if (normalized === '3' || normalized === '3.3') {
+  if (normalized === '3') {
     return '3';
   }
 
@@ -51,9 +57,35 @@ function normalizeSearchValue(value: string | string[] | undefined) {
   return value?.trim() ?? '';
 }
 
+function normalizeRepairType(value: string | string[] | undefined) {
+  const normalized = normalizeSearchValue(value);
+  return normalized === 'dealer' || normalized === 'garage' ? normalized : '';
+}
+
+function parseNumberCsv(value: string | null | undefined) {
+  if (!value) {
+    return [];
+  }
+
+  return value
+    .split(',')
+    .map((entry) => Number.parseInt(entry.trim(), 10))
+    .filter((entry) => Number.isFinite(entry) && entry >= 0);
+}
+
+function toNumberOrNull(value: number | string | null | undefined) {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  const parsed = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 function buildResultsHref(filters: {
   sClass: string;
   coverage: string;
+  repairType: string;
   brand: string;
   model: string;
   year: string;
@@ -64,6 +96,7 @@ function buildResultsHref(filters: {
 
   if (filters.sClass) params.set('sClass', filters.sClass);
   if (filters.coverage) params.set('coverage', filters.coverage);
+  if (filters.repairType) params.set('repairType', filters.repairType);
   if (filters.brand) params.set('brand', filters.brand);
   if (filters.model) params.set('model', filters.model);
   if (filters.year) params.set('year', filters.year);
@@ -82,6 +115,7 @@ export default async function SearchInsurancePage({
   const resolvedSearchParams = (await searchParams) ?? {};
   const selectedSClass = normalizeSearchValue(resolvedSearchParams.sClass);
   const selectedCoverage = normalizeSearchValue(resolvedSearchParams.coverage);
+  const selectedRepairType = normalizeRepairType(resolvedSearchParams.repairType);
   const selectedBrand = normalizeSearchValue(resolvedSearchParams.brand);
   const selectedModel = normalizeSearchValue(resolvedSearchParams.model);
   const selectedYear = normalizeSearchValue(resolvedSearchParams.year);
@@ -90,6 +124,7 @@ export default async function SearchInsurancePage({
   const resultsHref = buildResultsHref({
     sClass: selectedSClass,
     coverage: selectedCoverage,
+    repairType: selectedRepairType,
     brand: selectedBrand,
     model: selectedModel,
     year: selectedYear,
@@ -98,47 +133,71 @@ export default async function SearchInsurancePage({
   });
 
   const optionRows = await prisma.$queryRaw<OptionRow[]>`
-    SELECT DISTINCT
-      COALESCE(sClass, JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.SClass'))) AS sClass,
+    SELECT
+      sClass,
+      repairType,
       brand,
       model,
-      COALESCE(minCarAge, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MinYear')), '') AS UNSIGNED)) AS minCarAge,
-      COALESCE(maxCarAge, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MaxYear')), '') AS UNSIGNED)) AS maxCarAge,
-      COALESCE(minCubicCapacity, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MinCST')), '') AS UNSIGNED)) AS minCubicCapacity,
-      COALESCE(maxCubicCapacity, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MaxCST')), '') AS UNSIGNED)) AS maxCubicCapacity,
-      COALESCE(minSumInsured, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MinSI')), '') AS UNSIGNED)) AS minSumInsured,
-      COALESCE(maxSumInsured, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MaxSI')), '') AS UNSIGNED)) AS maxSumInsured,
-      JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.covcod')) AS coverageCode
-    FROM InsurancePackage
-    WHERE brand IS NOT NULL
-      AND brand <> ''
-      AND model IS NOT NULL
-      AND model <> ''
+      minCarAge,
+      maxCarAge,
+      minCubicCapacity,
+      maxCubicCapacity,
+      coverageCode,
+      GROUP_CONCAT(DISTINCT minSumInsured ORDER BY minSumInsured SEPARATOR ',') AS minSumInsuredValues,
+      GROUP_CONCAT(DISTINCT maxSumInsured ORDER BY maxSumInsured SEPARATOR ',') AS maxSumInsuredValues
+    FROM (
+      SELECT
+        COALESCE(sClass, JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.SClass'))) AS sClass,
+        CASE
+          WHEN UPPER(TRIM(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.GarageCd')), ''))) = 'G'
+            OR TRIM(COALESCE(repairType, '')) IN ('ซ่อมห้าง', 'อู่ห้าง')
+            THEN 'dealer'
+          ELSE 'garage'
+        END AS repairType,
+        brand,
+        model,
+        COALESCE(minCarAge, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MinYear')), '') AS UNSIGNED)) AS minCarAge,
+        COALESCE(maxCarAge, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MaxYear')), '') AS UNSIGNED)) AS maxCarAge,
+        COALESCE(minCubicCapacity, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MinCST')), '') AS UNSIGNED)) AS minCubicCapacity,
+        COALESCE(maxCubicCapacity, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MaxCST')), '') AS UNSIGNED)) AS maxCubicCapacity,
+        COALESCE(minSumInsured, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MinSI')), '') AS UNSIGNED)) AS minSumInsured,
+        COALESCE(maxSumInsured, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MaxSI')), '') AS UNSIGNED)) AS maxSumInsured,
+        JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.covcod')) AS coverageCode
+      FROM InsurancePackage
+      WHERE brand IS NOT NULL
+        AND brand <> ''
+        AND model IS NOT NULL
+        AND model <> ''
+    ) source
+    GROUP BY
+      sClass,
+      repairType,
+      brand,
+      model,
+      minCarAge,
+      maxCarAge,
+      minCubicCapacity,
+      maxCubicCapacity,
+      coverageCode
     ORDER BY sClass ASC, brand ASC, model ASC, minCarAge ASC
   `;
-  const currentYear = new Date().getFullYear();
 
   const normalizedOptionRows = optionRows
     .map((row) => ({
       sClass: row.sClass?.trim() ?? '',
       coverageType: normalizeCoverageType(row.coverageCode),
+      repairType: row.repairType,
       brand: row.brand?.trim() ?? '',
       model: row.model?.trim() ?? '',
-      minCarAge: row.minCarAge,
-      maxCarAge: row.maxCarAge,
-      minCubicCapacity: row.minCubicCapacity,
-      maxCubicCapacity: row.maxCubicCapacity,
-      minSumInsured: row.minSumInsured,
-      maxSumInsured: row.maxSumInsured,
-      years:
-        row.minCarAge !== null && row.maxCarAge !== null
-          ? Array.from(
-              { length: Math.max(row.maxCarAge - row.minCarAge + 1, 0) },
-              (_, index) => String(currentYear - (row.minCarAge ?? 0) - index)
-            )
-          : []
+      minCarAge: toNumberOrNull(row.minCarAge),
+      maxCarAge: toNumberOrNull(row.maxCarAge),
+      minCubicCapacity: toNumberOrNull(row.minCubicCapacity),
+      maxCubicCapacity: toNumberOrNull(row.maxCubicCapacity),
+      sumInsuredValues: Array.from(
+        new Set([...parseNumberCsv(row.minSumInsuredValues), ...parseNumberCsv(row.maxSumInsuredValues)])
+      )
     }))
-    .filter((row) => Boolean(row.sClass && row.coverageType && row.coverageType !== '1' && row.brand && row.model));
+    .filter((row) => Boolean(row.sClass && row.coverageType && row.repairType && row.brand && row.model));
 
   return (
     <main className="min-h-screen bg-[#f4f5ff] text-[#12131a]">
@@ -179,6 +238,7 @@ export default async function SearchInsurancePage({
           optionRows={normalizedOptionRows}
           initialSClass={selectedSClass}
           initialCoverage={selectedCoverage}
+          initialRepairType={selectedRepairType}
           initialBrand={selectedBrand}
           initialModel={selectedModel}
           initialYear={selectedYear}

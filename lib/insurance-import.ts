@@ -246,7 +246,10 @@ export function mapCsvRecordToInsurancePackage(
     return null;
   }
 
-  const repairType = readRecordValue(record, ['repairtype', 'repair_type']) || null;
+  const garageCode = readRecordValue(record, ['garagecd', 'garage_cd']);
+  const repairType =
+    readRecordValue(record, ['repairtype', 'repair_type']) ||
+    (garageCode.trim().toUpperCase() === 'G' ? 'ซ่อมห้าง' : 'ซ่อมอู่');
   const coverage = readRecordValue(record, ['coverage', 'covdesc']) || null;
 
   return {

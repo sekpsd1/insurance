@@ -7,6 +7,32 @@ function formatMoney(value: number) {
   return value.toLocaleString('th-TH');
 }
 
+function toNumber(value: unknown) {
+  if (typeof value === 'number') {
+    return value;
+  }
+
+  if (typeof value === 'bigint') {
+    return Number(value);
+  }
+
+  if (value && typeof value === 'object' && 'toNumber' in value && typeof value.toNumber === 'function') {
+    return value.toNumber();
+  }
+
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function toNumberOrNull(value: unknown) {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+
+  const parsed = toNumber(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 function getText(value: string | null | undefined, fallback: string) {
   const normalized = value?.trim();
   return normalized ? normalized : fallback;
@@ -15,6 +41,7 @@ function getText(value: string | null | undefined, fallback: string) {
 type LineAppSearchParams = {
   sClass?: string;
   coverage?: string;
+  repairType?: string;
   brand?: string;
   model?: string;
   year?: string;
@@ -62,33 +89,43 @@ function normalizeSearchValue(value: string | string[] | undefined) {
 function normalizeCoverageType(value: string | string[] | undefined) {
   const normalized = normalizeSearchValue(value);
 
-  if (normalized === '2+' || normalized === '3+' || normalized === '3') {
-    return normalized as '2+' | '3+' | '3';
+  if (normalized === '1') {
+    return '1';
   }
 
-  if (normalized === '2.2') {
+  if (normalized === '2.1' || normalized === '2.2' || normalized === '2+') {
     return '2+';
   }
 
-  if (normalized === '3.2') {
+  if (normalized === '3.1' || normalized === '3.2' || normalized === '3+') {
     return '3+';
   }
 
-  if (normalized === '3' || normalized === '3.3') {
+  if (normalized === '3') {
     return '3';
   }
 
   return '';
 }
 
+function normalizeRepairType(value: string | string[] | undefined) {
+  const normalized = normalizeSearchValue(value);
+  return normalized === 'dealer' || normalized === 'garage' ? normalized : '';
+}
+
 function getCoverageLabel(value: string) {
-  if (value === '2+') return 'ประกัน 2+';
-  if (value === '3+') return 'ประกัน 3+';
-  if (value === '3') return 'ประกันชั้น 3';
+  if (value === '1') return 'ประเภท 1';
+  if (value === '2+') return 'ประเภท 2 พลัส';
+  if (value === '3+') return 'ประเภท 3 พลัส';
+  if (value === '3') return 'ประเภท 3';
   return value;
 }
 
 function getSClassLabel(value: string) {
+  if (value === '110') return 'รถยนต์นั่ง ส่วนบุคคล / รถกระบะ 4 ประตู';
+  if (value === '320') return 'รถกระบะ 2 ประตู';
+  if (value === '210') return 'รถตู้ / กระบะ ป้ายทะเบียนสีฟ้า';
+
   const labels: Record<string, string> = {
     '110': '110 รถยนต์นั่งส่วนบุคคล',
     '210': '210 รถยนต์โดยสารส่วนบุคคล',
@@ -98,8 +135,18 @@ function getSClassLabel(value: string) {
   return labels[value] ?? value;
 }
 
+function getRepairTypeLabel(value: string) {
+  if (value === 'dealer') return 'ซ่อมห้าง';
+  if (value === 'garage') return 'ซ่อมอู่';
+  return value;
+}
+
 function formatSumInsured(value: string) {
   const parsed = Number.parseInt(value.replace(/,/g, ''), 10);
+  if (parsed === 0) {
+    return 'ไม่มีทุนประกัน';
+  }
+
   return Number.isFinite(parsed) ? parsed.toLocaleString('th-TH') : value;
 }
 
@@ -112,10 +159,11 @@ function formatCubicCapacity(value: string) {
   return `${parsed.toLocaleString('th-TH')} ซีซี`;
 }
 
-function buildSearchSummary(filters: { sClass: string; coverage: string; brand: string; model: string; year: string; cubicCapacity: string; sumInsured: string }) {
+function buildSearchSummary(filters: { sClass: string; coverage: string; repairType: string; brand: string; model: string; year: string; cubicCapacity: string; sumInsured: string }) {
   return [
     filters.sClass ? getSClassLabel(filters.sClass) : '',
     filters.coverage ? getCoverageLabel(filters.coverage) : '',
+    filters.repairType ? getRepairTypeLabel(filters.repairType) : '',
     filters.brand,
     filters.model,
     filters.year,
@@ -181,10 +229,21 @@ function buildCoverageTypeSql() {
   return Prisma.sql`
     CASE
       WHEN TRIM(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.covcod'))) LIKE '1%' THEN '1'
-      WHEN TRIM(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.covcod'))) = '2.2' THEN '2+'
-      WHEN TRIM(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.covcod'))) = '3.2' THEN '3+'
-      WHEN TRIM(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.covcod'))) IN ('3', '3.3') THEN '3'
+      WHEN TRIM(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.covcod'))) IN ('2.1', '2.2') THEN '2+'
+      WHEN TRIM(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.covcod'))) IN ('3.1', '3.2') THEN '3+'
+      WHEN TRIM(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.covcod'))) = '3' THEN '3'
       ELSE ''
+    END
+  `;
+}
+
+function buildRepairTypeSql() {
+  return Prisma.sql`
+    CASE
+      WHEN UPPER(TRIM(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.GarageCd')), ''))) = 'G'
+        OR TRIM(COALESCE(repairType, '')) IN ('ซ่อมห้าง', 'อู่ห้าง')
+        THEN 'dealer'
+      ELSE 'garage'
     END
   `;
 }
@@ -269,6 +328,7 @@ export default async function LineAppPage({
   const resolvedSearchParams = (await searchParams) ?? {};
   const sClass = normalizeSearchValue(resolvedSearchParams.sClass);
   const coverage = normalizeCoverageType(resolvedSearchParams.coverage);
+  const repairType = normalizeRepairType(resolvedSearchParams.repairType);
   const brand = normalizeSearchValue(resolvedSearchParams.brand);
   const model = normalizeSearchValue(resolvedSearchParams.model);
   const year = normalizeSearchValue(resolvedSearchParams.year);
@@ -278,11 +338,12 @@ export default async function LineAppPage({
   const selectedCarAge = getCarAgeFromRegistrationYear(year);
   const selectedCubicCapacity = parsePositiveInt(cubicCapacity);
   const selectedSumInsured = parsePositiveInt(sumInsured);
-  const hasFilters = Boolean(sClass || coverage || brand || model || year || cubicCapacity || sumInsured);
+  const hasFilters = Boolean(sClass || coverage || repairType || brand || model || year || cubicCapacity || sumInsured);
   const baseParams = new URLSearchParams();
 
   if (sClass) baseParams.set('sClass', sClass);
   if (coverage) baseParams.set('coverage', coverage);
+  if (repairType) baseParams.set('repairType', repairType);
   if (brand) baseParams.set('brand', brand);
   if (model) baseParams.set('model', model);
   if (year) baseParams.set('year', year);
@@ -291,14 +352,22 @@ export default async function LineAppPage({
   const baseQueryString = baseParams.toString();
 
   const coverageTypeSql = buildCoverageTypeSql();
-  const searchConditions: Prisma.Sql[] = [Prisma.sql`${coverageTypeSql} <> '1'`];
-  const baseConditions: Prisma.Sql[] = [Prisma.sql`${coverageTypeSql} <> '1'`];
+  const repairTypeSql = buildRepairTypeSql();
+  const searchConditions: Prisma.Sql[] = [Prisma.sql`${coverageTypeSql} <> ''`];
+  const baseConditions: Prisma.Sql[] = [Prisma.sql`${coverageTypeSql} <> ''`];
 
   if (coverage) {
     const coverageCondition = Prisma.sql`${coverageTypeSql} = ${coverage}`;
 
     searchConditions.push(coverageCondition);
     baseConditions.push(coverageCondition);
+  }
+
+  if (repairType) {
+    const repairTypeCondition = Prisma.sql`${repairTypeSql} = ${repairType}`;
+
+    searchConditions.push(repairTypeCondition);
+    baseConditions.push(repairTypeCondition);
   }
 
   if (sClass) {
@@ -374,7 +443,7 @@ export default async function LineAppPage({
       company,
       logoUrl,
       details,
-      repairType,
+      CASE WHEN ${repairTypeSql} = 'dealer' THEN 'ซ่อมห้าง' ELSE 'ซ่อมอู่' END AS repairType,
       coverage,
       JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.covcod')) AS coverageCode,
       ${coverageTypeSql} AS coverageType,
@@ -399,7 +468,7 @@ export default async function LineAppPage({
   };
 
   let insurancePackages = packages;
-  const searchSummary = buildSearchSummary({ sClass, coverage, brand, model, year, cubicCapacity, sumInsured });
+  const searchSummary = buildSearchSummary({ sClass, coverage, repairType, brand, model, year, cubicCapacity, sumInsured });
 
   const resultRange = totalItems === 0 ? { start: 0, end: 0 } : { start: (safePage - 1) * PAGE_SIZE + 1, end: Math.min(safePage * PAGE_SIZE, totalItems) };
 
@@ -430,6 +499,12 @@ export default async function LineAppPage({
                 ไม่มีข้อมูลปีจดทะเบียนตรงกับที่เลือก แสดงผลตามยี่ห้อและรุ่นแทน
               </span>
             ) : null}
+            <Link
+              href={buildSearchHref(baseParams)}
+              className="mt-3 flex w-full items-center justify-center rounded-xl border border-[#0052CC] bg-white px-4 py-2.5 text-sm font-semibold text-[#0052CC] transition hover:bg-[#eef3ff]"
+            >
+              เปลี่ยนประเภท / ทุนประกัน / ซ่อมห้าง ซ่อมอู่
+            </Link>
           </section>
         ) : null}
 
@@ -458,7 +533,7 @@ export default async function LineAppPage({
             href={buildCompareHref(baseParams)}
             className="flex items-center justify-between rounded-2xl border border-[#cfd8ff] bg-[#eef3ff] px-4 py-4 text-sm font-semibold text-[#24406f] shadow-[0_8px_24px_rgba(0,0,0,0.04)] transition hover:bg-[#e1ebff]"
           >
-            <span>ไปหน้า Comparison Table เพื่อเลือกแผนมาเทียบ</span>
+            <span>ไปหน้าเปรียบเทียบแผน เพื่อเลือกแผนมาเทียบ</span>
             <span aria-hidden="true">→</span>
           </Link>
         ) : null}
@@ -484,15 +559,18 @@ export default async function LineAppPage({
               coverage: pkg.coverage,
               coverageType: pkg.coverageType,
               sClass: pkg.sClass,
-              minCubicCapacity: pkg.minCubicCapacity,
-              maxCubicCapacity: pkg.maxCubicCapacity,
-              minSumInsured: pkg.minSumInsured,
-              maxSumInsured: pkg.maxSumInsured,
-              fullPrice: pkg.fullPrice,
-              netPrice: pkg.netPrice,
-              discount: pkg.discount
+              minCubicCapacity: toNumberOrNull(pkg.minCubicCapacity),
+              maxCubicCapacity: toNumberOrNull(pkg.maxCubicCapacity),
+              minSumInsured: toNumberOrNull(pkg.minSumInsured),
+              maxSumInsured: toNumberOrNull(pkg.maxSumInsured),
+              fullPrice: toNumber(pkg.fullPrice),
+              netPrice: toNumber(pkg.netPrice),
+              discount: toNumber(pkg.discount)
             }))}
             baseQueryString={baseQueryString}
+            vehicleTypeLabel={sClass ? getSClassLabel(sClass) : ''}
+            registrationYear={year}
+            cubicCapacityLabel={cubicCapacity ? formatCubicCapacity(cubicCapacity) : ''}
           />
         )}
 

@@ -2,10 +2,13 @@ import Link from 'next/link';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { notFound } from 'next/navigation';
+import CartPackageButton from './cart-package-button';
+import RemoveComparePackageButton from './remove-compare-package-button';
 
 type CompareSearchParams = {
   sClass?: string;
   coverage?: string;
+  repairType?: string;
   brand?: string;
   model?: string;
   year?: string;
@@ -75,29 +78,35 @@ function normalizeSearchValue(value: string | string[] | undefined) {
 function normalizeCoverageType(value: string | string[] | undefined) {
   const normalized = normalizeSearchValue(value);
 
-  if (normalized === '2+' || normalized === '3+' || normalized === '3') {
-    return normalized as '2+' | '3+' | '3';
+  if (normalized === '1') {
+    return '1';
   }
 
-  if (normalized === '2.2') {
+  if (normalized === '2.1' || normalized === '2.2' || normalized === '2+') {
     return '2+';
   }
 
-  if (normalized === '3.2') {
+  if (normalized === '3.1' || normalized === '3.2' || normalized === '3+') {
     return '3+';
   }
 
-  if (normalized === '3' || normalized === '3.3') {
+  if (normalized === '3') {
     return '3';
   }
 
   return '';
 }
 
+function normalizeRepairType(value: string | string[] | undefined) {
+  const normalized = normalizeSearchValue(value);
+  return normalized === 'dealer' || normalized === 'garage' ? normalized : '';
+}
+
 function getCoverageLabel(value: string) {
-  if (value === '2+') return 'ประกัน 2+';
-  if (value === '3+') return 'ประกัน 3+';
-  if (value === '3') return 'ประกันชั้น 3';
+  if (value === '1') return 'ประเภท 1';
+  if (value === '2+') return 'ประเภท 2 พลัส';
+  if (value === '3+') return 'ประเภท 3 พลัส';
+  if (value === '3') return 'ประเภท 3';
   return value;
 }
 
@@ -105,15 +114,19 @@ function buildCoverageTypeSql() {
   return Prisma.sql`
     CASE
       WHEN TRIM(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.covcod'))) LIKE '1%' THEN '1'
-      WHEN TRIM(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.covcod'))) = '2.2' THEN '2+'
-      WHEN TRIM(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.covcod'))) = '3.2' THEN '3+'
-      WHEN TRIM(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.covcod'))) IN ('3', '3.3') THEN '3'
+      WHEN TRIM(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.covcod'))) IN ('2.1', '2.2') THEN '2+'
+      WHEN TRIM(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.covcod'))) IN ('3.1', '3.2') THEN '3+'
+      WHEN TRIM(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.covcod'))) = '3' THEN '3'
       ELSE ''
     END
   `;
 }
 
 function getSClassLabel(value: string) {
+  if (value === '110') return 'รถยนต์นั่ง ส่วนบุคคล / รถกระบะ 4 ประตู';
+  if (value === '320') return 'รถกระบะ 2 ประตู';
+  if (value === '210') return 'รถตู้ / กระบะ ป้ายทะเบียนสีฟ้า';
+
   const labels: Record<string, string> = {
     '110': '110 รถยนต์นั่งส่วนบุคคล',
     '210': '210 รถยนต์โดยสารส่วนบุคคล',
@@ -123,8 +136,18 @@ function getSClassLabel(value: string) {
   return labels[value] ?? value;
 }
 
+function getRepairTypeLabel(value: string) {
+  if (value === 'dealer') return 'ซ่อมห้าง';
+  if (value === 'garage') return 'ซ่อมอู่';
+  return value;
+}
+
 function formatSumInsured(value: string) {
   const parsed = Number.parseInt(value.replace(/,/g, ''), 10);
+  if (parsed === 0) {
+    return 'ไม่มีทุนประกัน';
+  }
+
   return Number.isFinite(parsed) ? parsed.toLocaleString('th-TH') : value;
 }
 
@@ -137,10 +160,11 @@ function formatCubicCapacity(value: string) {
   return `${parsed.toLocaleString('th-TH')} ซีซี`;
 }
 
-function buildSearchSummary(filters: { sClass: string; coverage: string; brand: string; model: string; year: string; cubicCapacity: string; sumInsured: string }) {
+function buildSearchSummary(filters: { sClass: string; coverage: string; repairType: string; brand: string; model: string; year: string; cubicCapacity: string; sumInsured: string }) {
   return [
     filters.sClass ? getSClassLabel(filters.sClass) : '',
     filters.coverage ? getCoverageLabel(filters.coverage) : '',
+    filters.repairType ? getRepairTypeLabel(filters.repairType) : '',
     filters.brand,
     filters.model,
     filters.year,
@@ -151,11 +175,12 @@ function buildSearchSummary(filters: { sClass: string; coverage: string; brand: 
     .join(' ');
 }
 
-function buildResultsHref(filters: { sClass: string; coverage: string; brand: string; model: string; year: string; cubicCapacity: string; sumInsured: string }) {
+function buildResultsHref(filters: { sClass: string; coverage: string; repairType: string; brand: string; model: string; year: string; cubicCapacity: string; sumInsured: string }) {
   const params = new URLSearchParams();
 
   if (filters.sClass) params.set('sClass', filters.sClass);
   if (filters.coverage) params.set('coverage', filters.coverage);
+  if (filters.repairType) params.set('repairType', filters.repairType);
   if (filters.brand) params.set('brand', filters.brand);
   if (filters.model) params.set('model', filters.model);
   if (filters.year) params.set('year', filters.year);
@@ -166,11 +191,12 @@ function buildResultsHref(filters: { sClass: string; coverage: string; brand: st
   return query ? `/line-app?${query}` : '/line-app';
 }
 
-function buildSearchHref(filters: { sClass: string; coverage: string; brand: string; model: string; year: string; cubicCapacity: string; sumInsured: string }) {
+function buildSearchHref(filters: { sClass: string; coverage: string; repairType: string; brand: string; model: string; year: string; cubicCapacity: string; sumInsured: string }) {
   const params = new URLSearchParams();
 
   if (filters.sClass) params.set('sClass', filters.sClass);
   if (filters.coverage) params.set('coverage', filters.coverage);
+  if (filters.repairType) params.set('repairType', filters.repairType);
   if (filters.brand) params.set('brand', filters.brand);
   if (filters.model) params.set('model', filters.model);
   if (filters.year) params.set('year', filters.year);
@@ -179,6 +205,23 @@ function buildSearchHref(filters: { sClass: string; coverage: string; brand: str
 
   const query = params.toString();
   return query ? `/line-app/search?${query}` : '/line-app/search';
+}
+
+function buildCompareHrefWithIds(filters: { sClass: string; coverage: string; repairType: string; brand: string; model: string; year: string; cubicCapacity: string; sumInsured: string }, ids: string[]) {
+  const params = new URLSearchParams();
+
+  if (filters.sClass) params.set('sClass', filters.sClass);
+  if (filters.coverage) params.set('coverage', filters.coverage);
+  if (filters.repairType) params.set('repairType', filters.repairType);
+  if (filters.brand) params.set('brand', filters.brand);
+  if (filters.model) params.set('model', filters.model);
+  if (filters.year) params.set('year', filters.year);
+  if (filters.cubicCapacity) params.set('cubicCapacity', filters.cubicCapacity);
+  if (filters.sumInsured) params.set('sumInsured', filters.sumInsured);
+  ids.forEach((id) => params.append('ids', id));
+
+  const query = params.toString();
+  return query ? `/line-app/compare?${query}` : '/line-app/compare';
 }
 
 function normalizeIdList(value: string | string[] | undefined) {
@@ -236,6 +279,7 @@ export default async function ComparePage({
   const resolvedSearchParams = (await searchParams) ?? {};
   const sClass = normalizeSearchValue(resolvedSearchParams.sClass);
   const coverage = normalizeCoverageType(resolvedSearchParams.coverage);
+  const repairType = normalizeRepairType(resolvedSearchParams.repairType);
   const brand = normalizeSearchValue(resolvedSearchParams.brand);
   const model = normalizeSearchValue(resolvedSearchParams.model);
   const year = normalizeSearchValue(resolvedSearchParams.year);
@@ -247,10 +291,22 @@ export default async function ComparePage({
   const selectedIds = normalizeIdList(resolvedSearchParams.ids);
 
   const coverageTypeSql = buildCoverageTypeSql();
-  const searchConditions: Prisma.Sql[] = [Prisma.sql`${coverageTypeSql} <> '1'`];
+  const repairTypeSql = Prisma.sql`
+    CASE
+      WHEN UPPER(TRIM(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.GarageCd')), ''))) = 'G'
+        OR TRIM(COALESCE(repairType, '')) IN ('ซ่อมห้าง', 'อู่ห้าง')
+        THEN 'dealer'
+      ELSE 'garage'
+    END
+  `;
+  const searchConditions: Prisma.Sql[] = [Prisma.sql`${coverageTypeSql} <> ''`];
 
   if (coverage) {
     searchConditions.push(Prisma.sql`${coverageTypeSql} = ${coverage}`);
+  }
+
+  if (repairType) {
+    searchConditions.push(Prisma.sql`${repairTypeSql} = ${repairType}`);
   }
 
   if (sClass) {
@@ -298,7 +354,7 @@ export default async function ComparePage({
       company,
       logoUrl,
       details,
-      repairType,
+      CASE WHEN ${repairTypeSql} = 'dealer' THEN 'ซ่อมห้าง' ELSE 'ซ่อมอู่' END AS repairType,
       coverage,
       JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.covcod')) AS coverageCode,
       ${coverageTypeSql} AS coverageType,
@@ -330,7 +386,7 @@ export default async function ComparePage({
         company,
         logoUrl,
         details,
-        repairType,
+        CASE WHEN ${repairTypeSql} = 'dealer' THEN 'ซ่อมห้าง' ELSE 'ซ่อมอู่' END AS repairType,
         coverage,
         JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.covcod')) AS coverageCode,
         ${coverageTypeSql} AS coverageType,
@@ -361,9 +417,10 @@ export default async function ComparePage({
       .filter((row): row is ComparePackage => Boolean(row));
   }
 
-  const searchSummary = buildSearchSummary({ sClass, coverage, brand, model, year, cubicCapacity, sumInsured });
-  const searchHref = buildSearchHref({ sClass, coverage, brand, model, year, cubicCapacity, sumInsured });
-  const resultsHref = buildResultsHref({ sClass, coverage, brand, model, year, cubicCapacity, sumInsured });
+  const searchSummary = buildSearchSummary({ sClass, coverage, repairType, brand, model, year, cubicCapacity, sumInsured });
+  const searchHref = buildSearchHref({ sClass, coverage, repairType, brand, model, year, cubicCapacity, sumInsured });
+  const resultsHref = buildResultsHref({ sClass, coverage, repairType, brand, model, year, cubicCapacity, sumInsured });
+  const compareFilters = { sClass, coverage, repairType, brand, model, year, cubicCapacity, sumInsured };
   const isComparisonReady = packages.length >= 2;
 
   return (
@@ -376,7 +433,7 @@ export default async function ComparePage({
             </svg>
           </Link>
 
-          <h1 className="font-[Kanit,sans-serif] text-xl font-bold tracking-wide">Comparison Table</h1>
+          <h1 className="font-[Kanit,sans-serif] text-xl font-bold tracking-wide">ตารางเปรียบเทียบแผน</h1>
           <div className="h-9 w-9" />
         </div>
       </header>
@@ -421,6 +478,7 @@ export default async function ComparePage({
               <form action="/line-app/compare" method="get" className="space-y-3">
                 {sClass ? <input type="hidden" name="sClass" value={sClass} /> : null}
                 {coverage ? <input type="hidden" name="coverage" value={coverage} /> : null}
+                {repairType ? <input type="hidden" name="repairType" value={repairType} /> : null}
                 {brand ? <input type="hidden" name="brand" value={brand} /> : null}
                 {model ? <input type="hidden" name="model" value={model} /> : null}
                 {year ? <input type="hidden" name="year" value={year} /> : null}
@@ -485,9 +543,21 @@ export default async function ComparePage({
                             )}
                           </div>
                           <div className="min-w-0">
-                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#4c6394]">{pkg.company}</p>
+                            <div className="flex items-start justify-between gap-3">
+                              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#4c6394]">{pkg.company}</p>
+                              <RemoveComparePackageButton
+                                href={buildCompareHrefWithIds(
+                                  compareFilters,
+                                  packages.filter((item) => item.id !== pkg.id).map((item) => item.id)
+                                )}
+                                remainingIds={packages.filter((item) => item.id !== pkg.id).map((item) => item.id)}
+                              />
+                            </div>
                             <h3 className="mt-1 font-[Kanit,sans-serif] text-lg font-bold leading-tight text-[#0047BA]">{pkg.name}</h3>
                             <p className="mt-2 text-sm font-semibold text-[#0f4ec7]">{getCoverageLabel(pkg.coverageType || coverage || '')}</p>
+                            <div className="mt-3">
+                              <CartPackageButton packageId={pkg.id} />
+                            </div>
                           </div>
                         </div>
                       </th>
@@ -499,7 +569,7 @@ export default async function ComparePage({
                     { label: 'บริษัท', values: packages.map((pkg) => pkg.company) },
                     { label: 'ยี่ห้อ', values: packages.map((pkg) => pkg.brand || '-') },
                     { label: 'รุ่น', values: packages.map((pkg) => pkg.model || '-') },
-                    { label: 'ปี', values: packages.map((pkg) => (pkg.year ? String(pkg.year) : '-')) },
+                    { label: 'ปี', values: packages.map((pkg) => (pkg.year ? String(pkg.year) : year || '-')) },
                     { label: 'ขนาดเครื่องยนต์', values: packages.map((pkg) => (pkg.minCubicCapacity || pkg.maxCubicCapacity ? `${formatMoney(pkg.minCubicCapacity ?? 0)}-${formatMoney(pkg.maxCubicCapacity ?? 0)} ซีซี` : '-')) },
                     { label: 'ทุนประกัน', values: packages.map((pkg) => (pkg.minSumInsured || pkg.maxSumInsured ? `${formatMoney(pkg.minSumInsured ?? pkg.maxSumInsured ?? 0)} บาท` : '-')) },
                     { label: 'ประเภทซ่อม', values: packages.map((pkg) => pkg.repairType || 'อู่ประกัน') },

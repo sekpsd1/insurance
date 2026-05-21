@@ -17,7 +17,8 @@ These are entered in the admin import modal, not necessarily in the CSV:
 The importer accepts insurer campaign rows and maps the commonly used fields into searchable package data:
 
 - `SClass` - vehicle class, such as `110`, `210`, `320`.
-- `covcod` - coverage code. Customer-facing flow supports `2.2`, `3.2`, `3`, and `3.3`; first class codes are excluded from customer results.
+- `covcod` - coverage code. Customer-facing flow groups imported codes into four options: `ประเภท 1`, `ประเภท 2 พลัส`, `ประเภท 3 พลัส`, and `ประเภท 3`.
+- `GarageCd` - repair type. `G` maps to `ซ่อมห้าง`; blank values map to `ซ่อมอู่`.
 - `MinSI` / `MaxSI` - sum insured range.
 - `MinYear` / `MaxYear` - car age range, not registration year.
 - `MinCST` / `MaxCST` - cubic capacity range.
@@ -44,11 +45,16 @@ These are campaign-level settings and should normally be maintained in Admin aft
 
 - CSV files are limited to 15 MB.
 - The upload must be a text CSV file and must not contain binary null bytes.
-- Customer-facing search excludes first class insurance.
-- Missing repair type is currently displayed as garage repair fallback text until the source data rule is confirmed.
+- Customer-facing search groups `covcod` choices:
+  - `1` / first-class prefixed values = `ประเภท 1`
+  - `2.1` and `2.2` = `ประเภท 2 พลัส`
+  - `3.1` and `3.2` = `ประเภท 3 พลัส`
+  - `3` = `ประเภท 3`
+- Customer-facing vehicle type options map to insurer vehicle classes: `110` for `รถยนต์นั่ง ส่วนบุคคล / รถกระบะ 4 ประตู`, `320` for `รถกระบะ 2 ประตู`, and `210` for `รถตู้ / กระบะ ป้ายทะเบียนสีฟ้า`.
+- Customer-facing repair coverage filters use `GarageCd`: `G` for dealer repair and blank for garage repair.
 
 ## QA After Import
 
-- Open `/line-app/search` and confirm vehicle class, coverage, brand, model, year, cubic capacity, and sum insured options appear.
+- Open `/line-app/search` and confirm vehicle class, coverage, repair type, brand, model, year, cubic capacity, and sum insured options appear.
 - Search one known campaign row and confirm the result count is expected.
 - Open Admin campaign details and fill provider contact plus payment setup before running a real checkout.

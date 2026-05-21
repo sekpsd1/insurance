@@ -1,6 +1,6 @@
 # Project State
 
-Last updated: 2026-05-19
+Last updated: 2026-05-21
 
 ## Current Architecture
 
@@ -73,6 +73,7 @@ Main Prisma models:
 It also stores rating/search fields imported from insurer CSV rows:
 
 - `sClass` from `SClass` vehicle class.
+- `repairType` from `GarageCd`, where `G` means `ซ่อมห้าง` and blank means `ซ่อมอู่`.
 - `minSumInsured` and `maxSumInsured` from `MinSI`/`MaxSI`.
 - `minCarAge` and `maxCarAge` from `MinYear`/`MaxYear`.
 - `minCubicCapacity` and `maxCubicCapacity` from `MinCST`/`MaxCST`.
@@ -97,13 +98,30 @@ It also stores rating/search fields imported from insurer CSV rows:
 
 - Search Premium page loads real brand/model/year options from DB.
 - Search Premium now filters by insurer vehicle class (`SClass`) and selected sum insured (`MinSI`/`MaxSI`).
+- Search Premium vehicle type options now show customer-facing groups:
+  - `รถยนต์นั่ง ส่วนบุคคล / รถกระบะ 4 ประตู` maps to `SClass 110`.
+  - `รถกระบะ 2 ประตู` maps to `SClass 320`.
+  - `รถตู้ / กระบะ ป้ายทะเบียนสีฟ้า` maps to `SClass 210`.
+- Search Premium now supports a repair coverage selector:
+  - `ซ่อมห้าง` maps to CSV `GarageCd = G`.
+  - `ซ่อมอู่` maps to blank `GarageCd`.
+- Search Premium now shows only the four customer-requested policy type groups:
+  - `ประเภท 1`
+  - `ประเภท 2 พลัส` from CSV `covcod` `2.1`/`2.2`
+  - `ประเภท 3 พลัส` from CSV `covcod` `3.1`/`3.2`
+  - `ประเภท 3` from CSV `covcod` `3`
+- Search Premium option payload is grouped on the server and computes registration year options in the client from age ranges to avoid sending one option row per premium row.
 - Search Premium now exposes cubic-capacity ranges from `MinCST`/`MaxCST` as a "ขนาดเครื่องยนต์" selector because no separate vehicle submodel master exists in the imported CSV.
 - Search year now maps registration year to vehicle age and filters against CSV `MinYear`/`MaxYear`.
-- Search Results filters by coverage, brand, model, and year.
-- Search Results preserve and apply `sClass`, `cubicCapacity`, and `sumInsured` query parameters.
+- Search Results filters by coverage, repair type, brand, model, and year.
+- Search Results preserve and apply `sClass`, `repairType`, `cubicCapacity`, and `sumInsured` query parameters.
+- Search Results now shows a `เปลี่ยนประเภท / ทุนประกัน / ซ่อมห้าง ซ่อมอู่` button in the search summary box that returns to `/line-app/search` with the current filters prefilled.
+- Search Premium preserves vehicle selections when changing policy type or repair coverage, and only clears downstream vehicle fields when the old value is not available in the newly filtered data.
+- Search Premium now derives repair coverage options from the selected vehicle class and policy type. If a new policy type only has one repair coverage, such as `ประเภท 3` with only `ซ่อมอู่`, the form auto-switches to that repair coverage and keeps the vehicle selections when still valid.
+- Search Premium now supports packages with `MinSI`/`MaxSI` equal to `0`, such as some `ประเภท 3` rows, by showing `ไม่มีทุนประกัน` as a selectable sum-insured option.
 - Results page supports pagination.
 - Result cards encode uploaded logo URLs before rendering and fall back to company text if the image cannot be loaded.
-- Result cards and compare table display missing repair type as `อู่ประกัน` for now. Future work may distinguish `อู่ประกัน` from `อู่ห้าง` once the source data rule is confirmed.
+- Result cards and compare table display repair type from `GarageCd` as `ซ่อมห้าง` or `ซ่อมอู่`.
 - Compare selection flow exists.
 - Compare page displays selected packages side by side.
 - Results and compare preserve query parameters.
@@ -128,7 +146,7 @@ It also stores rating/search fields imported from insurer CSV rows:
 - Checkout, success, tracking, admin order detail, provider Magic Link, provider email preview, and provider email body now show selected CTP/CMI details when present.
 - Success page shows order summary, payment method, and timeline.
 - Tracking page supports lookup and direct tracking by order number.
-- First class insurance has been removed from customer-facing selection/results/compare flow.
+- Customer-facing selection/results/compare now use the four customer-requested policy type groups instead of exposing detailed DD/OD `covcod` labels.
 
 ### Admin/Broker Flow
 
@@ -269,7 +287,7 @@ It also stores rating/search fields imported from insurer CSV rows:
 ## Current Bugs / Known Issues
 
 - Thai text appears mojibake in some files when read through PowerShell. Browser rendering may still be fine, but large Thai copy edits should be checked visually.
-- Compare year can show `-` if imported CSV/database rows have no `year`.
+- Imported CSV/database rows may not store a direct `year`; compare now falls back to the searched registration year.
 - Uploaded slip/logo/payment QR files can use S3-compatible object storage in production. Existing local files under `public/uploads` remain local/dev files unless migrated.
 - `tsconfig.tsbuildinfo` may show as modified after typecheck/build. It is generated and should not be committed.
 - Build still shows Next lint warnings for `<img>` usage in compare pages and checkout QR/payment images.
@@ -279,6 +297,24 @@ It also stores rating/search fields imported from insurer CSV rows:
 - Local database schema was synced again with `npx prisma db push` after adding optional CTP/CMI fields to `Order`.
 
 ## Latest Local Verification
+
+Last verified on 2026-05-21 using localhost dev server after the customer search/results/compare refinement slice.
+
+- `npx tsc --noEmit` passed.
+- `npm run build` passed.
+- Build still shows the known acceptable `<img>` warnings in checkout/compare areas.
+- `/api/health` returned 200 with database `ok`.
+- `/line-app/search` returned 200 with the updated vehicle type, grouped policy type, repair coverage, cubic capacity, and sum insured flow.
+- `/line-app` results returned 200 for `ประเภท 3` / `ซ่อมอู่` / `sumInsured=0` and displays `ไม่มีทุนประกัน`.
+- Search now auto-switches repair coverage when the chosen policy type has only one valid repair option, for example `ประเภท 3` automatically switches to `ซ่อมอู่`.
+- Search keeps vehicle selections when changing policy type or repair coverage if the vehicle values still exist in the newly filtered data.
+- Results now show vehicle type, registration year, and cubic capacity in package cards.
+- Results now include `เปลี่ยนประเภท / ทุนประกัน / ซ่อมห้าง ซ่อมอู่`, returning to search with current filters prefilled.
+- Results separate compare selection from cart selection:
+  - `เลือกเทียบ` stores compare selections.
+  - `เก็บใส่ตะกร้า` stores cart selections separately.
+- Compare page title is now Thai: `ตารางเปรียบเทียบแผน`.
+- Compare page supports removing individual compared plans and has a separate `เก็บใส่ตะกร้า` button per plan.
 
 Last verified on 2026-05-17 using localhost production start.
 
@@ -313,7 +349,7 @@ Last verified on 2026-05-17 using localhost production start.
 - Admin/broker should primarily manage insurance data and monitor orders, not manually drive policy status.
 - Insurance provider Magic Link is the main mechanism for provider-side status updates.
 - Magic Link raw tokens are not stored; only token hashes are stored.
-- First class insurance is removed from customer-facing flow.
+- Customer-facing insurance type filtering follows the four customer-requested groups, including `ประเภท 1` when imported data is available.
 - Campaign logos are managed at campaign level, not per-package.
 - Provider Contact is stored on `InsurancePackage` rows and updated across packages in the same campaign.
 - Payment is made directly to the insurance company, not to this broker app.
