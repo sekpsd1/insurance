@@ -299,7 +299,7 @@ It also stores rating/search fields imported from insurer CSV rows:
 
 ## Latest Local Verification
 
-Last verified on 2026-05-22 after adding the in-page results quick filter panel.
+Last verified on 2026-05-22 after adding the in-page results quick filter panel and proposal-style result cards.
 
 - `npx tsc --noEmit` passed.
 - `npm run build` passed.
@@ -309,6 +309,7 @@ Last verified on 2026-05-22 after adding the in-page results quick filter panel.
 - `/line-app` returned 200 for a results URL using `SClass 110`, grouped `2+`, `ซ่อมอู่`, `TOYOTA HILUX REVO`, registration year `2022`, cubic capacity `2001`, and sum insured `300000`.
 - `/line-app` returned 200 for `ประเภท 3` / `ซ่อมอู่` / `sumInsured=0`.
 - Results now let customers switch policy type, repair coverage, and sum insured directly on the results page while preserving the selected vehicle details in the query string.
+- Results proposal cards now show a separate plan detail box and cost summary box, and use `covcod` to show whether first deductible applies.
 
 Last verified on 2026-05-21 using localhost dev server after the customer search/results/compare refinement slice.
 
@@ -321,6 +322,7 @@ Last verified on 2026-05-21 using localhost dev server after the customer search
 - Search now auto-switches repair coverage when the chosen policy type has only one valid repair option, for example `ประเภท 3` automatically switches to `ซ่อมอู่`.
 - Search keeps vehicle selections when changing policy type or repair coverage if the vehicle values still exist in the newly filtered data.
 - Results now show vehicle type, registration year, and cubic capacity in package cards.
+- Results package cards were reorganized into a customer-facing proposal layout with a plan detail box and cost summary box, including deductible wording derived from `covcod` (`2.2`/`3.2` show no first deductible; `2.1`/`3.1` show first deductible applies).
 - Results now include `เปลี่ยนประเภท / ทุนประกัน / ซ่อมห้าง ซ่อมอู่`, returning to search with current filters prefilled.
 - Results now include an in-page quick filter panel for policy type, repair coverage, and sum insured so customers can adjust those choices without returning to the full vehicle search form.
 - Results separate compare selection from cart selection:

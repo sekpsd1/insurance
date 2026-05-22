@@ -12,6 +12,7 @@ type ComparePackageCard = {
   details: string | null;
   repairType: string | null;
   coverage: string | null;
+  coverageCode: string | null;
   coverageType: string | null;
   sClass: string | null;
   minCubicCapacity: number | null;
@@ -52,6 +53,30 @@ function getCoverageLabel(value: string) {
   return value;
 }
 
+function getDeductibleLabel(coverageCode: string | null | undefined) {
+  const normalized = coverageCode?.trim();
+
+  if (normalized === '2.2' || normalized === '3.2') {
+    return 'ไม่มี';
+  }
+
+  if (normalized === '2.1' || normalized === '3.1') {
+    return 'มี';
+  }
+
+  return '-';
+}
+
+function getSClassShortLabel(value: string | null | undefined, fallback: string) {
+  const normalized = value?.trim();
+
+  if (!normalized) {
+    return fallback || '-';
+  }
+
+  return `รหัส ${normalized}`;
+}
+
 function formatSumInsuredRange(min: number | null | undefined, max: number | null | undefined) {
   if (min === 0 && max === 0) {
     return 'ไม่มีทุนประกัน';
@@ -73,6 +98,53 @@ function encodeLogoUrl(logoUrl: string) {
     .split('/')
     .map((segment, index) => (index === 0 ? segment : encodeURIComponent(segment)))
     .join('/');
+}
+
+function DetailIcon({ icon, tone }: { icon: 'car' | 'shield' | 'money' | 'star' | 'wrench' | 'tag' | 'ctp'; tone: 'blue' | 'indigo' | 'green' | 'amber' | 'slate' | 'orange' }) {
+  const toneClass = {
+    blue: 'text-[#0052CC]',
+    indigo: 'text-[#364fc7]',
+    green: 'text-[#16803c]',
+    amber: 'text-[#c48a00]',
+    slate: 'text-[#445066]',
+    orange: 'text-[#bf5b00]'
+  }[tone];
+
+  const icons = {
+    car: (
+      <>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 15h2l1.7-4.2A3 3 0 0 1 9.5 9h4.8a3 3 0 0 1 2.4 1.2L20 14h1v4h-2" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M5 18H3v-3h18M8 18h8M8.2 9l-1.4 4H12V9M12 9v4h6.4" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M7 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM17 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" />
+      </>
+    ),
+    shield: (
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4l6 2v5c0 4-2.4 7-6 9-3.6-2-6-5-6-9V6l6-2Zm0 4v7m-3.2-3.2L12 15l3.2-3.2" />
+    ),
+    money: (
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 7h14v10H5V7Zm3 3h.01M16 14h.01M12 10.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z" />
+    ),
+    star: (
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4l2.2 4.6 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5-3.6-3.5 5-.7L12 4Z" />
+    ),
+    wrench: (
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.7 5.3a4 4 0 0 0 3 5.4l-7.9 7.9a2 2 0 0 1-2.8 0l-2.6-2.6a2 2 0 0 1 0-2.8l7.9-7.9a4 4 0 0 0 2.4 0ZM7.5 14.5l2 2" />
+    ),
+    tag: (
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 11V5h6l9 9-6 6-9-9Zm4-3h.01" />
+    ),
+    ctp: (
+      <path strokeLinecap="round" strokeLinejoin="round" d="M7 5h8l2 2v12H7V5Zm8 0v3h3M9 12h6M9 15h4" />
+    )
+  }[icon];
+
+  return (
+    <span className={`flex h-9 w-9 shrink-0 items-center justify-center ${toneClass}`}>
+      <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2">
+        {icons}
+      </svg>
+    </span>
+  );
 }
 
 export default function CompareSelection({
@@ -206,6 +278,7 @@ export default function CompareSelection({
           const ctpOption = getCtpOptionForSClass(pkg.sClass);
           const isCtpSelected = ctpPackageIdSet.has(pkg.id);
           const totalPrice = pkg.netPrice + (isCtpSelected && ctpOption ? ctpOption.total : 0);
+          const deductibleLabel = getDeductibleLabel(pkg.coverageCode);
 
           return (
             <div
@@ -215,7 +288,7 @@ export default function CompareSelection({
               }`}
             >
               <div className="relative p-5">
-                <div className="mb-4 flex items-start justify-between gap-3">
+                <div className="relative mb-4 pr-24">
                   <div className="flex min-w-0 items-start gap-3">
                     <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[rgba(195,198,214,0.35)] bg-[#eef3ff] shadow-sm">
                       {pkg.logoUrl && !failedLogoIdSet.has(pkg.id) ? (
@@ -233,19 +306,8 @@ export default function CompareSelection({
                     </div>
 
                     <div className="min-w-0">
-                      <h2 className="font-[Kanit,sans-serif] text-xl font-bold leading-tight text-[#0052CC]">{pkg.name}</h2>
-                      <p className="mt-1 text-sm text-[#434654]">{pkg.company}</p>
-                      <div className="mt-2 flex flex-wrap items-center gap-2">
-                        <span className="inline-flex items-center rounded-full bg-[#0f4ec7] px-3 py-1 text-xs font-semibold leading-none text-white shadow-[0_2px_8px_rgba(15,78,199,0.18)]">
-                          {getCoverageLabel(pkg.coverageType || '')}
-                        </span>
-                        <span className="inline-flex items-center rounded-full bg-[#0f4ec7] px-3 py-1 text-xs font-semibold leading-none text-white shadow-[0_2px_8px_rgba(15,78,199,0.18)]">
-                          {getText(pkg.repairType, 'อู่ประกัน')}
-                        </span>
-                        <span className="inline-flex items-center rounded-full bg-[#0f4ec7] px-3 py-1 text-xs font-semibold leading-none text-white shadow-[0_2px_8px_rgba(15,78,199,0.18)]">
-                          {getText(pkg.coverage, 'ยังไม่ได้ระบุความคุ้มครอง')}
-                        </span>
-                      </div>
+                      <p className="text-sm text-[#434654]">{pkg.company}</p>
+                      <h2 className="mt-1 font-[Kanit,sans-serif] text-lg font-bold leading-tight text-[#0052CC]">{pkg.name}</h2>
                     </div>
                   </div>
 
@@ -253,7 +315,7 @@ export default function CompareSelection({
                     type="button"
                     onClick={() => togglePackage(pkg.id)}
                     aria-pressed={isSelected}
-                    className={`inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold transition ${
+                    className={`absolute right-0 top-0 inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold transition ${
                       isSelected
                         ? 'bg-[#0052CC] text-white shadow-[0_2px_8px_rgba(0,82,204,0.25)]'
                         : 'bg-[#eef3ff] text-[#0052CC] hover:bg-[#dde7ff]'
@@ -264,71 +326,97 @@ export default function CompareSelection({
                   </button>
                 </div>
 
-                {vehicleTypeLabel || registrationYear || cubicCapacityLabel ? (
-                  <div className="mb-4 grid gap-1.5 text-xs leading-5 text-[#434654]">
-                    {vehicleTypeLabel ? (
-                      <div className="grid grid-cols-[4.5rem_minmax(0,1fr)] gap-2">
-                        <span className="text-right font-semibold text-[#24406f]">ประเภทรถ:</span>
-                        <span>{vehicleTypeLabel}</span>
+                <div className="mb-4 overflow-hidden rounded-2xl border border-[#dfe4ef] bg-white shadow-[0_6px_18px_rgba(15,32,67,0.06)]">
+                  <div className="space-y-3 p-4 text-sm text-[#2f3545]">
+                    <div className="flex items-start gap-3">
+                      <DetailIcon icon="car" tone="blue" />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-3">
+                          <span className="font-semibold text-[#1f2a44]">{getSClassShortLabel(pkg.sClass, vehicleTypeLabel)}</span>
+                          <span className="text-right leading-5">{vehicleTypeLabel || '-'}</span>
+                        </div>
+                        {(registrationYear || cubicCapacityLabel) ? (
+                          <p className="mt-1 text-xs text-[#667085]">
+                            {[registrationYear ? `ปี ${registrationYear}` : '', cubicCapacityLabel].filter(Boolean).join(' · ')}
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <DetailIcon icon="shield" tone="indigo" />
+                      <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+                        <span className="font-medium text-[#4b5265]">ประเภท</span>
+                        <span className="text-right font-semibold text-[#1f2a44]">{getCoverageLabel(pkg.coverageType || '')}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <DetailIcon icon="money" tone="green" />
+                      <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+                        <span className="font-medium text-[#4b5265]">ทุนประกัน</span>
+                        <span className="text-right font-semibold text-[#1f2a44]">{formatSumInsuredRange(pkg.minSumInsured, pkg.maxSumInsured)}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <DetailIcon icon="star" tone="amber" />
+                      <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+                        <span className="font-medium text-[#4b5265]">ความเสียหายส่วนแรก</span>
+                        <span className="text-right font-semibold text-[#1f2a44]">{deductibleLabel}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <DetailIcon icon="wrench" tone="slate" />
+                      <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+                        <span className="font-medium text-[#4b5265]">ประเภทการซ่อม</span>
+                        <span className="text-right font-semibold text-[#1f2a44]">{getText(pkg.repairType, 'อู่ประกัน')}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mb-5 overflow-hidden rounded-2xl bg-[#eef1f4] shadow-[0_8px_22px_rgba(15,32,67,0.08)]">
+                  <div className="border-b border-[#d8dde7] px-4 py-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <h3 className="font-[Kanit,sans-serif] text-base font-bold text-[#1f2a44]">สรุปค่าใช้จ่าย</h3>
+                      {ctpOption ? (
+                        <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold text-[#1f2a44]">
+                          <span>เพิ่ม พ.ร.บ.</span>
+                          <input
+                            type="checkbox"
+                            checked={isCtpSelected}
+                            onChange={() => toggleCtp(pkg.id)}
+                            className="h-5 w-5 rounded border-slate-300 text-[#0052CC] focus:ring-[#0052CC]"
+                          />
+                        </label>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  <div className="space-y-3 px-4 py-4 text-sm text-[#2f3545]">
+                    <div className="flex items-center gap-3">
+                      <DetailIcon icon="tag" tone="orange" />
+                      <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+                        <span className="font-medium">เบี้ยประกัน</span>
+                        <span className="text-right font-semibold">{formatMoney(pkg.netPrice)} บาท</span>
+                      </div>
+                    </div>
+
+                    {ctpOption ? (
+                      <div className="flex items-center gap-3">
+                        <DetailIcon icon="ctp" tone="blue" />
+                        <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+                          <span className="font-medium">พ.ร.บ. เพิ่มเติม</span>
+                          <span className="text-right font-semibold">{isCtpSelected ? `${formatMoney(ctpOption.total)} บาท` : '-'}</span>
+                        </div>
                       </div>
                     ) : null}
-                    {registrationYear ? (
-                      <div className="grid grid-cols-[4.5rem_minmax(0,1fr)] gap-2">
-                        <span className="text-right font-semibold text-[#24406f]">ปี:</span>
-                        <span>{registrationYear}</span>
-                      </div>
-                    ) : null}
-                    {cubicCapacityLabel ? (
-                      <div className="grid grid-cols-[4.5rem_minmax(0,1fr)] gap-2">
-                        <span className="text-right font-semibold text-[#24406f]">ซีซี:</span>
-                        <span>{cubicCapacityLabel}</span>
-                      </div>
-                    ) : null}
-                  </div>
-                ) : null}
-
-                <div className="mb-5 space-y-2 rounded-lg bg-[#faf8ff] p-4">
-                  <div className="flex items-center justify-between gap-4 text-sm text-[#434654]">
-                    <span>ราคาตลาดทั่วไป:</span>
-                    <span className="line-through">{formatMoney(pkg.fullPrice)} บาท</span>
                   </div>
 
-                  <div className="flex items-center justify-between gap-4 text-base font-semibold text-[#0052CC]">
-                    <span>เบี้ยประกันราคาทุน:</span>
-                    <span>{formatMoney(pkg.netPrice)} บาท</span>
-                  </div>
-
-                  <div className="flex items-center justify-between gap-4 text-sm font-semibold text-[#006c7a]">
-                    <span>ทุนประกัน:</span>
-                    <span>{formatSumInsuredRange(pkg.minSumInsured, pkg.maxSumInsured)}</span>
-                  </div>
-
-                  <div className="flex items-center justify-between gap-4 text-sm font-medium text-[#109e06]">
-                    <span>ค่าบริการแพลตฟอร์ม:</span>
-                    <span>0 บาท (ฟรี!)</span>
-                  </div>
-
-                  <div className="my-2 h-px w-full bg-[rgba(195,198,214,0.2)]" />
-
-                  {ctpOption ? (
-                    <label className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-[#b8d9de] bg-white px-3 py-3 text-sm font-semibold text-[#074a52] transition hover:border-[#00899a]">
-                      <span className="flex min-w-0 items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={isCtpSelected}
-                          onChange={() => toggleCtp(pkg.id)}
-                          className="h-4 w-4 rounded border-slate-300 text-[#00899a] focus:ring-[#00899a]"
-                        />
-                        <span className="truncate">+ เพิ่ม พ.ร.บ. {ctpOption.rateCode}</span>
-                      </span>
-                      <span className="shrink-0 text-base font-bold text-[#00899a]">฿ {formatMoney(ctpOption.total)}</span>
-                    </label>
-                  ) : null}
-
-                  {ctpOption ? <div className="my-2 h-px w-full bg-[rgba(195,198,214,0.2)]" /> : null}
-
-                  <div className="flex items-center justify-between gap-4 text-lg font-bold text-[#0052CC]">
-                    <span>ยอดรวมสุทธิ:</span>
+                  <div className="flex items-center justify-between gap-4 border-t border-[#d8dde7] px-4 py-4 text-lg font-bold text-[#1f2a44]">
+                    <span>รวม</span>
                     <span>{formatMoney(totalPrice)} บาท</span>
                   </div>
                 </div>

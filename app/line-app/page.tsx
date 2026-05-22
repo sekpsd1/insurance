@@ -673,6 +673,7 @@ export default async function LineAppPage({
               details: pkg.details,
               repairType: pkg.repairType,
               coverage: pkg.coverage,
+              coverageCode: pkg.coverageCode,
               coverageType: pkg.coverageType,
               sClass: pkg.sClass,
               minCubicCapacity: toNumberOrNull(pkg.minCubicCapacity),
