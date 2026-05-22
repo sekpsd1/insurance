@@ -52,6 +52,7 @@ model InsurancePackage {
   coverage             String?
   fullPrice            Float
   netPrice             Float
+  payablePrice         Float?
   discount             Float
   orders               Order[]
   createdAt            DateTime @default(now())
@@ -59,6 +60,23 @@ model InsurancePackage {
   @@index([companyCode, campaignCode])
   @@index([brand, model, year])
   @@index([sClass, minSumInsured, maxSumInsured])
+}
+
+model CtpRate {
+  id                 String   @id @default(uuid())
+  sClass             String   @unique
+  rateCode           String?
+  cmiVehicleTypeCode String?
+  label              String
+  eligibilityLabel   String?
+  premium            Float    @default(0)
+  stamp              Float    @default(0)
+  vat                Float    @default(0)
+  total              Float    @default(0)
+  sellable           Boolean  @default(false)
+  active             Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 }
 
 model Order {

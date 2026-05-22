@@ -25,6 +25,7 @@ Customer-facing routes live under `/line-app`.
 - `/line-app/search` - search premium form.
 - `/line-app` - search results and package cards.
 - `/line-app/compare` - comparison table and compare selection flow.
+- `/line-app/cart` - saved package cart for plans customers want to keep before choosing.
 - `/line-app/form/[id]` - Policy Info page for the selected package.
 - `/line-app/checkout/[orderId]` - hybrid checkout.
 - `/line-app/success/[orderId]` - order success and recent timeline.
@@ -77,6 +78,7 @@ It also stores rating/search fields imported from insurer CSV rows:
 - `minSumInsured` and `maxSumInsured` from `MinSI`/`MaxSI`.
 - `minCarAge` and `maxCarAge` from `MinYear`/`MaxYear`.
 - `minCubicCapacity` and `maxCubicCapacity` from `MinCST`/`MaxCST`.
+- `payablePrice` from CSV `paid`, used as the customer remaining payable amount.
 
 `Order` stores customer policy info, vehicle info, payment method/status, slip/gateway fields, insurer status/note, and links to status history and magic links.
 
@@ -89,6 +91,8 @@ It also stores rating/search fields imported from insurer CSV rows:
 - `ctpStamp`
 - `ctpVat`
 - `ctpTotal`
+
+`CtpRate` stores editable CTP/CMI rates per vehicle class/SClass for customer add-ons.
 
 `EmailOutbox` stores provider email audit records, including recipient, subject, body, Magic Link path, queue/error status, and sent/error timestamps.
 
@@ -140,6 +144,7 @@ It also stores rating/search fields imported from insurer CSV rows:
   - `SClass 110` sells CTP rate `1.10` at total `645.21`.
   - `SClass 320` sells CTP rate `1.40A` at total `967.28`.
   - Other vehicle classes cannot select the CTP add-on.
+- Admin insurance dashboard now includes editable CTP/CMI rate settings for SClass `110`, `210`, and `320`; `210` is present but defaults to not sellable until a price is configured and enabled.
 - Selected CTP/CMI add-ons are carried into Policy Info, stored on `Order`, and included in `paymentAmount`.
 - Checkout page supports:
   - Bank transfer with slip upload.
@@ -225,6 +230,7 @@ It also stores rating/search fields imported from insurer CSV rows:
 - Campaign dashboard supports viewing/deleting the current campaign logo and payment QR/image.
 - Replacing a campaign logo or payment QR/image now removes the previous uploaded file from local storage.
 - Deleting a campaign now also removes its campaign logo and payment QR/image files from local storage.
+- Deleting or replacing a campaign now removes dependent order records for packages in that campaign before deleting the package rows, so old import campaigns can be cleared after taking a database backup.
 - Checkout now displays the selected campaign/company payment instructions instead of the old demo broker bank account.
 - Checkout gateway flow now uses the configured campaign/provider payment URL and no longer creates the mock `example.com` gateway URL.
 - Uploaded customer slips should be visible to the insurance provider on the Magic Link page.
@@ -299,17 +305,28 @@ It also stores rating/search fields imported from insurer CSV rows:
 
 ## Latest Local Verification
 
-Last verified on 2026-05-22 after adding the in-page results quick filter panel and proposal-style result cards.
+Last verified on 2026-05-22 after adding the saved-cart page and cart sticky action from results.
 
 - `npx tsc --noEmit` passed.
 - `npm run build` passed.
 - Build still shows the known acceptable `<img>` warnings in checkout/compare areas.
 - `/api/health` returned 200.
-- `/line-app` without query parameters returned a 307 redirect to `/line-app/search`.
+- `/line-app/cart` returned 200.
+- Browser QA confirmed `เก็บใส่ตะกร้า` shows a separate `ดูรายการในตะกร้า` sticky action and opens `/line-app/cart` with the saved package ID.
+- Local dev server was restarted after clearing stale `.next` chunks; `/api/health`, `/line-app/cart`, and the tested results URL returned 200.
+- `/line-app` without query parameters redirects to `/line-app/search`.
 - `/line-app` returned 200 for a results URL using `SClass 110`, grouped `2+`, `ซ่อมอู่`, `TOYOTA HILUX REVO`, registration year `2022`, cubic capacity `2001`, and sum insured `300000`.
 - `/line-app` returned 200 for `ประเภท 3` / `ซ่อมอู่` / `sumInsured=0`.
 - Results now let customers switch policy type, repair coverage, and sum insured directly on the results page while preserving the selected vehicle details in the query string.
 - Results proposal cards now show a separate plan detail box and cost summary box, and use `covcod` to show whether first deductible applies.
+- CSV import now maps `prm_gapnew` to package premium (`netPrice`) and `paid` to `payablePrice`.
+- Results, cart, compare, checkout, and order creation now use `payablePrice + CTP/CMI` as the customer payable amount, while still showing the package premium separately.
+- Cart links now carry selected CTP/CMI package IDs through `ctpIds`; the cart page shows the optional CTP/CMI line, includes it in remaining payable totals, and keeps `includeCtp=1` when customers continue to Policy Info from the cart.
+- Compare links now also carry selected CTP/CMI package IDs through `ctpIds`; the comparison table shows CTP/CMI, total premium, and remaining payable per compared plan.
+- Returning from the comparison page to results preserves selected CTP/CMI checkboxes through the `ctpIds` query and separate compare CTP localStorage, so comparison selections no longer get overwritten by cart-only CTP state.
+- Customer-facing result, cart, and comparison cards now hide internal package/campaign names such as `Sabai ...`; customer views keep insurer, vehicle, coverage, repair, sum insured, and pricing details visible.
+- Customer-facing result and cart cards now show vehicle brand/model from structured package fields after hiding internal package names, so entries still display values such as `TOYOTA · HILUX REVO` without exposing campaign names. The comparison table keeps brand/model only in its dedicated table rows.
+- Existing imported package rows were backfilled from `rawData.paid` into `payablePrice` after the schema update.
 
 Last verified on 2026-05-21 using localhost dev server after the customer search/results/compare refinement slice.
 
@@ -328,8 +345,12 @@ Last verified on 2026-05-21 using localhost dev server after the customer search
 - Results separate compare selection from cart selection:
   - `เลือกเทียบ` stores compare selections.
   - `เก็บใส่ตะกร้า` stores cart selections separately.
+- Results now show a separate sticky cart bar after customers save packages, with a `ดูรายการในตะกร้า` action that opens `/line-app/cart`.
+- `/line-app/cart` now displays saved packages, total premium, remove-per-plan, clear-cart, back-to-results, and choose-plan actions.
+- Home page Customer CTA now links directly to `/line-app/search`.
 - Compare page title is now Thai: `ตารางเปรียบเทียบแผน`.
 - Compare page supports removing individual compared plans and has a separate `เก็บใส่ตะกร้า` button per plan.
+- Compare page no longer shows the rows for general market price, coverage, or discount, per the latest comparison-table cleanup.
 
 Last verified on 2026-05-17 using localhost production start.
 

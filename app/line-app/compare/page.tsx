@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
+import { getCustomerCtpOptionsBySClass } from '@/lib/ctp-rates';
 import { notFound } from 'next/navigation';
 import CartPackageButton from './cart-package-button';
 import RemoveComparePackageButton from './remove-compare-package-button';
@@ -15,6 +16,7 @@ type CompareSearchParams = {
   cubicCapacity?: string;
   sumInsured?: string;
   ids?: string | string[];
+  ctpIds?: string | string[];
 };
 
 type ComparePackageRow = {
@@ -37,6 +39,7 @@ type ComparePackageRow = {
   year: number | null;
   fullPrice: number;
   netPrice: number;
+  payablePrice: number | null;
   discount: number;
   createdAt: Date;
 };
@@ -61,6 +64,7 @@ type ComparePackage = {
   year: number | null;
   fullPrice: number;
   netPrice: number;
+  payablePrice: number | null;
   discount: number;
   createdAt: Date;
 };
@@ -175,7 +179,7 @@ function buildSearchSummary(filters: { sClass: string; coverage: string; repairT
     .join(' ');
 }
 
-function buildResultsHref(filters: { sClass: string; coverage: string; repairType: string; brand: string; model: string; year: string; cubicCapacity: string; sumInsured: string }) {
+function buildResultsHref(filters: { sClass: string; coverage: string; repairType: string; brand: string; model: string; year: string; cubicCapacity: string; sumInsured: string }, ctpIds: string[] = []) {
   const params = new URLSearchParams();
 
   if (filters.sClass) params.set('sClass', filters.sClass);
@@ -186,6 +190,7 @@ function buildResultsHref(filters: { sClass: string; coverage: string; repairTyp
   if (filters.year) params.set('year', filters.year);
   if (filters.cubicCapacity) params.set('cubicCapacity', filters.cubicCapacity);
   if (filters.sumInsured) params.set('sumInsured', filters.sumInsured);
+  ctpIds.forEach((id) => params.append('ctpIds', id));
 
   const query = params.toString();
   return query ? `/line-app?${query}` : '/line-app';
@@ -207,7 +212,7 @@ function buildSearchHref(filters: { sClass: string; coverage: string; repairType
   return query ? `/line-app/search?${query}` : '/line-app/search';
 }
 
-function buildCompareHrefWithIds(filters: { sClass: string; coverage: string; repairType: string; brand: string; model: string; year: string; cubicCapacity: string; sumInsured: string }, ids: string[]) {
+function buildCompareHrefWithIds(filters: { sClass: string; coverage: string; repairType: string; brand: string; model: string; year: string; cubicCapacity: string; sumInsured: string }, ids: string[], ctpIds: string[]) {
   const params = new URLSearchParams();
 
   if (filters.sClass) params.set('sClass', filters.sClass);
@@ -219,6 +224,7 @@ function buildCompareHrefWithIds(filters: { sClass: string; coverage: string; re
   if (filters.cubicCapacity) params.set('cubicCapacity', filters.cubicCapacity);
   if (filters.sumInsured) params.set('sumInsured', filters.sumInsured);
   ids.forEach((id) => params.append('ids', id));
+  ctpIds.forEach((id) => params.append('ctpIds', id));
 
   const query = params.toString();
   return query ? `/line-app/compare?${query}` : '/line-app/compare';
@@ -289,6 +295,7 @@ export default async function ComparePage({
   const selectedCubicCapacity = parsePositiveInt(cubicCapacity);
   const selectedSumInsured = parsePositiveInt(sumInsured);
   const selectedIds = normalizeIdList(resolvedSearchParams.ids);
+  const selectedCtpIds = normalizeIdList(resolvedSearchParams.ctpIds);
 
   const coverageTypeSql = buildCoverageTypeSql();
   const repairTypeSql = Prisma.sql`
@@ -368,6 +375,7 @@ export default async function ComparePage({
       year,
       fullPrice,
       netPrice,
+      payablePrice,
       discount,
       createdAt
     FROM InsurancePackage
@@ -400,6 +408,7 @@ export default async function ComparePage({
         year,
         fullPrice,
         netPrice,
+        payablePrice,
         discount,
         createdAt
       FROM InsurancePackage
@@ -419,9 +428,19 @@ export default async function ComparePage({
 
   const searchSummary = buildSearchSummary({ sClass, coverage, repairType, brand, model, year, cubicCapacity, sumInsured });
   const searchHref = buildSearchHref({ sClass, coverage, repairType, brand, model, year, cubicCapacity, sumInsured });
-  const resultsHref = buildResultsHref({ sClass, coverage, repairType, brand, model, year, cubicCapacity, sumInsured });
   const compareFilters = { sClass, coverage, repairType, brand, model, year, cubicCapacity, sumInsured };
   const isComparisonReady = packages.length >= 2;
+  const packageIdSet = new Set(packages.map((pkg) => pkg.id));
+  const activeCtpIds = selectedCtpIds.filter((id) => packageIdSet.has(id));
+  const activeCtpIdSet = new Set(activeCtpIds);
+  const resultsHref = buildResultsHref(compareFilters, activeCtpIds);
+  const ctpOptionsBySClass = await getCustomerCtpOptionsBySClass();
+  const ctpOptionByPackageId = new Map(
+    packages.map((pkg) => [
+      pkg.id,
+      activeCtpIdSet.has(pkg.id) && pkg.sClass ? ctpOptionsBySClass[pkg.sClass] ?? null : null
+    ])
+  );
 
   return (
     <main className="min-h-screen bg-[#f4f5ff] text-[#12131a]">
@@ -499,7 +518,6 @@ export default async function ComparePage({
                       />
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-semibold text-slate-900">{pkg.name}</span>
                           <span className="rounded-full bg-[#0f4ec7] px-2.5 py-1 text-xs font-semibold text-white">
                             {getCoverageLabel(pkg.coverageType || coverage || '')}
                           </span>
@@ -548,15 +566,16 @@ export default async function ComparePage({
                               <RemoveComparePackageButton
                                 href={buildCompareHrefWithIds(
                                   compareFilters,
-                                  packages.filter((item) => item.id !== pkg.id).map((item) => item.id)
+                                  packages.filter((item) => item.id !== pkg.id).map((item) => item.id),
+                                  activeCtpIds.filter((id) => id !== pkg.id)
                                 )}
                                 remainingIds={packages.filter((item) => item.id !== pkg.id).map((item) => item.id)}
+                                remainingCtpIds={activeCtpIds.filter((id) => id !== pkg.id)}
                               />
                             </div>
-                            <h3 className="mt-1 font-[Kanit,sans-serif] text-lg font-bold leading-tight text-[#0047BA]">{pkg.name}</h3>
                             <p className="mt-2 text-sm font-semibold text-[#0f4ec7]">{getCoverageLabel(pkg.coverageType || coverage || '')}</p>
                             <div className="mt-3">
-                              <CartPackageButton packageId={pkg.id} />
+                              <CartPackageButton packageId={pkg.id} includeCtp={Boolean(ctpOptionByPackageId.get(pkg.id))} />
                             </div>
                           </div>
                         </div>
@@ -573,10 +592,19 @@ export default async function ComparePage({
                     { label: 'ขนาดเครื่องยนต์', values: packages.map((pkg) => (pkg.minCubicCapacity || pkg.maxCubicCapacity ? `${formatMoney(pkg.minCubicCapacity ?? 0)}-${formatMoney(pkg.maxCubicCapacity ?? 0)} ซีซี` : '-')) },
                     { label: 'ทุนประกัน', values: packages.map((pkg) => (pkg.minSumInsured || pkg.maxSumInsured ? `${formatMoney(pkg.minSumInsured ?? pkg.maxSumInsured ?? 0)} บาท` : '-')) },
                     { label: 'ประเภทซ่อม', values: packages.map((pkg) => pkg.repairType || 'อู่ประกัน') },
-                    { label: 'ความคุ้มครอง', values: packages.map((pkg) => pkg.coverage || '-') },
-                    { label: 'ราคาตลาดทั่วไป', values: packages.map((pkg) => `${formatMoney(pkg.fullPrice)} บาท`) },
                     { label: 'เบี้ยประกันราคาทุน', values: packages.map((pkg) => `${formatMoney(pkg.netPrice)} บาท`) },
-                    { label: 'ส่วนลด', values: packages.map((pkg) => `${formatMoney(pkg.discount)} บาท`) },
+                    { label: 'พ.ร.บ. เพิ่มเติม', values: packages.map((pkg) => {
+                      const ctpOption = ctpOptionByPackageId.get(pkg.id);
+                      return ctpOption ? `${formatMoney(ctpOption.total)} บาท` : '-';
+                    }) },
+                    { label: 'รวม', values: packages.map((pkg) => {
+                      const ctpOption = ctpOptionByPackageId.get(pkg.id);
+                      return `${formatMoney(pkg.netPrice + (ctpOption?.total ?? 0))} บาท`;
+                    }) },
+                    { label: 'คงเหลือชำระ', values: packages.map((pkg) => {
+                      const ctpOption = ctpOptionByPackageId.get(pkg.id);
+                      return `${formatMoney((pkg.payablePrice ?? pkg.netPrice) + (ctpOption?.total ?? 0))} บาท`;
+                    }) },
                     { label: 'รายละเอียด', values: packages.map((pkg) => pkg.details || '-') }
                   ].map((row) => (
                     <tr key={row.label}>

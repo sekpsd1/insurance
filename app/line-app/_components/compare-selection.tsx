@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getCtpOptionForSClass } from '@/lib/ctp';
+import type { CtpOption } from '@/lib/ctp';
 
 type ComparePackageCard = {
   id: string;
@@ -19,22 +19,29 @@ type ComparePackageCard = {
   maxCubicCapacity: number | null;
   minSumInsured: number | null;
   maxSumInsured: number | null;
+  brand: string | null;
+  model: string | null;
   fullPrice: number;
   netPrice: number;
+  payablePrice: number | null;
   discount: number;
 };
 
 type CompareSelectionProps = {
   packages: ComparePackageCard[];
+  ctpOptionsBySClass: Record<string, CtpOption>;
   baseQueryString: string;
   vehicleTypeLabel: string;
   registrationYear: string;
   cubicCapacityLabel: string;
+  initialCtpPackageIds?: string[];
 };
 
 const MAX_COMPARE_PACKAGES = 4;
 const COMPARE_STORAGE_KEY = 'insurance.comparePackageIds';
+const COMPARE_CTP_STORAGE_KEY = 'insurance.compareCtpPackageIds';
 const CART_STORAGE_KEY = 'insurance.cartPackageIds';
+const CART_CTP_STORAGE_KEY = 'insurance.cartCtpPackageIds';
 
 function formatMoney(value: number) {
   return value.toLocaleString('th-TH');
@@ -149,10 +156,12 @@ function DetailIcon({ icon, tone }: { icon: 'car' | 'shield' | 'money' | 'star' 
 
 export default function CompareSelection({
   packages,
+  ctpOptionsBySClass,
   baseQueryString,
   vehicleTypeLabel,
   registrationYear,
-  cubicCapacityLabel
+  cubicCapacityLabel,
+  initialCtpPackageIds = []
 }: CompareSelectionProps) {
   const router = useRouter();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -177,11 +186,17 @@ export default function CompareSelection({
       if (Array.isArray(parsed)) {
         setSelectedIds(parsed.filter((value): value is string => typeof value === 'string').slice(0, MAX_COMPARE_PACKAGES));
       }
+
+      const rawCtpValue = window.localStorage.getItem(COMPARE_CTP_STORAGE_KEY);
+      const parsedCtp = rawCtpValue ? JSON.parse(rawCtpValue) : [];
+      const storedCtpIds = Array.isArray(parsedCtp) ? parsedCtp.filter((value): value is string => typeof value === 'string') : [];
+      setCtpPackageIds(Array.from(new Set([...storedCtpIds, ...initialCtpPackageIds])));
     } catch {
       window.localStorage.removeItem(COMPARE_STORAGE_KEY);
+      window.localStorage.removeItem(COMPARE_CTP_STORAGE_KEY);
     }
     setIsCompareStorageLoaded(true);
-  }, []);
+  }, [initialCtpPackageIds]);
 
   useEffect(() => {
     if (!isCompareStorageLoaded) {
@@ -189,7 +204,8 @@ export default function CompareSelection({
     }
 
     window.localStorage.setItem(COMPARE_STORAGE_KEY, JSON.stringify(selectedIds));
-  }, [isCompareStorageLoaded, selectedIds]);
+    window.localStorage.setItem(COMPARE_CTP_STORAGE_KEY, JSON.stringify(ctpPackageIds));
+  }, [ctpPackageIds, isCompareStorageLoaded, selectedIds]);
 
   useEffect(() => {
     try {
@@ -198,8 +214,16 @@ export default function CompareSelection({
       if (Array.isArray(parsed)) {
         setCartIds(parsed.filter((value): value is string => typeof value === 'string'));
       }
+
+      const rawCtpValue = window.localStorage.getItem(CART_CTP_STORAGE_KEY);
+      const parsedCtp = rawCtpValue ? JSON.parse(rawCtpValue) : [];
+      if (Array.isArray(parsedCtp)) {
+        const cartCtpIds = parsedCtp.filter((value): value is string => typeof value === 'string');
+        setCtpPackageIds((current) => Array.from(new Set([...current, ...cartCtpIds])));
+      }
     } catch {
       window.localStorage.removeItem(CART_STORAGE_KEY);
+      window.localStorage.removeItem(CART_CTP_STORAGE_KEY);
     }
     setIsCartStorageLoaded(true);
   }, []);
@@ -210,7 +234,8 @@ export default function CompareSelection({
     }
 
     window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartIds));
-  }, [cartIds, isCartStorageLoaded]);
+    window.localStorage.setItem(CART_CTP_STORAGE_KEY, JSON.stringify(ctpPackageIds.filter((id) => cartIds.includes(id))));
+  }, [cartIds, ctpPackageIds, isCartStorageLoaded]);
 
   function markLogoFailed(id: string) {
     setFailedLogoIds((current) => (current.includes(id) ? current : [...current, id]));
@@ -235,6 +260,11 @@ export default function CompareSelection({
   function clearCompareSelection() {
     setError('');
     setSelectedIds([]);
+  }
+
+  function clearCartSelection() {
+    setCartIds([]);
+    setCtpPackageIds([]);
   }
 
   function toggleCart(id: string) {
@@ -266,7 +296,15 @@ export default function CompareSelection({
 
     const params = new URLSearchParams(baseQueryString);
     selectedIds.forEach((id) => params.append('ids', id));
+    ctpPackageIds.filter((id) => selectedIds.includes(id)).forEach((id) => params.append('ctpIds', id));
     router.push(`/line-app/compare?${params.toString()}`);
+  }
+
+  function handleCart() {
+    const params = new URLSearchParams(baseQueryString);
+    cartIds.forEach((id) => params.append('ids', id));
+    ctpPackageIds.filter((id) => cartIds.includes(id)).forEach((id) => params.append('ctpIds', id));
+    router.push(`/line-app/cart?${params.toString()}`);
   }
 
   return (
@@ -275,9 +313,11 @@ export default function CompareSelection({
         {packages.map((pkg) => {
           const isSelected = selectedIdSet.has(pkg.id);
           const isInCart = cartIdSet.has(pkg.id);
-          const ctpOption = getCtpOptionForSClass(pkg.sClass);
+          const ctpOption = pkg.sClass ? ctpOptionsBySClass[pkg.sClass] ?? null : null;
           const isCtpSelected = ctpPackageIdSet.has(pkg.id);
-          const totalPrice = pkg.netPrice + (isCtpSelected && ctpOption ? ctpOption.total : 0);
+          const ctpTotal = isCtpSelected && ctpOption ? ctpOption.total : 0;
+          const totalPrice = pkg.netPrice + ctpTotal;
+          const payableTotal = (pkg.payablePrice ?? pkg.netPrice) + ctpTotal;
           const deductibleLabel = getDeductibleLabel(pkg.coverageCode);
 
           return (
@@ -288,34 +328,34 @@ export default function CompareSelection({
               }`}
             >
               <div className="relative p-5">
-                <div className="relative mb-4 pr-24">
-                  <div className="flex min-w-0 items-start gap-3">
-                    <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[rgba(195,198,214,0.35)] bg-[#eef3ff] shadow-sm">
-                      {pkg.logoUrl && !failedLogoIdSet.has(pkg.id) ? (
-                        <img
-                          src={encodeLogoUrl(pkg.logoUrl)}
-                          alt={pkg.company}
-                          onError={() => markLogoFailed(pkg.id)}
-                          className="h-full w-full object-contain p-1"
-                        />
-                      ) : (
-                        <span className="px-1 text-center text-xs font-bold leading-4 text-[#0052CC]">
-                          {pkg.company.slice(0, 6)}
-                        </span>
-                      )}
-                    </div>
+                <div className="mb-4 flex items-start gap-3">
+                  <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[rgba(195,198,214,0.35)] bg-[#eef3ff] shadow-sm">
+                    {pkg.logoUrl && !failedLogoIdSet.has(pkg.id) ? (
+                      <img
+                        src={encodeLogoUrl(pkg.logoUrl)}
+                        alt={pkg.company}
+                        onError={() => markLogoFailed(pkg.id)}
+                        className="h-full w-full object-contain p-1"
+                      />
+                    ) : (
+                      <span className="px-1 text-center text-xs font-bold leading-4 text-[#0052CC]">
+                        {pkg.company.slice(0, 6)}
+                      </span>
+                    )}
+                  </div>
 
-                    <div className="min-w-0">
-                      <p className="text-sm text-[#434654]">{pkg.company}</p>
-                      <h2 className="mt-1 font-[Kanit,sans-serif] text-lg font-bold leading-tight text-[#0052CC]">{pkg.name}</h2>
-                    </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm leading-5 text-[#434654]">{pkg.company}</p>
+                    <p className="mt-1 font-[Kanit,sans-serif] text-lg font-bold leading-tight text-[#0052CC]">
+                      {[pkg.brand, pkg.model].filter(Boolean).join(' · ') || '-'}
+                    </p>
                   </div>
 
                   <button
                     type="button"
                     onClick={() => togglePackage(pkg.id)}
                     aria-pressed={isSelected}
-                    className={`absolute right-0 top-0 inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold transition ${
+                    className={`inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold transition ${
                       isSelected
                         ? 'bg-[#0052CC] text-white shadow-[0_2px_8px_rgba(0,82,204,0.25)]'
                         : 'bg-[#eef3ff] text-[#0052CC] hover:bg-[#dde7ff]'
@@ -421,6 +461,11 @@ export default function CompareSelection({
                   </div>
                 </div>
 
+                <div className="mb-5 rounded-2xl border border-[#d6c27a] bg-[#fffdf4] px-4 py-4 shadow-[0_8px_20px_rgba(154,118,20,0.10)]">
+                  <p className="text-sm font-semibold text-[#4b3a0b]">คงเหลือชำระ</p>
+                  <p className="mt-1 font-[Kanit,sans-serif] text-3xl font-bold leading-tight text-[#111827]">{formatMoney(payableTotal)} บาท</p>
+                </div>
+
                 <button
                   type="button"
                   onClick={() => toggleCart(pkg.id)}
@@ -448,27 +493,45 @@ export default function CompareSelection({
         })}
       </div>
 
-      {selectedCount > 0 ? (
-      <div className="sticky bottom-4 rounded-3xl bg-white p-4 shadow-[0_10px_30px_rgba(4,16,61,0.08)] ring-1 ring-white/70">
-        {error ? <p className="mb-2 text-center text-sm font-medium text-red-600">{error}</p> : null}
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-sm font-semibold text-[#1f2a44]">เก็บไว้เปรียบเทียบ {selectedCount} แผน</p>
-            <p className="mt-0.5 text-xs text-[#4b5265]">เก็บได้สูงสุด {MAX_COMPARE_PACKAGES} แผน</p>
-          </div>
-          <button type="button" onClick={clearCompareSelection} className="shrink-0 text-xs font-semibold text-[#6b7280] underline-offset-4 hover:underline">
-            ล้าง
-          </button>
+      {cartIds.length > 0 || selectedCount > 0 ? (
+      <div className="sticky bottom-0 z-20 -mx-4 border-t border-[#d8dcec] bg-white/95 px-4 py-3 shadow-[0_-8px_24px_rgba(4,16,61,0.10)] backdrop-blur">
+        {error ? <p className="mb-2 text-center text-xs font-medium text-red-600">{error}</p> : null}
+        <div className={`grid gap-2 ${cartIds.length > 0 && selectedCount > 0 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+          {cartIds.length > 0 ? (
+            <div className="min-w-0">
+              <button
+                type="button"
+                onClick={handleCart}
+                className="flex h-14 w-full flex-col items-center justify-center rounded-2xl bg-[#0047BA] px-2 text-center font-[Kanit,sans-serif] text-sm font-semibold leading-tight text-white transition hover:bg-[#003c9d]"
+              >
+                <span>ดูตะกร้า</span>
+                <span className="text-xs font-medium opacity-90">{cartIds.length} แผน</span>
+              </button>
+              <button type="button" onClick={clearCartSelection} className="mt-1 w-full text-center text-[11px] font-semibold text-[#6b7280] underline-offset-4 hover:underline">
+                ล้างตะกร้า
+              </button>
+            </div>
+          ) : null}
+
+          {selectedCount > 0 ? (
+            <div className="min-w-0">
+              <button
+                type="button"
+                onClick={handleCompare}
+                className="flex h-14 w-full flex-col items-center justify-center rounded-2xl bg-[#0047BA] px-2 text-center font-[Kanit,sans-serif] text-sm font-semibold leading-tight text-white transition hover:bg-[#003c9d]"
+              >
+                <span>ดูเปรียบเทียบ</span>
+                <span className="text-xs font-medium opacity-90">{selectedCount} / {MAX_COMPARE_PACKAGES} แผน</span>
+              </button>
+              <button type="button" onClick={clearCompareSelection} className="mt-1 w-full text-center text-[11px] font-semibold text-[#6b7280] underline-offset-4 hover:underline">
+                ล้างเปรียบเทียบ
+              </button>
+            </div>
+          ) : null}
         </div>
-        <button
-          type="button"
-          onClick={handleCompare}
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#0047BA] px-4 py-4 text-base font-semibold text-white transition hover:bg-[#003c9d]"
-        >
-          ดูรายการเปรียบเทียบ
-          <span aria-hidden="true">→</span>
-        </button>
-        <p className="mt-2 text-center text-xs text-[#4b5265]">เลือกอย่างน้อย 2 แผนเพื่อเปิดตารางเปรียบเทียบ</p>
+        {selectedCount === 1 ? (
+          <p className="mt-1 text-center text-[11px] text-[#4b5265]">เลือกอย่างน้อย 2 แผนเพื่อเปิดตารางเปรียบเทียบ</p>
+        ) : null}
       </div>
       ) : null}
     </>

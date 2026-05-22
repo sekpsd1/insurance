@@ -29,6 +29,7 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
   }
 
   const amount = order.paymentAmount ?? order.pkg.netPrice;
+  const payableBasePrice = order.pkg.payablePrice ?? order.pkg.netPrice;
   const bankDetails = [
     order.pkg.paymentBankName,
     order.pkg.paymentAccountNumber ? `เลขที่บัญชี: ${order.pkg.paymentAccountNumber}` : null,
@@ -48,6 +49,16 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
             <div className="mt-1 font-semibold text-slate-950">{order.orderNumber}</div>
             <div className="mt-3 text-sm text-slate-600">ยอดชำระ</div>
             <div className="mt-1 text-2xl font-bold text-[#0052CC]">{formatCurrency(amount)}</div>
+            <div className="mt-3 rounded-xl bg-white p-3 text-sm text-slate-700 ring-1 ring-blue-100">
+              <div className="flex justify-between gap-3">
+                <span>เบี้ยประกัน</span>
+                <span className="font-semibold">{formatCurrency(order.pkg.netPrice)}</span>
+              </div>
+              <div className="mt-1 flex justify-between gap-3">
+                <span>คงเหลือชำระ</span>
+                <span className="font-semibold">{formatCurrency(payableBasePrice)}</span>
+              </div>
+            </div>
             {order.ctpSelected ? (
               <div className="mt-3 rounded-xl bg-white p-3 text-sm text-slate-700 ring-1 ring-blue-100">
                 <div className="flex justify-between gap-3">

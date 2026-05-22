@@ -14,7 +14,7 @@ export default function HomePage() {
       </p>
       <div className="mt-10 flex flex-wrap gap-4">
         <Link
-          href="/line-app"
+          href="/line-app/search"
           className="rounded-xl bg-brand-600 px-5 py-3 font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700"
         >
           ไปหน้า Customer

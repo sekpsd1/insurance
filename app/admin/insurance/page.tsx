@@ -5,6 +5,7 @@ import {
   deleteInsuranceCampaignPaymentQr,
   deleteInsuranceCampaign,
   importInsuranceCampaign,
+  updateCtpRate,
   updateInsuranceCampaignLogo,
   updateInsuranceCampaignPaymentSetup,
   updateInsuranceCampaignProviderContact
@@ -14,13 +15,21 @@ import {
   getInsuranceCampaignSummaries,
   getInsuranceCompanySummaries
 } from '@/lib/insurance-import';
+import { getAdminCtpRates } from '@/lib/ctp-rates';
+
+export const dynamic = 'force-dynamic';
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat('th-TH', {
     style: 'currency',
     currency: 'THB',
-    maximumFractionDigits: 0
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
   }).format(value);
+}
+
+function formatNumberInput(value: number) {
+  return Number.isInteger(value) ? String(value) : value.toFixed(2);
 }
 
 function formatDate(value: Date | null) {
@@ -63,7 +72,10 @@ async function getInsuranceDashboardStats() {
 }
 
 export default async function InsuranceCampaignAdminPage() {
-  const { campaignSummaries, companySummaries, packageCount, companyCount } = await getInsuranceDashboardStats();
+  const [{ campaignSummaries, companySummaries, packageCount, companyCount }, ctpRates] = await Promise.all([
+    getInsuranceDashboardStats(),
+    getAdminCtpRates()
+  ]);
 
   return (
     <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -109,6 +121,77 @@ export default async function InsuranceCampaignAdminPage() {
             Search / Edit Packages
           </Link>
           <CampaignImportModal action={importInsuranceCampaign} />
+        </div>
+      </div>
+
+      <div className="mb-8 rounded-3xl border border-white/10 bg-white p-5 shadow-2xl shadow-black/10">
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold text-slate-950">ตั้งค่า พ.ร.บ.</h3>
+          <p className="mt-1 text-sm text-slate-500">แก้ไขราคา พ.ร.บ. ตามประเภทรถ ถ้าปิด “ขาย พ.ร.บ.” ลูกค้าจะไม่เห็นตัวเลือกเพิ่ม พ.ร.บ. ของรหัสนั้น</p>
+        </div>
+
+        <div className="grid gap-4 lg:grid-cols-3">
+          {ctpRates.map((rate) => (
+            <form key={rate.sClass} action={updateCtpRate} className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <input type="hidden" name="sClass" value={rate.sClass} />
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-700">SClass {rate.sClass}</div>
+                  <div className="mt-1 text-lg font-bold text-slate-950">{rate.total > 0 ? formatCurrency(rate.total) : 'ยังไม่มีราคา'}</div>
+                </div>
+                <div className="space-y-1 text-right text-xs text-slate-600">
+                  <label className="flex items-center justify-end gap-2">
+                    <span>Active</span>
+                    <input name="active" type="checkbox" defaultChecked={rate.active} className="h-4 w-4 rounded border-slate-300 text-cyan-600" />
+                  </label>
+                  <label className="flex items-center justify-end gap-2">
+                    <span>ขาย พ.ร.บ.</span>
+                    <input name="sellable" type="checkbox" defaultChecked={rate.sellable} className="h-4 w-4 rounded border-slate-300 text-cyan-600" />
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-600">Rate Code</label>
+                <input name="rateCode" defaultValue={rate.rateCode} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-600">CMI Vehicle Type Code</label>
+                <input name="cmiVehicleTypeCode" defaultValue={rate.cmiVehicleTypeCode} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-600">ชื่อรายการ</label>
+                <input name="label" defaultValue={rate.label} required className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-600">เงื่อนไขแสดงผล</label>
+                <input name="eligibilityLabel" defaultValue={rate.eligibilityLabel} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100" />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-600">Premium</label>
+                  <input name="premium" type="number" step="0.01" min="0" defaultValue={formatNumberInput(rate.premium)} required className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-600">Stamp</label>
+                  <input name="stamp" type="number" step="0.01" min="0" defaultValue={formatNumberInput(rate.stamp)} required className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-600">VAT</label>
+                  <input name="vat" type="number" step="0.01" min="0" defaultValue={formatNumberInput(rate.vat)} required className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-600">Total</label>
+                  <input name="total" type="number" step="0.01" min="0" defaultValue={formatNumberInput(rate.total)} required className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100" />
+                </div>
+              </div>
+
+              <button type="submit" className="inline-flex w-full items-center justify-center rounded-xl bg-cyan-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-cyan-700">
+                บันทึกราคา พ.ร.บ.
+              </button>
+            </form>
+          ))}
         </div>
       </div>
 

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import CompareSelection from './_components/compare-selection';
 import ResultsQuickFilters from './_components/results-quick-filters';
+import { getCustomerCtpOptionsBySClass } from '@/lib/ctp-rates';
 
 function formatMoney(value: number) {
   return value.toLocaleString('th-TH');
@@ -35,6 +36,19 @@ function toNumberOrNull(value: unknown) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function normalizeIdList(value: string | string[] | undefined) {
+  const rawValue = Array.isArray(value) ? value : normalizeSearchValue(value) ? [normalizeSearchValue(value)] : [];
+
+  return Array.from(
+    new Set(
+      rawValue
+        .flatMap((entry) => entry.split(','))
+        .map((entry) => entry.trim())
+        .filter(Boolean)
+    )
+  );
+}
+
 function getText(value: string | null | undefined, fallback: string) {
   const normalized = value?.trim();
   return normalized ? normalized : fallback;
@@ -50,6 +64,7 @@ type LineAppSearchParams = {
   cubicCapacity?: string;
   sumInsured?: string;
   page?: string;
+  ctpIds?: string | string[];
 };
 
 type InsurancePackageRow = {
@@ -67,8 +82,11 @@ type InsurancePackageRow = {
   maxCubicCapacity: number | null;
   minSumInsured: number | null;
   maxSumInsured: number | null;
+  brand: string | null;
+  model: string | null;
   fullPrice: number;
   netPrice: number;
+  payablePrice: number | null;
   discount: number;
   createdAt: Date;
 };
@@ -359,6 +377,7 @@ export default async function LineAppPage({
   const year = normalizeSearchValue(resolvedSearchParams.year);
   const cubicCapacity = normalizeSearchValue(resolvedSearchParams.cubicCapacity);
   const sumInsured = normalizeSearchValue(resolvedSearchParams.sumInsured);
+  const initialCtpPackageIds = normalizeIdList(resolvedSearchParams.ctpIds);
   const page = parsePage(resolvedSearchParams.page);
   const selectedCarAge = getCarAgeFromRegistrationYear(year);
   const selectedCubicCapacity = parsePositiveInt(cubicCapacity);
@@ -482,8 +501,11 @@ export default async function LineAppPage({
       COALESCE(maxCubicCapacity, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MaxCST')), '') AS UNSIGNED)) AS maxCubicCapacity,
       COALESCE(minSumInsured, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MinSI')), '') AS UNSIGNED)) AS minSumInsured,
       COALESCE(maxSumInsured, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MaxSI')), '') AS UNSIGNED)) AS maxSumInsured,
+      brand,
+      model,
       fullPrice,
       netPrice,
+      payablePrice,
       discount,
       createdAt
     FROM InsurancePackage
@@ -575,6 +597,7 @@ export default async function LineAppPage({
   };
 
   let insurancePackages = packages;
+  const ctpOptionsBySClass = await getCustomerCtpOptionsBySClass();
   const searchSummary = buildSearchSummary({ sClass, coverage, repairType, brand, model, year, cubicCapacity, sumInsured });
 
   const resultRange = totalItems === 0 ? { start: 0, end: 0 } : { start: (safePage - 1) * PAGE_SIZE + 1, end: Math.min(safePage * PAGE_SIZE, totalItems) };
@@ -680,14 +703,19 @@ export default async function LineAppPage({
               maxCubicCapacity: toNumberOrNull(pkg.maxCubicCapacity),
               minSumInsured: toNumberOrNull(pkg.minSumInsured),
               maxSumInsured: toNumberOrNull(pkg.maxSumInsured),
+              brand: pkg.brand,
+              model: pkg.model,
               fullPrice: toNumber(pkg.fullPrice),
               netPrice: toNumber(pkg.netPrice),
+              payablePrice: toNumberOrNull(pkg.payablePrice),
               discount: toNumber(pkg.discount)
             }))}
+            ctpOptionsBySClass={ctpOptionsBySClass}
             baseQueryString={baseQueryString}
             vehicleTypeLabel={sClass ? getSClassLabel(sClass) : ''}
             registrationYear={year}
             cubicCapacityLabel={cubicCapacity ? formatCubicCapacity(cubicCapacity) : ''}
+            initialCtpPackageIds={initialCtpPackageIds}
           />
         )}
 

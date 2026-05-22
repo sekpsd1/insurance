@@ -3,7 +3,8 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { createPolicyDraftOrder } from '@/lib/actions';
-import { getCtpOptionForSClass, isCtpSelected } from '@/lib/ctp';
+import { isCtpSelected } from '@/lib/ctp';
+import { getCtpOptionForSClass } from '@/lib/ctp-rates';
 
 type FormPageProps = {
   params: Promise<{ id: string }>;
@@ -152,7 +153,7 @@ export default async function PackageFormPage({ params, searchParams }: FormPage
     resolvedSearchParams.lineId?.trim() ||
     process.env.DEMO_LINE_ID?.trim() ||
     `demo-${packageId}`;
-  const ctpOption = getCtpOptionForSClass(packageItem.sClass);
+  const ctpOption = await getCtpOptionForSClass(packageItem.sClass);
   const includeCtp = isCtpSelected(resolvedSearchParams.includeCtp) && Boolean(ctpOption);
 
   return (

@@ -74,6 +74,11 @@ export type InsuranceCampaignImportResult = {
   rowsInserted: number;
 };
 
+type DeleteCampaignResult = {
+  packagesDeleted: number;
+  ordersDeleted: number;
+};
+
 function normalizeKey(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]/g, '');
 }
@@ -235,8 +240,9 @@ export function mapCsvRecordToInsurancePackage(
   const minCubicCapacity = parseOptionalNumberValue(readRecordValue(record, ['mincst', 'mincc', 'mincubiccapacity']));
   const maxCubicCapacity = parseOptionalNumberValue(readRecordValue(record, ['maxcst', 'maxcc', 'maxcubiccapacity']));
   const netPrice = parseNumberValue(
-    readRecordValue(record, ['prem_net_pd', 'netprice', 'premnetpd', 'premium_net', 'premium'])
+    readRecordValue(record, ['prm_gapnew', 'prem_net_pd', 'netprice', 'premnetpd', 'premium_net', 'premium'])
   );
+  const payablePrice = parseNumberValue(readRecordValue(record, ['paid', 'payable', 'payableprice', 'remainingprice']), netPrice);
   const fullPrice = parseNumberValue(
     readRecordValue(record, ['prem_full_pd', 'prem_gross_pd', 'fullprice', 'grossprice', 'premium_full']),
     netPrice
@@ -276,13 +282,15 @@ export function mapCsvRecordToInsurancePackage(
       ['sClass', ['sclass', 'carclass', 'vehicleclass']],
       ['sumInsured', ['minsi', 'maxsi', 'minsuminsured', 'maxsuminsured']],
       ['carAge', ['minyear', 'maxyear', 'mincarage', 'maxcarage']],
-      ['netPrice', ['prem_net_pd', 'netprice', 'premnetpd', 'premium_net', 'premium']],
+      ['netPrice', ['prm_gapnew', 'prem_net_pd', 'netprice', 'premnetpd', 'premium_net', 'premium']],
+      ['payablePrice', ['paid', 'payable', 'payableprice', 'remainingprice']],
       ['year', ['year', 'car_year', 'modelyear', 'mfgyear', 'registeryear']]
     ]),
     repairType,
     coverage,
     fullPrice,
     netPrice,
+    payablePrice,
     discount: Math.max(fullPrice - netPrice, 0)
   };
 }
@@ -324,13 +332,8 @@ export async function importInsuranceCampaignFromCsv(
   await prisma.$transaction(
     async (tx) => {
     if (options.replaceExisting) {
-      await tx.$executeRaw`
-        DELETE FROM InsurancePackage
-        WHERE companyCode = ${companyCode}
-          AND campaignCode = ${campaignCode}
-      `;
-
-      rowsDeleted = packageRows.length;
+      const deleteResult = await deleteInsuranceCampaignRows(tx, companyCode, campaignCode);
+      rowsDeleted = deleteResult.packagesDeleted;
     }
 
     for (const batch of chunkArray(packageRows, INSURANCE_IMPORT_BATCH_SIZE)) {
@@ -359,6 +362,86 @@ export async function importInsuranceCampaignFromCsv(
   };
 }
 
+async function deleteInsuranceCampaignRows(
+  tx: Prisma.TransactionClient,
+  companyCode: string,
+  campaignCode: string
+): Promise<DeleteCampaignResult> {
+  const packages = await tx.insurancePackage.findMany({
+    where: {
+      companyCode,
+      campaignCode
+    },
+    select: {
+      id: true
+    }
+  });
+  const packageIds = packages.map((pkg) => pkg.id);
+
+  if (packageIds.length === 0) {
+    return { packagesDeleted: 0, ordersDeleted: 0 };
+  }
+
+  const orders = await tx.order.findMany({
+    where: {
+      packageId: {
+        in: packageIds
+      }
+    },
+    select: {
+      id: true
+    }
+  });
+  const orderIds = orders.map((order) => order.id);
+
+  if (orderIds.length > 0) {
+    await tx.emailOutbox.updateMany({
+      where: {
+        orderId: {
+          in: orderIds
+        }
+      },
+      data: {
+        orderId: null
+      }
+    });
+    await tx.magicLinkToken.deleteMany({
+      where: {
+        orderId: {
+          in: orderIds
+        }
+      }
+    });
+    await tx.orderStatusHistory.deleteMany({
+      where: {
+        orderId: {
+          in: orderIds
+        }
+      }
+    });
+    await tx.order.deleteMany({
+      where: {
+        id: {
+          in: orderIds
+        }
+      }
+    });
+  }
+
+  const deletePackagesResult = await tx.insurancePackage.deleteMany({
+    where: {
+      id: {
+        in: packageIds
+      }
+    }
+  });
+
+  return {
+    packagesDeleted: deletePackagesResult.count,
+    ordersDeleted: orderIds.length
+  };
+}
+
 export async function deleteInsuranceCampaignByCode(companyCode: string, campaignCode: string) {
   const normalizedCompanyCode = companyCode.trim();
   const normalizedCampaignCode = campaignCode.trim();
@@ -371,11 +454,13 @@ export async function deleteInsuranceCampaignByCode(companyCode: string, campaig
     throw new Error('campaignCode is required');
   }
 
-  return prisma.$executeRaw`
-    DELETE FROM InsurancePackage
-    WHERE companyCode = ${normalizedCompanyCode}
-      AND campaignCode = ${normalizedCampaignCode}
-  `;
+  return prisma.$transaction(
+    async (tx) => deleteInsuranceCampaignRows(tx, normalizedCompanyCode, normalizedCampaignCode),
+    {
+      timeout: 600000,
+      maxWait: 600000
+    }
+  );
 }
 
 export async function getInsuranceCampaignSummaries(): Promise<InsuranceCampaignSummary[]> {

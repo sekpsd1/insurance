@@ -3,36 +3,46 @@
 import { useEffect, useState } from 'react';
 
 const CART_STORAGE_KEY = 'insurance.cartPackageIds';
+const CART_CTP_STORAGE_KEY = 'insurance.cartCtpPackageIds';
 
 type CartPackageButtonProps = {
   packageId: string;
+  includeCtp?: boolean;
 };
 
-function readCartIds() {
+function readStorageIds(key: string) {
   try {
-    const rawValue = window.localStorage.getItem(CART_STORAGE_KEY);
+    const rawValue = window.localStorage.getItem(key);
     const parsed = rawValue ? JSON.parse(rawValue) : [];
     return Array.isArray(parsed) ? parsed.filter((value): value is string => typeof value === 'string') : [];
   } catch {
-    window.localStorage.removeItem(CART_STORAGE_KEY);
+    window.localStorage.removeItem(key);
     return [];
   }
 }
 
-export default function CartPackageButton({ packageId }: CartPackageButtonProps) {
+export default function CartPackageButton({ packageId, includeCtp = false }: CartPackageButtonProps) {
   const [isInCart, setIsInCart] = useState(false);
 
   useEffect(() => {
-    setIsInCart(readCartIds().includes(packageId));
+    setIsInCart(readStorageIds(CART_STORAGE_KEY).includes(packageId));
   }, [packageId]);
 
   function toggleCart() {
-    const currentIds = readCartIds();
-    const nextIds = currentIds.includes(packageId)
-      ? currentIds.filter((id) => id !== packageId)
-      : [...currentIds, packageId];
+    const currentCartIds = readStorageIds(CART_STORAGE_KEY);
+    const currentCtpIds = readStorageIds(CART_CTP_STORAGE_KEY);
+    const isCurrentlyInCart = currentCartIds.includes(packageId);
+    const nextIds = isCurrentlyInCart
+      ? currentCartIds.filter((id) => id !== packageId)
+      : [...currentCartIds, packageId];
+    const nextCtpIds = isCurrentlyInCart
+      ? currentCtpIds.filter((id) => id !== packageId)
+      : includeCtp && !currentCtpIds.includes(packageId)
+        ? [...currentCtpIds, packageId]
+        : currentCtpIds;
 
     window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(nextIds));
+    window.localStorage.setItem(CART_CTP_STORAGE_KEY, JSON.stringify(nextCtpIds.filter((id) => nextIds.includes(id))));
     setIsInCart(nextIds.includes(packageId));
   }
 

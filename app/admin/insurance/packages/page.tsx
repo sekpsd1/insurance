@@ -24,6 +24,7 @@ type PackageRow = {
   year: number | null;
   fullPrice: number;
   netPrice: number;
+  payablePrice: number | null;
   discount: number;
   repairType: string | null;
   coverage: string | null;
@@ -124,6 +125,7 @@ async function getPackages(searchParams: PackageSearchParams) {
       year: true,
       fullPrice: true,
       netPrice: true,
+      payablePrice: true,
       discount: true,
       repairType: true,
       coverage: true,
@@ -227,6 +229,10 @@ function PackageEditForm({ pkg }: { pkg: PackageRow }) {
         <div className="rounded-2xl bg-slate-50 p-3">
           <div className="text-slate-500">Discount</div>
           <div className="mt-1 font-semibold text-slate-900">{formatCurrency(pkg.discount)}</div>
+        </div>
+        <div className="rounded-2xl bg-amber-50 p-3">
+          <div className="text-amber-700">คงเหลือชำระ</div>
+          <div className="mt-1 font-semibold text-slate-900">{formatCurrency(pkg.payablePrice ?? pkg.netPrice)}</div>
         </div>
       </div>
 

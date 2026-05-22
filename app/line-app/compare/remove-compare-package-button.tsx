@@ -3,18 +3,22 @@
 import Link from 'next/link';
 
 const COMPARE_STORAGE_KEY = 'insurance.comparePackageIds';
+const COMPARE_CTP_STORAGE_KEY = 'insurance.compareCtpPackageIds';
 
 type RemoveComparePackageButtonProps = {
   href: string;
   remainingIds: string[];
+  remainingCtpIds: string[];
 };
 
 export default function RemoveComparePackageButton({
   href,
-  remainingIds
+  remainingIds,
+  remainingCtpIds
 }: RemoveComparePackageButtonProps) {
   function syncCompareStorage() {
     window.localStorage.setItem(COMPARE_STORAGE_KEY, JSON.stringify(remainingIds));
+    window.localStorage.setItem(COMPARE_CTP_STORAGE_KEY, JSON.stringify(remainingCtpIds));
   }
 
   return (

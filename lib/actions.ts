@@ -6,7 +6,8 @@ import { createHash, createHmac, randomBytes, randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
-import { getCtpOptionForSClass, isCtpSelected } from '@/lib/ctp';
+import { isCtpSelected } from '@/lib/ctp';
+import { getCtpOptionForSClass } from '@/lib/ctp-rates';
 import { getOrderStatusLabel, getPaymentMethodLabel, getPaymentStatusLabel } from '@/lib/status-labels';
 import {
   deleteInsuranceCampaignByCode,
@@ -274,6 +275,17 @@ function parseOptionalInt(value: string | null) {
 
   const parsed = Number.parseInt(value, 10);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function parseRequiredMoney(value: string | null, fieldName: string) {
+  const normalized = value?.replace(/,/g, '').trim();
+  const parsed = normalized ? Number.parseFloat(normalized) : Number.NaN;
+
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    throw new Error(`${fieldName} must be a valid non-negative number`);
+  }
+
+  return Math.round(parsed * 100) / 100;
 }
 
 function parseOptionalDate(value: string | null) {
@@ -1082,7 +1094,7 @@ export async function createPolicyDraftOrder(formData: FormData): Promise<void> 
     throw new Error('Selected package was not found');
   }
 
-  const ctpOption = getCtpOptionForSClass(selectedPackage.sClass);
+  const ctpOption = await getCtpOptionForSClass(selectedPackage.sClass);
   const includeCtp = isCtpSelected(formData.get('includeCtp'));
 
   if (includeCtp && !ctpOption) {
@@ -1090,7 +1102,7 @@ export async function createPolicyDraftOrder(formData: FormData): Promise<void> 
   }
 
   const ctpTotal = includeCtp && ctpOption ? ctpOption.total : 0;
-  const paymentAmount = selectedPackage.netPrice + ctpTotal;
+  const paymentAmount = (selectedPackage.payablePrice ?? selectedPackage.netPrice) + ctpTotal;
 
   const user = await prisma.user.upsert({
     where: {
@@ -1213,7 +1225,7 @@ export async function submitCheckout(formData: FormData): Promise<void> {
       status,
       paymentMethod,
       paymentStatus,
-      paymentAmount: order.paymentAmount ?? order.pkg.netPrice,
+      paymentAmount: order.paymentAmount ?? order.pkg.payablePrice ?? order.pkg.netPrice,
       slipUrl,
       gatewayUrl
     }
@@ -1582,4 +1594,53 @@ export async function deleteInsuranceCampaign(formData: FormData): Promise<void>
   revalidatePath('/admin/insurance');
   revalidatePath('/admin/insurance/packages');
   revalidatePath('/line-app');
+}
+
+export async function updateCtpRate(formData: FormData): Promise<void> {
+  const sClass = normalizeShortText(getRequiredFormValue(formData, 'sClass'), 20, 'Vehicle class') ?? '';
+  const rateCode = normalizeShortText(getOptionalFormValue(formData, 'rateCode'), 40, 'Rate code');
+  const cmiVehicleTypeCode = normalizeShortText(getOptionalFormValue(formData, 'cmiVehicleTypeCode'), 40, 'CMI vehicle type code');
+  const label = normalizeShortText(getRequiredFormValue(formData, 'label'), 200, 'Label') ?? '';
+  const eligibilityLabel = normalizeShortText(getOptionalFormValue(formData, 'eligibilityLabel'), 200, 'Eligibility label');
+  const premium = parseRequiredMoney(getRequiredFormValue(formData, 'premium'), 'Premium');
+  const stamp = parseRequiredMoney(getRequiredFormValue(formData, 'stamp'), 'Stamp');
+  const vat = parseRequiredMoney(getRequiredFormValue(formData, 'vat'), 'VAT');
+  const total = parseRequiredMoney(getRequiredFormValue(formData, 'total'), 'Total');
+  const sellable = String(formData.get('sellable') ?? '').trim() === 'on';
+  const active = String(formData.get('active') ?? '').trim() === 'on';
+
+  await prisma.ctpRate.upsert({
+    where: {
+      sClass
+    },
+    create: {
+      sClass,
+      rateCode,
+      cmiVehicleTypeCode,
+      label,
+      eligibilityLabel,
+      premium,
+      stamp,
+      vat,
+      total,
+      sellable,
+      active
+    },
+    update: {
+      rateCode,
+      cmiVehicleTypeCode,
+      label,
+      eligibilityLabel,
+      premium,
+      stamp,
+      vat,
+      total,
+      sellable,
+      active
+    }
+  });
+
+  revalidatePath('/admin/insurance');
+  revalidatePath('/line-app');
+  revalidatePath('/line-app/search');
 }
