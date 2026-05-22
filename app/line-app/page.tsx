@@ -1,7 +1,9 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import CompareSelection from './_components/compare-selection';
+import ResultsQuickFilters from './_components/results-quick-filters';
 
 function formatMoney(value: number) {
   return value.toLocaleString('th-TH');
@@ -74,6 +76,13 @@ type InsurancePackageRow = {
 type SearchResultMeta = {
   exactYearMatched: boolean;
   usedFallbackYearSearch: boolean;
+};
+
+type QuickFilterOptionRow = {
+  coverageType: string | null;
+  repairType: 'dealer' | 'garage' | null;
+  minSumInsuredValues: string | null;
+  maxSumInsuredValues: string | null;
 };
 
 const PAGE_SIZE = 12;
@@ -188,6 +197,22 @@ function parsePage(value: string | string[] | undefined) {
 function parsePositiveInt(value: string) {
   const parsed = Number.parseInt(value.replace(/,/g, ''), 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function parseNonNegativeInt(value: string) {
+  const parsed = Number.parseInt(value.replace(/,/g, ''), 10);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+}
+
+function parseNumberCsv(value: string | null | undefined) {
+  if (!value) {
+    return [];
+  }
+
+  return value
+    .split(',')
+    .map((entry) => Number.parseInt(entry.trim(), 10))
+    .filter((entry) => Number.isFinite(entry) && entry >= 0);
 }
 
 function getCarAgeFromRegistrationYear(year: string) {
@@ -337,8 +362,13 @@ export default async function LineAppPage({
   const page = parsePage(resolvedSearchParams.page);
   const selectedCarAge = getCarAgeFromRegistrationYear(year);
   const selectedCubicCapacity = parsePositiveInt(cubicCapacity);
-  const selectedSumInsured = parsePositiveInt(sumInsured);
+  const selectedSumInsured = parseNonNegativeInt(sumInsured);
   const hasFilters = Boolean(sClass || coverage || repairType || brand || model || year || cubicCapacity || sumInsured);
+
+  if (!hasFilters) {
+    redirect('/line-app/search');
+  }
+
   const baseParams = new URLSearchParams();
 
   if (sClass) baseParams.set('sClass', sClass);
@@ -462,6 +492,83 @@ export default async function LineAppPage({
     LIMIT ${PAGE_SIZE} OFFSET ${(safePage - 1) * PAGE_SIZE}
   `;
 
+  const quickFilterConditions: Prisma.Sql[] = [Prisma.sql`${coverageTypeSql} <> ''`];
+
+  if (sClass) {
+    quickFilterConditions.push(Prisma.sql`COALESCE(sClass, JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.SClass'))) = ${sClass}`);
+  }
+
+  if (brand) {
+    quickFilterConditions.push(Prisma.sql`brand = ${brand}`);
+  }
+
+  if (model) {
+    quickFilterConditions.push(Prisma.sql`model = ${model}`);
+  }
+
+  if (selectedCarAge !== null) {
+    quickFilterConditions.push(Prisma.sql`
+      COALESCE(minCarAge, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MinYear')), '') AS UNSIGNED)) <= ${selectedCarAge}
+      AND COALESCE(maxCarAge, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MaxYear')), '') AS UNSIGNED)) >= ${selectedCarAge}
+    `);
+  }
+
+  if (selectedCubicCapacity !== null) {
+    quickFilterConditions.push(Prisma.sql`
+      COALESCE(minCubicCapacity, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MinCST')), '') AS UNSIGNED)) <= ${selectedCubicCapacity}
+      AND COALESCE(maxCubicCapacity, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MaxCST')), '') AS UNSIGNED)) >= ${selectedCubicCapacity}
+    `);
+  }
+
+  const quickFilterWhereClause = Prisma.sql`WHERE ${Prisma.join(quickFilterConditions, ' AND ')}`;
+  const quickFilterRows = await prisma.$queryRaw<QuickFilterOptionRow[]>`
+    SELECT
+      coverageType,
+      repairType,
+      GROUP_CONCAT(DISTINCT minSumInsured ORDER BY minSumInsured SEPARATOR ',') AS minSumInsuredValues,
+      GROUP_CONCAT(DISTINCT maxSumInsured ORDER BY maxSumInsured SEPARATOR ',') AS maxSumInsuredValues
+    FROM (
+      SELECT
+        ${coverageTypeSql} AS coverageType,
+        ${repairTypeSql} AS repairType,
+        COALESCE(minSumInsured, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MinSI')), '') AS UNSIGNED)) AS minSumInsured,
+        COALESCE(maxSumInsured, CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.MaxSI')), '') AS UNSIGNED)) AS maxSumInsured
+      FROM InsurancePackage
+      ${quickFilterWhereClause}
+    ) quickFilterSource
+    GROUP BY coverageType, repairType
+    ORDER BY coverageType ASC, repairType ASC
+  `;
+
+  const quickFilterOptions = quickFilterRows.flatMap((row) => {
+    const normalizedCoverageType = row.coverageType?.trim();
+
+    if (
+      normalizedCoverageType !== '1' &&
+      normalizedCoverageType !== '2+' &&
+      normalizedCoverageType !== '3+' &&
+      normalizedCoverageType !== '3'
+    ) {
+      return [];
+    }
+
+    if (row.repairType !== 'dealer' && row.repairType !== 'garage') {
+      return [];
+    }
+
+    const coverageType = normalizedCoverageType as '1' | '2+' | '3+' | '3';
+
+    return [
+      {
+        coverageType,
+        repairType: row.repairType,
+        sumInsuredValues: Array.from(
+          new Set([...parseNumberCsv(row.minSumInsuredValues), ...parseNumberCsv(row.maxSumInsuredValues)])
+        )
+      }
+    ];
+  });
+
   let searchMeta: SearchResultMeta = {
     exactYearMatched: exactYearTotal > 0 || !year,
     usedFallbackYearSearch: false,
@@ -499,13 +606,22 @@ export default async function LineAppPage({
                 ไม่มีข้อมูลปีจดทะเบียนตรงกับที่เลือก แสดงผลตามยี่ห้อและรุ่นแทน
               </span>
             ) : null}
-            <Link
-              href={buildSearchHref(baseParams)}
-              className="mt-3 flex w-full items-center justify-center rounded-xl border border-[#0052CC] bg-white px-4 py-2.5 text-sm font-semibold text-[#0052CC] transition hover:bg-[#eef3ff]"
-            >
-              เปลี่ยนประเภท / ทุนประกัน / ซ่อมห้าง ซ่อมอู่
-            </Link>
           </section>
+        ) : null}
+
+        {hasFilters ? (
+          <ResultsQuickFilters
+            optionRows={quickFilterOptions}
+            baseQueryString={baseQueryString}
+            searchHref={buildSearchHref(baseParams)}
+            currentCoverage={coverage}
+            currentRepairType={repairType}
+            currentSumInsured={sumInsured}
+            vehicleTitle={[brand, model, year].filter(Boolean).join(' ') || 'ข้อมูลรถของคุณ'}
+            vehicleSubtitle={[sClass ? getSClassLabel(sClass) : '', cubicCapacity ? formatCubicCapacity(cubicCapacity) : '']
+              .filter(Boolean)
+              .join(' · ')}
+          />
         ) : null}
 
         <section className="rounded-xl bg-[#e1e2ec] p-4 shadow-[0_8px_24px_rgba(0,0,0,0.06)]">

@@ -1,6 +1,6 @@
 # Project State
 
-Last updated: 2026-05-21
+Last updated: 2026-05-22
 
 ## Current Architecture
 
@@ -97,6 +97,7 @@ It also stores rating/search fields imported from insurer CSV rows:
 ### Customer Flow
 
 - Search Premium page loads real brand/model/year options from DB.
+- Opening `/line-app` without search query parameters now redirects to `/line-app/search` so customers start from the vehicle search form instead of seeing the unfiltered package list.
 - Search Premium now filters by insurer vehicle class (`SClass`) and selected sum insured (`MinSI`/`MaxSI`).
 - Search Premium vehicle type options now show customer-facing groups:
   - `รถยนต์นั่ง ส่วนบุคคล / รถกระบะ 4 ประตู` maps to `SClass 110`.
@@ -298,6 +299,17 @@ It also stores rating/search fields imported from insurer CSV rows:
 
 ## Latest Local Verification
 
+Last verified on 2026-05-22 after adding the in-page results quick filter panel.
+
+- `npx tsc --noEmit` passed.
+- `npm run build` passed.
+- Build still shows the known acceptable `<img>` warnings in checkout/compare areas.
+- `/api/health` returned 200.
+- `/line-app` without query parameters returned a 307 redirect to `/line-app/search`.
+- `/line-app` returned 200 for a results URL using `SClass 110`, grouped `2+`, `ซ่อมอู่`, `TOYOTA HILUX REVO`, registration year `2022`, cubic capacity `2001`, and sum insured `300000`.
+- `/line-app` returned 200 for `ประเภท 3` / `ซ่อมอู่` / `sumInsured=0`.
+- Results now let customers switch policy type, repair coverage, and sum insured directly on the results page while preserving the selected vehicle details in the query string.
+
 Last verified on 2026-05-21 using localhost dev server after the customer search/results/compare refinement slice.
 
 - `npx tsc --noEmit` passed.
@@ -310,6 +322,7 @@ Last verified on 2026-05-21 using localhost dev server after the customer search
 - Search keeps vehicle selections when changing policy type or repair coverage if the vehicle values still exist in the newly filtered data.
 - Results now show vehicle type, registration year, and cubic capacity in package cards.
 - Results now include `เปลี่ยนประเภท / ทุนประกัน / ซ่อมห้าง ซ่อมอู่`, returning to search with current filters prefilled.
+- Results now include an in-page quick filter panel for policy type, repair coverage, and sum insured so customers can adjust those choices without returning to the full vehicle search form.
 - Results separate compare selection from cart selection:
   - `เลือกเทียบ` stores compare selections.
   - `เก็บใส่ตะกร้า` stores cart selections separately.
