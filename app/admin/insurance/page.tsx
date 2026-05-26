@@ -13,7 +13,8 @@ import {
 import { CampaignImportModal } from './_components/campaign-import-modal';
 import {
   getInsuranceCampaignSummaries,
-  getInsuranceCompanySummaries
+  getInsuranceCompanySummaries,
+  getPremiumImportAuditSummary
 } from '@/lib/insurance-import';
 import { getAdminCtpRates } from '@/lib/ctp-rates';
 
@@ -57,22 +58,24 @@ function buildCompanyPackagesHref(companyCode: string) {
 }
 
 async function getInsuranceDashboardStats() {
-  const [campaignSummaries, companySummaries, packageCount] = await Promise.all([
+  const [campaignSummaries, companySummaries, packageCount, premiumAudit] = await Promise.all([
     getInsuranceCampaignSummaries(),
     getInsuranceCompanySummaries(),
     prisma.insurancePackage.count(),
+    getPremiumImportAuditSummary()
   ]);
 
   return {
     campaignSummaries,
     companySummaries,
+    premiumAudit,
     packageCount,
     companyCount: companySummaries.length
   };
 }
 
 export default async function InsuranceCampaignAdminPage() {
-  const [{ campaignSummaries, companySummaries, packageCount, companyCount }, ctpRates] = await Promise.all([
+  const [{ campaignSummaries, companySummaries, packageCount, companyCount, premiumAudit }, ctpRates] = await Promise.all([
     getInsuranceDashboardStats(),
     getAdminCtpRates()
   ]);
@@ -122,6 +125,83 @@ export default async function InsuranceCampaignAdminPage() {
           </Link>
           <CampaignImportModal action={importInsuranceCampaign} />
         </div>
+      </div>
+
+      <div className="mb-8 rounded-3xl border border-white/10 bg-white p-5 shadow-2xl shadow-black/10">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-700">Import QA</p>
+            <h3 className="mt-1 text-lg font-semibold text-slate-950">ตรวจสอบเบี้ยประกันจาก prm_gapnew</h3>
+            <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-500">
+              ระบบตรวจว่า <span className="font-semibold text-slate-700">netPrice</span> ที่ใช้แสดงเบี้ยประกันตรงกับ <span className="font-semibold text-slate-700">rawData.prm_gapnew</span> จาก CSV หรือไม่ ควรใช้หลัง import หรือแทนที่แคมเปญทุกครั้ง
+            </p>
+          </div>
+          <span className={`inline-flex rounded-full px-3 py-1 text-sm font-semibold ring-1 ring-inset ${
+            premiumAudit.mismatchedRows === 0
+              ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
+              : 'bg-red-50 text-red-700 ring-red-200'
+          }`}>
+            {premiumAudit.mismatchedRows === 0 ? 'ผ่าน' : `พบผิด ${premiumAudit.mismatchedRows.toLocaleString()} แถว`}
+          </span>
+        </div>
+
+        <div className="mt-5 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-5">
+          <div className="rounded-2xl bg-slate-50 p-4">
+            <div className="text-slate-500">แพ็กเกจทั้งหมด</div>
+            <div className="mt-1 text-xl font-bold text-slate-950">{premiumAudit.totalPackages.toLocaleString()}</div>
+          </div>
+          <div className="rounded-2xl bg-slate-50 p-4">
+            <div className="text-slate-500">มี prm_gapnew</div>
+            <div className="mt-1 text-xl font-bold text-slate-950">{premiumAudit.rowsWithPrmGapNew.toLocaleString()}</div>
+          </div>
+          <div className="rounded-2xl bg-emerald-50 p-4">
+            <div className="text-emerald-700">ตรงกัน</div>
+            <div className="mt-1 text-xl font-bold text-emerald-800">{premiumAudit.matchingRows.toLocaleString()}</div>
+          </div>
+          <div className="rounded-2xl bg-red-50 p-4">
+            <div className="text-red-700">ไม่ตรงกัน</div>
+            <div className="mt-1 text-xl font-bold text-red-800">{premiumAudit.mismatchedRows.toLocaleString()}</div>
+          </div>
+          <div className="rounded-2xl bg-amber-50 p-4">
+            <div className="text-amber-700">ไม่มี prm_gapnew</div>
+            <div className="mt-1 text-xl font-bold text-amber-800">{premiumAudit.missingPrmGapNewRows.toLocaleString()}</div>
+          </div>
+        </div>
+
+        {premiumAudit.examples.length > 0 ? (
+          <div className="mt-5 overflow-hidden rounded-2xl border border-red-100">
+            <div className="bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">ตัวอย่างแถวที่ netPrice ไม่ตรงกับ prm_gapnew</div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-slate-200 text-sm">
+                <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th className="px-4 py-3">Campaign</th>
+                    <th className="px-4 py-3">Vehicle</th>
+                    <th className="px-4 py-3 text-right">netPrice</th>
+                    <th className="px-4 py-3 text-right">prm_gapnew</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 bg-white">
+                  {premiumAudit.examples.map((example) => (
+                    <tr key={example.id}>
+                      <td className="px-4 py-3 text-slate-700">
+                        <div className="font-semibold text-slate-900">{example.campaignName || '-'}</div>
+                        <div className="text-xs text-slate-500">{example.companyCode} / {example.campaignCode}</div>
+                      </td>
+                      <td className="px-4 py-3 text-slate-700">{[example.brand, example.model].filter(Boolean).join(' · ') || '-'}</td>
+                      <td className="px-4 py-3 text-right font-semibold text-red-700">{formatCurrency(example.netPrice)}</td>
+                      <td className="px-4 py-3 text-right font-semibold text-slate-900">{formatCurrency(example.prmGapNew)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : (
+          <p className="mt-4 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
+            netPrice ตรงกับ rawData.prm_gapnew ทุกแถวที่มีค่า prm_gapnew
+          </p>
+        )}
       </div>
 
       <div className="mb-8 rounded-3xl border border-white/10 bg-white p-5 shadow-2xl shadow-black/10">

@@ -63,6 +63,26 @@ export type InsuranceCompanySummary = {
   latestCreatedAt: Date | null;
 };
 
+export type PremiumImportAuditExample = {
+  id: string;
+  companyCode: string;
+  campaignCode: string;
+  campaignName: string;
+  brand: string;
+  model: string;
+  netPrice: number;
+  prmGapNew: number;
+};
+
+export type PremiumImportAuditSummary = {
+  totalPackages: number;
+  rowsWithPrmGapNew: number;
+  matchingRows: number;
+  mismatchedRows: number;
+  missingPrmGapNewRows: number;
+  examples: PremiumImportAuditExample[];
+};
+
 export type InsuranceCampaignImportResult = {
   companyCode: string;
   campaignCode: string;
@@ -122,6 +142,20 @@ function parseOptionalNumberValue(value: string) {
   const parsed = Number.parseInt(normalized, 10);
   return Number.isFinite(parsed) ? parsed : null;
 }
+
+const prmGapNewSql = Prisma.sql`
+  CAST(
+    REPLACE(
+      COALESCE(
+        NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.prm_gapnew')), ''),
+        NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.PRM_GAPNEW')), ''),
+        NULLIF(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.Prm_Gapnew')), '')
+      ),
+      ',',
+      ''
+    ) AS DECIMAL(12, 2)
+  )
+`;
 
 function parseYearValue(value: string) {
   if (!value) {
@@ -545,4 +579,76 @@ export async function getInsuranceCompanySummaries(): Promise<InsuranceCompanySu
       latestCreatedAt: row.latestCreatedAt ? new Date(row.latestCreatedAt) : null
     }))
     .filter((row) => row.companyCode);
+}
+
+export async function getPremiumImportAuditSummary(): Promise<PremiumImportAuditSummary> {
+  const [summary] = await prisma.$queryRaw<
+    Array<{
+      totalPackages: bigint | number | string;
+      rowsWithPrmGapNew: bigint | number | string;
+      matchingRows: bigint | number | string;
+      mismatchedRows: bigint | number | string;
+      missingPrmGapNewRows: bigint | number | string;
+    }>
+  >`
+    SELECT
+      COUNT(*) AS totalPackages,
+      SUM(CASE WHEN ${prmGapNewSql} IS NOT NULL THEN 1 ELSE 0 END) AS rowsWithPrmGapNew,
+      SUM(CASE WHEN ${prmGapNewSql} IS NOT NULL AND ABS(netPrice - ${prmGapNewSql}) < 0.005 THEN 1 ELSE 0 END) AS matchingRows,
+      SUM(CASE WHEN ${prmGapNewSql} IS NOT NULL AND ABS(netPrice - ${prmGapNewSql}) >= 0.005 THEN 1 ELSE 0 END) AS mismatchedRows,
+      SUM(CASE WHEN ${prmGapNewSql} IS NULL THEN 1 ELSE 0 END) AS missingPrmGapNewRows
+    FROM InsurancePackage
+    WHERE companyCode IS NOT NULL
+      AND campaignCode IS NOT NULL
+      AND rawData IS NOT NULL
+  `;
+
+  const examples = await prisma.$queryRaw<
+    Array<{
+      id: string;
+      companyCode: string | null;
+      campaignCode: string | null;
+      campaignName: string | null;
+      brand: string | null;
+      model: string | null;
+      netPrice: number | string;
+      prmGapNew: number | string;
+    }>
+  >`
+    SELECT
+      id,
+      companyCode,
+      campaignCode,
+      campaignName,
+      brand,
+      model,
+      netPrice,
+      ${prmGapNewSql} AS prmGapNew
+    FROM InsurancePackage
+    WHERE companyCode IS NOT NULL
+      AND campaignCode IS NOT NULL
+      AND rawData IS NOT NULL
+      AND ${prmGapNewSql} IS NOT NULL
+      AND ABS(netPrice - ${prmGapNewSql}) >= 0.005
+    ORDER BY createdAt DESC, id DESC
+    LIMIT 10
+  `;
+
+  return {
+    totalPackages: Number(summary?.totalPackages ?? 0),
+    rowsWithPrmGapNew: Number(summary?.rowsWithPrmGapNew ?? 0),
+    matchingRows: Number(summary?.matchingRows ?? 0),
+    mismatchedRows: Number(summary?.mismatchedRows ?? 0),
+    missingPrmGapNewRows: Number(summary?.missingPrmGapNewRows ?? 0),
+    examples: examples.map((row) => ({
+      id: row.id,
+      companyCode: row.companyCode ?? '',
+      campaignCode: row.campaignCode ?? '',
+      campaignName: row.campaignName ?? '',
+      brand: row.brand ?? '',
+      model: row.model ?? '',
+      netPrice: Number(row.netPrice) || 0,
+      prmGapNew: Number(row.prmGapNew) || 0
+    }))
+  };
 }

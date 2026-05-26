@@ -1,6 +1,6 @@
 # Project State
 
-Last updated: 2026-05-22
+Last updated: 2026-05-26
 
 ## Current Architecture
 
@@ -257,7 +257,7 @@ It also stores rating/search fields imported from insurer CSV rows:
 - `/api/health` exists as a production smoke-test endpoint that checks database connectivity.
 - `/admin/readiness` shows production readiness checks for DB, app URL, admin session env, provider email, and upload storage.
 - `server.js`, `npm run smoke`, `DEPLOYMENT_CHECKLIST.md`, and `PLESK_DEPLOYMENT.md` document and support Plesk Node.js deployment.
-- `CSV_IMPORT_GUIDE.md` documents supported import columns and post-import QA.
+- `CSV_IMPORT_GUIDE.md` documents supported import columns, `prm_gapnew`/`paid` price mapping, and post-import QA.
 - Latest pushed commits:
   - `a4ccef4` - order checkout and Magic Link flow.
   - `502e6af` - removed first class insurance from customer flow.
@@ -305,7 +305,7 @@ It also stores rating/search fields imported from insurer CSV rows:
 
 ## Latest Local Verification
 
-Last verified on 2026-05-22 after adding the saved-cart page and cart sticky action from results.
+Last verified on 2026-05-26 after adding Import QA and cleaning old sample package rows.
 
 - `npx tsc --noEmit` passed.
 - `npm run build` passed.
@@ -320,6 +320,10 @@ Last verified on 2026-05-22 after adding the saved-cart page and cart sticky act
 - Results now let customers switch policy type, repair coverage, and sum insured directly on the results page while preserving the selected vehicle details in the query string.
 - Results proposal cards now show a separate plan detail box and cost summary box, and use `covcod` to show whether first deductible applies.
 - CSV import now maps `prm_gapnew` to package premium (`netPrice`) and `paid` to `payablePrice`.
+- Local package rows were backfilled again on 2026-05-26 so `netPrice` exactly matches `rawData.prm_gapnew`; 16,328 rows were updated after customer confirmation that the displayed premium must come from `prm_gapnew`.
+- Admin insurance dashboard now includes an Import QA card that checks campaign import rows only and verifies whether `InsurancePackage.netPrice` matches `rawData.prm_gapnew`, shows mismatch counts, and lists up to 10 example rows for follow-up after CSV import.
+- The two old manual/sample packages named `ประกันชั้น 1 พลัส` for `กรุงเทพ` and `วิริยะประกันภัย` were deleted from the local database because they were not real campaign import data and did not have `rawData.prm_gapnew`.
+- Current local Import QA after deleting those sample rows: 41,015 campaign import rows, 41,015 rows with `prm_gapnew`, 41,015 matching rows, 0 mismatches, and 0 missing `prm_gapnew` rows.
 - Results, cart, compare, checkout, and order creation now use `payablePrice + CTP/CMI` as the customer payable amount, while still showing the package premium separately.
 - Cart links now carry selected CTP/CMI package IDs through `ctpIds`; the cart page shows the optional CTP/CMI line, includes it in remaining payable totals, and keeps `includeCtp=1` when customers continue to Policy Info from the cart.
 - Compare links now also carry selected CTP/CMI package IDs through `ctpIds`; the comparison table shows CTP/CMI, total premium, and remaining payable per compared plan.
