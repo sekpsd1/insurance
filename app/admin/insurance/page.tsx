@@ -11,6 +11,7 @@ import {
   updateInsuranceCampaignProviderContact
 } from '@/lib/actions';
 import { CampaignImportModal } from './_components/campaign-import-modal';
+import { ConfirmSubmitButton } from './_components/confirm-submit-button';
 import {
   getInsuranceCampaignSummaries,
   getInsuranceCompanySummaries,
@@ -553,12 +554,12 @@ export default async function InsuranceCampaignAdminPage() {
                 <form action={deleteInsuranceCampaign} className="flex-1 min-w-[160px]">
                   <input type="hidden" name="companyCode" value={campaign.companyCode} />
                   <input type="hidden" name="campaignCode" value={campaign.campaignCode} />
-                  <button
-                    type="submit"
+                  <ConfirmSubmitButton
+                    confirmMessage={`ยืนยันลบแคมเปญ "${campaign.campaignName}" (${campaign.companyCode} / ${campaign.campaignCode}) ใช่ไหม?\n\nการลบนี้จะลบแพ็กเกจในแคมเปญนี้ รวมถึงข้อมูลคำสั่งซื้อที่ผูกกับแพ็กเกจเหล่านี้ และไม่สามารถย้อนกลับได้`}
                     className="inline-flex w-full items-center justify-center rounded-xl bg-rose-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-rose-700"
                   >
                     Delete Campaign
-                  </button>
+                  </ConfirmSubmitButton>
                 </form>
               </div>
             </article>

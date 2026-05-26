@@ -325,6 +325,7 @@ Last verified on 2026-05-26 after adding Import QA and cleaning old sample packa
 - The two old manual/sample packages named `ประกันชั้น 1 พลัส` for `กรุงเทพ` and `วิริยะประกันภัย` were deleted from the local database because they were not real campaign import data and did not have `rawData.prm_gapnew`.
 - Current local Import QA after deleting those sample rows: 41,015 campaign import rows, 41,015 rows with `prm_gapnew`, 41,015 matching rows, 0 mismatches, and 0 missing `prm_gapnew` rows.
 - CSV import field lookup now respects alias priority instead of CSV column order, so `prm_gapnew` is used for `netPrice` even when older premium columns such as `prem_net_pd` appear earlier in the uploaded CSV.
+- Admin Delete Campaign now requires a browser confirmation before submitting the destructive server action.
 - Results, cart, compare, checkout, and order creation now use `payablePrice + CTP/CMI` as the customer payable amount, while still showing the package premium separately.
 - Cart links now carry selected CTP/CMI package IDs through `ctpIds`; the cart page shows the optional CTP/CMI line, includes it in remaining payable totals, and keeps `includeCtp=1` when customers continue to Policy Info from the cart.
 - Compare links now also carry selected CTP/CMI package IDs through `ctpIds`; the comparison table shows CTP/CMI, total premium, and remaining payable per compared plan.
