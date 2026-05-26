@@ -84,20 +84,25 @@ function getSClassShortLabel(value: string | null | undefined, fallback: string)
   return `รหัส ${normalized}`;
 }
 
-function formatSumInsuredRange(min: number | null | undefined, max: number | null | undefined) {
-  if (min === 0 && max === 0) {
+function formatSumInsuredRange(min: unknown, max: unknown) {
+  const minValue = min == null ? null : Number(min);
+  const maxValue = max == null ? null : Number(max);
+  const hasMin = minValue !== null && Number.isFinite(minValue);
+  const hasMax = maxValue !== null && Number.isFinite(maxValue);
+
+  if (minValue === 0 && maxValue === 0) {
     return 'ไม่มีทุนประกัน';
   }
 
-  if (!min && !max) {
+  if (!hasMin && !hasMax) {
     return '-';
   }
 
-  if (min && max && min !== max) {
-    return `${formatMoney(min)}-${formatMoney(max)} บาท`;
+  if (hasMin && hasMax && minValue !== maxValue) {
+    return `${formatMoney(minValue)}-${formatMoney(maxValue)} บาท`;
   }
 
-  return `${formatMoney(min ?? max ?? 0)} บาท`;
+  return `${formatMoney(hasMin ? minValue : maxValue ?? 0)} บาท`;
 }
 
 function encodeLogoUrl(logoUrl: string) {

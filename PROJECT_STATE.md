@@ -1,6 +1,6 @@
 # Project State
 
-Last updated: 2026-05-26
+Last updated: 2026-05-27
 
 ## Current Architecture
 
@@ -359,6 +359,8 @@ Last verified on 2026-05-21 using localhost dev server after the customer search
 - Compare page title is now Thai: `ตารางเปรียบเทียบแผน`.
 - Compare page supports removing individual compared plans and has a separate `เก็บใส่ตะกร้า` button per plan.
 - Compare page no longer shows the rows for general market price, coverage, or discount, per the latest comparison-table cleanup.
+
+- Cart and results card sum-insured display now normalizes min/max values before comparison so equal imported values such as `50000` and `50000` render as one amount instead of a duplicated range.
 
 Last verified on 2026-05-17 using localhost production start.
 

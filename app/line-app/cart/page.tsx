@@ -115,20 +115,25 @@ function getText(value: string | null | undefined, fallback: string) {
   return normalized ? normalized : fallback;
 }
 
-function formatSumInsuredRange(min: number | null | undefined, max: number | null | undefined) {
-  if (min === 0 && max === 0) {
+function formatSumInsuredRange(min: unknown, max: unknown) {
+  const minValue = min == null ? null : toNumber(min);
+  const maxValue = max == null ? null : toNumber(max);
+  const hasMin = minValue !== null && Number.isFinite(minValue);
+  const hasMax = maxValue !== null && Number.isFinite(maxValue);
+
+  if (minValue === 0 && maxValue === 0) {
     return 'ไม่มีทุนประกัน';
   }
 
-  if (!min && !max) {
+  if (!hasMin && !hasMax) {
     return '-';
   }
 
-  if (min && max && min !== max) {
-    return `${min.toLocaleString('th-TH')}-${max.toLocaleString('th-TH')} บาท`;
+  if (hasMin && hasMax && minValue !== maxValue) {
+    return `${minValue.toLocaleString('th-TH')}-${maxValue.toLocaleString('th-TH')} บาท`;
   }
 
-  return `${(min ?? max ?? 0).toLocaleString('th-TH')} บาท`;
+  return `${(hasMin ? minValue : maxValue ?? 0).toLocaleString('th-TH')} บาท`;
 }
 
 function encodeLogoUrl(logoUrl: string) {
