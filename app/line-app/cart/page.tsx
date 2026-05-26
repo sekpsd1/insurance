@@ -92,6 +92,29 @@ function getSClassLabel(value: string | null | undefined) {
   return value || '-';
 }
 
+function getSClassShortLabel(value: string | null | undefined) {
+  return value?.trim() ? `รหัส ${value.trim()}` : '-';
+}
+
+function getDeductibleLabel(coverageCode: string | null | undefined) {
+  const normalized = coverageCode?.trim();
+
+  if (normalized === '2.2' || normalized === '3.2') {
+    return 'ไม่มี';
+  }
+
+  if (normalized === '2.1' || normalized === '3.1') {
+    return 'มี';
+  }
+
+  return '-';
+}
+
+function getText(value: string | null | undefined, fallback: string) {
+  const normalized = value?.trim();
+  return normalized ? normalized : fallback;
+}
+
 function formatSumInsuredRange(min: number | null | undefined, max: number | null | undefined) {
   if (min === 0 && max === 0) {
     return 'ไม่มีทุนประกัน';
@@ -113,6 +136,47 @@ function encodeLogoUrl(logoUrl: string) {
     .split('/')
     .map((segment, index) => (index === 0 ? segment : encodeURIComponent(segment)))
     .join('/');
+}
+
+function DetailIcon({
+  icon,
+  tone
+}: {
+  icon: 'car' | 'shield' | 'money' | 'star' | 'wrench' | 'tag' | 'ctp';
+  tone: 'blue' | 'indigo' | 'green' | 'amber' | 'slate' | 'orange';
+}) {
+  const toneClass = {
+    blue: 'text-[#0052CC]',
+    indigo: 'text-[#364fc7]',
+    green: 'text-[#16803c]',
+    amber: 'text-[#c48a00]',
+    slate: 'text-[#445066]',
+    orange: 'text-[#bf5b00]'
+  }[tone];
+
+  const icons = {
+    car: (
+      <>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 15h2l1.7-4.2A3 3 0 0 1 9.5 9h4.8a3 3 0 0 1 2.4 1.2L20 14h1v4h-2" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M5 18H3v-3h18M8 18h8M8.2 9l-1.4 4H12V9M12 9v4h6.4" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M7 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM17 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" />
+      </>
+    ),
+    shield: <path strokeLinecap="round" strokeLinejoin="round" d="M12 4l6 2v5c0 4-2.4 7-6 9-3.6-2-6-5-6-9V6l6-2Zm0 4v7m-3.2-3.2L12 15l3.2-3.2" />,
+    money: <path strokeLinecap="round" strokeLinejoin="round" d="M5 7h14v10H5V7Zm3 3h.01M16 14h.01M12 10.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z" />,
+    star: <path strokeLinecap="round" strokeLinejoin="round" d="M12 4l2.2 4.6 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5-3.6-3.5 5-.7L12 4Z" />,
+    wrench: <path strokeLinecap="round" strokeLinejoin="round" d="M15.7 5.3a4 4 0 0 0 3 5.4l-7.9 7.9a2 2 0 0 1-2.8 0l-2.6-2.6a2 2 0 0 1 0-2.8l7.9-7.9a4 4 0 0 0 2.4 0ZM7.5 14.5l2 2" />,
+    tag: <path strokeLinecap="round" strokeLinejoin="round" d="M4 11V5h6l9 9-6 6-9-9Zm4-3h.01" />,
+    ctp: <path strokeLinecap="round" strokeLinejoin="round" d="M7 5h8l2 2v12H7V5Zm8 0v3h3M9 12h6M9 15h4" />
+  }[icon];
+
+  return (
+    <span className={`flex h-9 w-9 shrink-0 items-center justify-center ${toneClass}`}>
+      <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2">
+        {icons}
+      </svg>
+    </span>
+  );
 }
 
 function buildCoverageTypeSql() {
@@ -282,6 +346,7 @@ export default async function CartPage({
               const ctpTotal = ctpOption?.total ?? 0;
               const premiumTotal = toNumber(pkg.netPrice) + ctpTotal;
               const payableTotal = toNumber(pkg.payablePrice ?? pkg.netPrice) + ctpTotal;
+              const deductibleLabel = getDeductibleLabel(pkg.coverageCode);
 
               return (
                 <article key={pkg.id} className="overflow-hidden rounded-3xl bg-white p-5 shadow-[0_10px_30px_rgba(4,16,61,0.08)] ring-1 ring-white/70">
@@ -305,44 +370,88 @@ export default async function CartPage({
                     </div>
                   </div>
 
-                  <dl className="mt-4 grid gap-3 rounded-2xl border border-[#dfe4ef] bg-white p-4 text-sm">
-                    <div className="flex justify-between gap-4">
-                      <dt className="text-[#4b5265]">ประเภทรถ</dt>
-                      <dd className="text-right font-semibold text-[#1f2a44]">{getSClassLabel(pkg.sClass)}</dd>
-                    </div>
-                    <div className="flex justify-between gap-4">
-                      <dt className="text-[#4b5265]">ประเภท</dt>
-                      <dd className="text-right font-semibold text-[#1f2a44]">{getCoverageLabel(pkg.coverageType)}</dd>
-                    </div>
-                    <div className="flex justify-between gap-4">
-                      <dt className="text-[#4b5265]">ทุนประกัน</dt>
-                      <dd className="text-right font-semibold text-[#1f2a44]">{formatSumInsuredRange(pkg.minSumInsured, pkg.maxSumInsured)}</dd>
-                    </div>
-                    <div className="flex justify-between gap-4">
-                      <dt className="text-[#4b5265]">ประเภทการซ่อม</dt>
-                      <dd className="text-right font-semibold text-[#1f2a44]">{pkg.repairType || '-'}</dd>
-                    </div>
-                    <div className="flex justify-between gap-4 border-t border-[#dfe4ef] pt-3">
-                      <dt className="font-semibold text-[#1f2a44]">เบี้ยประกัน</dt>
-                      <dd className="text-right font-[Kanit,sans-serif] text-lg font-bold text-[#0047BA]">{formatMoney(toNumber(pkg.netPrice))} บาท</dd>
-                    </div>
-                    {ctpOption ? (
-                      <div className="flex justify-between gap-4">
-                        <dt className="font-semibold text-[#1f2a44]">พ.ร.บ. เพิ่มเติม</dt>
-                        <dd className="text-right font-[Kanit,sans-serif] text-lg font-bold text-[#0047BA]">{formatMoney(ctpOption.total)} บาท</dd>
+                  <div className="mt-4 overflow-hidden rounded-2xl border border-[#dfe4ef] bg-white shadow-[0_6px_18px_rgba(15,32,67,0.06)]">
+                    <div className="space-y-3 p-4 text-sm text-[#2f3545]">
+                      <div className="flex items-start gap-3">
+                        <DetailIcon icon="car" tone="blue" />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-3">
+                            <span className="font-semibold text-[#1f2a44]">{getSClassShortLabel(pkg.sClass)}</span>
+                            <span className="text-right leading-5">{getSClassLabel(pkg.sClass)}</span>
+                          </div>
+                        </div>
                       </div>
-                    ) : null}
-                    {ctpOption ? (
-                      <div className="flex justify-between gap-4">
-                        <dt className="font-semibold text-[#1f2a44]">รวม</dt>
-                        <dd className="text-right font-[Kanit,sans-serif] text-lg font-bold text-[#111827]">{formatMoney(premiumTotal)} บาท</dd>
+
+                      <div className="flex items-center gap-3">
+                        <DetailIcon icon="shield" tone="indigo" />
+                        <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+                          <span className="font-medium text-[#4b5265]">ประเภท</span>
+                          <span className="text-right font-semibold text-[#1f2a44]">{getCoverageLabel(pkg.coverageType)}</span>
+                        </div>
                       </div>
-                    ) : null}
-                    <div className="flex justify-between gap-4">
-                      <dt className="font-semibold text-[#4b3a0b]">คงเหลือชำระ</dt>
-                      <dd className="text-right font-[Kanit,sans-serif] text-lg font-bold text-[#111827]">{formatMoney(payableTotal)} บาท</dd>
+
+                      <div className="flex items-center gap-3">
+                        <DetailIcon icon="money" tone="green" />
+                        <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+                          <span className="font-medium text-[#4b5265]">ทุนประกัน</span>
+                          <span className="text-right font-semibold text-[#1f2a44]">{formatSumInsuredRange(pkg.minSumInsured, pkg.maxSumInsured)}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <DetailIcon icon="star" tone="amber" />
+                        <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+                          <span className="font-medium text-[#4b5265]">ความเสียหายส่วนแรก</span>
+                          <span className="text-right font-semibold text-[#1f2a44]">{deductibleLabel}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <DetailIcon icon="wrench" tone="slate" />
+                        <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+                          <span className="font-medium text-[#4b5265]">ประเภทการซ่อม</span>
+                          <span className="text-right font-semibold text-[#1f2a44]">{getText(pkg.repairType, 'อู่ประกัน')}</span>
+                        </div>
+                      </div>
                     </div>
-                  </dl>
+                  </div>
+
+                  <div className="mt-4 overflow-hidden rounded-2xl bg-[#eef1f4] shadow-[0_8px_22px_rgba(15,32,67,0.08)]">
+                    <div className="border-b border-[#d8dde7] px-4 py-3">
+                      <h3 className="font-[Kanit,sans-serif] text-base font-bold text-[#1f2a44]">สรุปค่าใช้จ่าย</h3>
+                    </div>
+
+                    <div className="space-y-3 px-4 py-4 text-sm text-[#2f3545]">
+                      <div className="flex items-center gap-3">
+                        <DetailIcon icon="tag" tone="orange" />
+                        <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+                          <span className="font-medium">เบี้ยประกัน</span>
+                          <span className="text-right font-semibold">{formatMoney(toNumber(pkg.netPrice))} บาท</span>
+                        </div>
+                      </div>
+
+                      {ctpOption ? (
+                        <div className="flex items-center gap-3">
+                          <DetailIcon icon="ctp" tone="blue" />
+                          <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+                            <span className="font-medium">พ.ร.บ. เพิ่มเติม</span>
+                            <span className="text-right font-semibold">{formatMoney(ctpOption.total)} บาท</span>
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+
+                    <div className="flex items-center justify-between gap-4 border-t border-[#d8dde7] px-4 py-4 text-lg font-bold text-[#1f2a44]">
+                      <span>รวม</span>
+                      <span>{formatMoney(premiumTotal)} บาท</span>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 rounded-2xl border border-[#d6c27a] bg-[#fffdf4] px-4 py-4 shadow-[0_8px_20px_rgba(154,118,20,0.10)]">
+                    <p className="text-sm font-semibold text-[#4b3a0b]">คงเหลือชำระ</p>
+                    <p className="mt-1 font-[Kanit,sans-serif] text-3xl font-bold leading-tight text-[#111827]">{formatMoney(payableTotal)} บาท</p>
+                  </div>
+
 
                   <Link
                     href={buildFormHref(baseParams, pkg.id, Boolean(ctpOption))}

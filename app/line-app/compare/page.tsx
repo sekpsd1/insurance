@@ -444,7 +444,7 @@ export default async function ComparePage({
 
   return (
     <main className="min-h-screen bg-[#f4f5ff] text-[#12131a]">
-      <header className="sticky top-0 z-10 bg-[#0047BA] text-white shadow-[0_4px_16px_rgba(0,0,0,0.12)]">
+      <header className="sticky top-0 z-50 bg-[#0047BA] text-white shadow-[0_4px_16px_rgba(0,0,0,0.12)]">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
           <Link href={searchHref} aria-label="กลับไปหน้า Search Premium" className="rounded-full p-1.5 transition-colors hover:bg-white/10">
             <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2">
