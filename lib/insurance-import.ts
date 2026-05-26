@@ -112,10 +112,20 @@ function normalizeText(value: unknown) {
 }
 
 function readRecordValue(record: CsvRecord, aliases: string[]) {
-  const normalizedAliases = aliases.map(normalizeKey);
+  const entriesByNormalizedKey = new Map<string, string>();
 
   for (const [key, value] of Object.entries(record)) {
-    if (normalizedAliases.includes(normalizeKey(key))) {
+    const normalizedKey = normalizeKey(key);
+
+    if (!entriesByNormalizedKey.has(normalizedKey)) {
+      entriesByNormalizedKey.set(normalizedKey, value);
+    }
+  }
+
+  for (const alias of aliases) {
+    const value = entriesByNormalizedKey.get(normalizeKey(alias));
+
+    if (value !== undefined) {
       return normalizeText(value);
     }
   }
