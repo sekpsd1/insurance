@@ -360,6 +360,8 @@ Last verified on 2026-05-21 using localhost dev server after the customer search
 - Compare page supports removing individual compared plans and has a separate `เก็บใส่ตะกร้า` button per plan.
 - Compare page no longer shows the rows for general market price, coverage, or discount, per the latest comparison-table cleanup.
 
+- Compare table no longer shows the top-left detail label or the bottom package details row, keeping only the useful comparison rows.
+- Customer `/line-app` layout no longer shows the internal `Customer Area / LINE Mini App Insurance Quote` header so production customer pages start directly with the app screen header.
 - Cart and results card sum-insured display now normalizes min/max values before comparison so equal imported values such as `50000` and `50000` render as one amount instead of a duplicated range.
 
 Last verified on 2026-05-17 using localhost production start.

@@ -549,7 +549,7 @@ export default async function ComparePage({
               <table className="min-w-full border-separate border-spacing-0">
                 <thead>
                   <tr>
-                    <th className="sticky left-0 z-20 bg-[#f8f9ff] px-4 py-4 text-left text-sm font-semibold text-slate-700">รายละเอียด</th>
+                    <th aria-label="หัวข้อเปรียบเทียบ" className="sticky left-0 z-20 bg-[#f8f9ff] px-4 py-4 text-left text-sm font-semibold text-slate-700" />
                     {packages.map((pkg) => (
                       <th key={pkg.id} className="min-w-[220px] border-l border-slate-200 bg-[#eef3ff] px-4 py-4 text-left align-top">
                         <div className="flex items-start gap-3">
@@ -604,8 +604,7 @@ export default async function ComparePage({
                     { label: 'คงเหลือชำระ', values: packages.map((pkg) => {
                       const ctpOption = ctpOptionByPackageId.get(pkg.id);
                       return `${formatMoney((pkg.payablePrice ?? pkg.netPrice) + (ctpOption?.total ?? 0))} บาท`;
-                    }) },
-                    { label: 'รายละเอียด', values: packages.map((pkg) => pkg.details || '-') }
+                    }) }
                   ].map((row) => (
                     <tr key={row.label}>
                       <th className="sticky left-0 z-10 border-t border-slate-200 bg-white px-4 py-3 text-left text-sm font-semibold text-slate-700">
