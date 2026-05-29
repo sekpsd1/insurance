@@ -32,6 +32,7 @@ export type OrderStatus =
   | 'CANCELLED';
 
 export type PaymentMethod = 'BANK_TRANSFER' | 'CARD_GATEWAY';
+export type TypeOneLeadSalesStatus = 'NEW' | 'CONTACTED' | 'QUOTED' | 'CLOSED';
 
 const ALLOWED_IMAGE_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif']);
 const LOGO_MAX_BYTES = 2 * 1024 * 1024;
@@ -50,6 +51,7 @@ const ALL_ORDER_STATUSES: OrderStatus[] = [
   'REJECTED',
   'CANCELLED'
 ];
+const TYPE_ONE_LEAD_SALES_STATUSES = new Set<TypeOneLeadSalesStatus>(['NEW', 'CONTACTED', 'QUOTED', 'CLOSED']);
 
 function formatOrderNumber(date = new Date()) {
   const ymd = date.toISOString().slice(0, 10).replace(/-/g, '');
@@ -1320,6 +1322,32 @@ export async function updateSalesLeadEmailSetting(formData: FormData): Promise<v
 
   revalidatePath('/admin/insurance');
   revalidatePath('/admin/readiness');
+}
+
+export async function updateTypeOneQuoteLeadFollowUp(formData: FormData): Promise<void> {
+  const leadId = getRequiredFormValue(formData, 'leadId');
+  const salesStatus = normalizeShortText(
+    getRequiredFormValue(formData, 'salesStatus'),
+    40,
+    'Sales follow-up status'
+  ) as TypeOneLeadSalesStatus | null;
+  const salesNote = normalizeShortText(getOptionalFormValue(formData, 'salesNote'), 1000, 'Sales note');
+
+  if (!salesStatus || !TYPE_ONE_LEAD_SALES_STATUSES.has(salesStatus)) {
+    throw new Error('Invalid sales follow-up status');
+  }
+
+  await prisma.typeOneQuoteLead.update({
+    where: {
+      id: leadId
+    },
+    data: {
+      salesStatus,
+      salesNote
+    }
+  });
+
+  revalidatePath('/admin/leads');
 }
 
 export async function submitCheckout(formData: FormData): Promise<void> {

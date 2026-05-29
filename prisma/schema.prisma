@@ -34,11 +34,14 @@ model TypeOneQuoteLead {
   carYear         Int
   cubicCapacity   String
   emailOutboxId   String?
+  salesStatus     String   @default("NEW")
+  salesNote       String?  @db.Text
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
   @@index([createdAt])
   @@index([customerPhone])
+  @@index([salesStatus])
 }
 
 model SystemSetting {

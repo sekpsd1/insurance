@@ -170,6 +170,7 @@ It also stores rating/search fields imported from insurer CSV rows:
 - Campaign-level logo upload exists.
 - Package management page exists for package search/edit.
 - Admin now has `/admin/leads` for Type 1 quote requests, including search, email-status filtering, customer/vehicle details, and resend email action.
+- Admin Type 1 Leads now supports sales follow-up status and internal notes, so sales can track whether a Type 1 quote request is new, contacted, quoted, or closed.
 - Provider Contact can now be saved per campaign and applied to all packages in that campaign.
 - Email preview page exists for provider Magic Link emails.
 

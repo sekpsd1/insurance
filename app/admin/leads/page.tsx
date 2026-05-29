@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
-import { sendEmailOutboxItem } from '@/lib/actions';
+import { sendEmailOutboxItem, updateTypeOneQuoteLeadFollowUp } from '@/lib/actions';
 import { getEmailActionLabel, getEmailStatusLabel } from '@/lib/status-labels';
 
 const LEADS_PAGE_SIZE = 20;
@@ -10,11 +10,35 @@ type AdminLeadsPageProps = {
   searchParams?: Promise<{
     q?: string;
     emailStatus?: string;
+    salesStatus?: string;
     page?: string;
   }>;
 };
 
 const emailStatusOptions = ['QUEUED', 'SENT', 'ERROR', 'MISSING_RECIPIENT'];
+const salesStatusOptions = [
+  { value: 'NEW', label: 'ใหม่' },
+  { value: 'CONTACTED', label: 'ติดต่อแล้ว' },
+  { value: 'QUOTED', label: 'ส่งใบเสนอราคาแล้ว' },
+  { value: 'CLOSED', label: 'ปิดงานแล้ว' }
+];
+
+function getSalesStatusLabel(status?: string | null) {
+  return salesStatusOptions.find((option) => option.value === status)?.label ?? 'ใหม่';
+}
+
+function getSalesStatusStyles(status?: string | null) {
+  switch (status) {
+    case 'CONTACTED':
+      return 'bg-sky-50 text-sky-700 ring-sky-200';
+    case 'QUOTED':
+      return 'bg-indigo-50 text-indigo-700 ring-indigo-200';
+    case 'CLOSED':
+      return 'bg-emerald-50 text-emerald-700 ring-emerald-200';
+    default:
+      return 'bg-amber-50 text-amber-700 ring-amber-200';
+  }
+}
 
 function formatDate(date: Date) {
   return new Intl.DateTimeFormat('th-TH', {
@@ -75,8 +99,13 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
   const params = (await searchParams) ?? {};
   const q = params.q?.trim() ?? '';
   const emailStatus = params.emailStatus?.trim() ?? '';
+  const salesStatus = params.salesStatus?.trim() ?? '';
   const currentPage = Math.max(Number.parseInt(params.page ?? '1', 10) || 1, 1);
   const where = buildLeadWhere(q);
+
+  if (salesStatus && salesStatusOptions.some((option) => option.value === salesStatus)) {
+    where.salesStatus = salesStatus;
+  }
 
   if (emailStatus) {
     const matchingOutboxes = await prisma.emailOutbox.findMany({
@@ -146,6 +175,10 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
     baseParams.set('emailStatus', emailStatus);
   }
 
+  if (salesStatus) {
+    baseParams.set('salesStatus', salesStatus);
+  }
+
   return (
     <div className="mx-auto w-full max-w-[1800px] px-4 py-8 text-slate-950 sm:px-6 lg:px-8">
       <section className="rounded-[2rem] bg-white p-6 shadow-xl shadow-slate-950/10">
@@ -181,7 +214,7 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
           </div>
         </div>
 
-        <form className="mt-6 grid gap-3 rounded-3xl border border-slate-200 bg-slate-50 p-4 lg:grid-cols-[1fr_220px_auto]">
+        <form className="mt-6 grid gap-3 rounded-3xl border border-slate-200 bg-slate-50 p-4 lg:grid-cols-[1fr_220px_220px_auto]">
           <label className="block">
             <span className="mb-2 block text-xs font-bold uppercase tracking-[0.16em] text-slate-500">ค้นหา</span>
             <input
@@ -206,6 +239,21 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
               ))}
             </select>
           </label>
+          <label className="block">
+            <span className="mb-2 block text-xs font-bold uppercase tracking-[0.16em] text-slate-500">สถานะติดตาม</span>
+            <select
+              name="salesStatus"
+              defaultValue={salesStatus}
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
+            >
+              <option value="">ทั้งหมด</option>
+              {salesStatusOptions.map((status) => (
+                <option key={status.value} value={status.value}>
+                  {status.label}
+                </option>
+              ))}
+            </select>
+          </label>
           <div className="flex items-end gap-2">
             <button className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-slate-800">
               กรองข้อมูล
@@ -221,13 +269,13 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
         </form>
 
         <div className="mt-6 overflow-hidden rounded-3xl border border-slate-200">
-          <div className="grid grid-cols-[180px_1.15fr_1.2fr_1.3fr_220px_130px] bg-slate-50 px-4 py-3 text-xs font-black uppercase tracking-[0.12em] text-slate-500">
+          <div className="grid grid-cols-[180px_1.1fr_1.1fr_1.25fr_230px_300px] bg-slate-50 px-4 py-3 text-xs font-black uppercase tracking-[0.12em] text-slate-500">
             <div>เลขคำขอ</div>
             <div>ลูกค้า</div>
             <div>รถ</div>
             <div>ช่องทางติดต่อ</div>
             <div>อีเมลทีมขาย</div>
-            <div className="text-right">คำสั่ง</div>
+            <div>ติดตาม</div>
           </div>
 
           {leads.length === 0 ? (
@@ -240,7 +288,7 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
               return (
                 <article
                   key={lead.id}
-                  className="grid grid-cols-[180px_1.15fr_1.2fr_1.3fr_220px_130px] items-start gap-4 border-t border-slate-200 px-4 py-5 text-sm"
+                  className="grid grid-cols-[180px_1.1fr_1.1fr_1.25fr_230px_300px] items-start gap-4 border-t border-slate-200 px-4 py-5 text-sm"
                 >
                   <div>
                     <p className="font-black text-slate-950">{lead.leadNumber}</p>
@@ -271,19 +319,46 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
                     <p className="mt-2 break-all text-xs text-slate-600">{outbox?.recipient ?? '-'}</p>
                     {outbox?.sentAt ? <p className="mt-1 text-xs text-emerald-700">ส่งเมื่อ {formatDate(outbox.sentAt)}</p> : null}
                     {outbox?.errorMessage ? <p className="mt-1 line-clamp-2 text-xs text-rose-600">{outbox.errorMessage}</p> : null}
-                  </div>
-                  <div className="flex justify-end">
                     {outbox && canRetryEmail(outbox.status, outbox.recipient) ? (
-                      <form action={sendEmailOutboxItem}>
+                      <form action={sendEmailOutboxItem} className="mt-3">
                         <input type="hidden" name="emailOutboxId" value={outbox.id} />
                         <button className="rounded-2xl bg-slate-950 px-4 py-2 text-xs font-bold text-white transition hover:bg-slate-800">
                           {getEmailActionLabel(outbox.status)}
                         </button>
                       </form>
                     ) : (
-                      <span className="rounded-2xl bg-slate-100 px-4 py-2 text-xs font-bold text-slate-500">-</span>
+                      <span className="mt-3 inline-flex rounded-2xl bg-slate-100 px-4 py-2 text-xs font-bold text-slate-500">-</span>
                     )}
                   </div>
+                  <form action={updateTypeOneQuoteLeadFollowUp} className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                    <input type="hidden" name="leadId" value={lead.id} />
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ring-1 ${getSalesStatusStyles(lead.salesStatus)}`}>
+                        {getSalesStatusLabel(lead.salesStatus)}
+                      </span>
+                      <button className="rounded-xl bg-slate-950 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-slate-800">
+                        บันทึก
+                      </button>
+                    </div>
+                    <select
+                      name="salesStatus"
+                      defaultValue={lead.salesStatus}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
+                    >
+                      {salesStatusOptions.map((status) => (
+                        <option key={status.value} value={status.value}>
+                          {status.label}
+                        </option>
+                      ))}
+                    </select>
+                    <textarea
+                      name="salesNote"
+                      defaultValue={lead.salesNote ?? ''}
+                      placeholder="บันทึกการติดตาม เช่น โทรแล้ว รอลูกค้าส่งเอกสาร"
+                      rows={3}
+                      className="mt-2 w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
+                    />
+                  </form>
                 </article>
               );
             })
