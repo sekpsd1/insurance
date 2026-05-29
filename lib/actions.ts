@@ -1046,6 +1046,7 @@ export async function sendEmailOutboxItem(formData: FormData): Promise<void> {
   await deliverEmailOutboxItem(emailOutboxId);
 
   revalidatePath('/admin');
+  revalidatePath('/admin/leads');
 }
 
 export async function createInsurerMagicLinkPreview(formData: FormData): Promise<void> {

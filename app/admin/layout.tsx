@@ -25,6 +25,13 @@ export default function AdminLayout({
               Orders
             </Link>
             <Link
+              href="/admin/leads"
+              prefetch={false}
+              className="rounded-full border border-white/10 px-4 py-2 text-white transition hover:bg-white/10"
+            >
+              Type 1 Leads
+            </Link>
+            <Link
               href="/admin/insurance/packages"
               prefetch={false}
               className="rounded-full border border-white/10 px-4 py-2 text-white transition hover:bg-white/10"

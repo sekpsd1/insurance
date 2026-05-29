@@ -169,6 +169,7 @@ It also stores rating/search fields imported from insurer CSV rows:
 - Campaign dashboard supports CSV import.
 - Campaign-level logo upload exists.
 - Package management page exists for package search/edit.
+- Admin now has `/admin/leads` for Type 1 quote requests, including search, email-status filtering, customer/vehicle details, and resend email action.
 - Provider Contact can now be saved per campaign and applied to all packages in that campaign.
 - Email preview page exists for provider Magic Link emails.
 
