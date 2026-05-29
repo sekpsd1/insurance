@@ -5,6 +5,7 @@ import type { Metadata } from 'next';
 import { createPolicyDraftOrder } from '@/lib/actions';
 import { isCtpSelected } from '@/lib/ctp';
 import { getCtpOptionForSClass } from '@/lib/ctp-rates';
+import { LineProfileFields } from '@/app/line-app/_components/line-profile-fields';
 
 type FormPageProps = {
   params: Promise<{ id: string }>;
@@ -175,7 +176,7 @@ export default async function PackageFormPage({ params, searchParams }: FormPage
 
       <form action={createPolicyDraftOrder} className="mx-auto flex max-w-md flex-col gap-5 px-4 pb-28 pt-5 sm:px-6">
         <input type="hidden" name="packageId" value={packageItem.id} />
-        <input type="hidden" name="lineId" value={lineId} />
+        <LineProfileFields fallbackLineId={lineId} />
         <input type="hidden" name="carBrand" value={packageItem.brand ?? ''} />
         <input type="hidden" name="carModel" value={packageItem.model ?? ''} />
         <input type="hidden" name="carYear" value={packageItem.year ?? ''} />
@@ -196,6 +197,7 @@ export default async function PackageFormPage({ params, searchParams }: FormPage
         <SectionCard icon="person" title="ข้อมูลส่วนตัว">
           <Field label="ชื่อ - นามสกุล" name="customerName" placeholder="ระบุชื่อและนามสกุลตามบัตรประชาชน" />
           <Field label="เบอร์โทรศัพท์" name="customerPhone" placeholder="08X-XXX-XXXX" type="tel" inputMode="tel" />
+          <Field label="อีเมล" name="customerEmail" placeholder="name@example.com" type="email" required={false} />
           <Field
             label="ที่อยู่สำหรับจัดส่งเอกสาร"
             name="customerAddress"

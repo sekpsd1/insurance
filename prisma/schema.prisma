@@ -8,14 +8,16 @@ datasource db {
 }
 
 model User {
-  id          String    @id @default(uuid())
-  lineId      String    @unique
-  name        String?
-  phone       String?
-  email       String?
-  consentedAt DateTime?
-  orders      Order[]
-  createdAt   DateTime  @default(now())
+  id              String    @id @default(uuid())
+  lineId          String    @unique
+  lineDisplayName String?
+  linePictureUrl  String?
+  name            String?
+  phone           String?
+  email           String?
+  consentedAt     DateTime?
+  orders          Order[]
+  createdAt       DateTime  @default(now())
 }
 
 model InsurancePackage {
