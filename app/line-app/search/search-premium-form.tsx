@@ -194,6 +194,7 @@ export default function SearchPremiumForm({
   const [leadCustomerPhone, setLeadCustomerPhone] = useState('');
   const [leadLineId, setLeadLineId] = useState('');
   const [leadLineDisplayName, setLeadLineDisplayName] = useState('');
+  const [hasLiffProfile, setHasLiffProfile] = useState(false);
   const [leadEmail, setLeadEmail] = useState('');
   const [leadSuccessNumber, setLeadSuccessNumber] = useState('');
   const [leadError, setLeadError] = useState('');
@@ -326,6 +327,7 @@ export default function SearchPremiumForm({
 
   useEffect(() => {
     if (coverage !== '1') {
+      setHasLiffProfile(false);
       return;
     }
 
@@ -350,9 +352,13 @@ export default function SearchPremiumForm({
         if (!cancelled) {
           setLeadLineId((current) => current || profile.userId);
           setLeadLineDisplayName(profile.displayName ?? '');
+          setHasLiffProfile(Boolean(profile.userId));
         }
       })
       .catch((error) => {
+        if (!cancelled) {
+          setHasLiffProfile(false);
+        }
         console.warn('[LIFF] quote lead profile initialization failed', error);
       });
 
@@ -787,7 +793,8 @@ export default function SearchPremiumForm({
                 />
               </div>
 
-              <div>
+              {!hasLiffProfile ? (
+                <div>
                 <label htmlFor="leadLineId" className="mb-2 block text-sm font-semibold text-[#12131a]">
                   LINE ID
                 </label>
@@ -799,7 +806,13 @@ export default function SearchPremiumForm({
                   className="w-full rounded-2xl border border-[#d8dcec] bg-white px-4 py-3 text-[16px] text-[#12131a] outline-none transition focus:border-[#0047BA] focus:ring-4 focus:ring-[#0047BA]/10"
                   placeholder="ถ้าเปิดผ่าน LINE ระบบจะพยายามดึงให้อัตโนมัติ"
                 />
-              </div>
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-[#cfe8d8] bg-[#f0fbf5] px-4 py-3 text-sm font-semibold text-[#087443]">
+                  เชื่อมต่อ LINE profile แล้ว
+                  {leadLineDisplayName ? <span className="font-normal text-[#3a4258]"> ({leadLineDisplayName})</span> : null}
+                </div>
+              )}
 
               <div>
                 <label htmlFor="leadEmail" className="mb-2 block text-sm font-semibold text-[#12131a]">

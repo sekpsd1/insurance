@@ -129,6 +129,7 @@ It also stores rating/search fields imported from insurer CSV rows:
 - Search Premium now derives repair coverage options from the selected vehicle class and policy type. If a new policy type only has one repair coverage, such as `ประเภท 3` with only `ซ่อมอู่`, the form auto-switches to that repair coverage and keeps the vehicle selections when still valid.
 - Search Premium now supports packages with `MinSI`/`MaxSI` equal to `0`, such as some `ประเภท 3` rows, by showing `ไม่มีทุนประกัน` as a selectable sum-insured option.
 - Search Premium now routes `ประเภท 1` to a quote request form instead of instant package search. It collects customer name, phone, LINE ID/LIFF profile when available, optional email, brand, model, registration year, and cubic capacity, stores a `TypeOneQuoteLead`, and queues an email to `SALES_LEAD_EMAIL` when configured. Because Type 1 packages are not sold from CSV results, the Type 1 form uses broader vehicle option data from the selected SClass so customers can still submit a lead.
+- Type 1 quote request now hides the editable LINE ID input when LIFF profile data is available, while still submitting the LINE user ID internally.
 - Type 1 quote request email now reads the editable admin sales recipient first, then falls back to `SALES_LEAD_EMAIL`.
 - Search Premium sum-insured options now respect the selected repair type so customers do not select a sum insured that only exists under a different repair group.
 - Results page supports pagination.
