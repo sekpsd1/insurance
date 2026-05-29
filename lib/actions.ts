@@ -52,6 +52,12 @@ function formatOrderNumber(date = new Date()) {
   return `IN-${ymd}-${suffix}`;
 }
 
+function formatLeadNumber(date = new Date()) {
+  const ymd = date.toISOString().slice(0, 10).replace(/-/g, '');
+  const suffix = Math.floor(Math.random() * 900000 + 100000);
+  return `QL-${ymd}-${suffix}`;
+}
+
 function hashMagicToken(token: string) {
   return createHash('sha256').update(token).digest('hex');
 }
@@ -1180,6 +1186,120 @@ export async function createPolicyDraftOrder(formData: FormData): Promise<void> 
 
   revalidatePath('/admin');
   redirect(`/line-app/checkout/${order.id}`);
+}
+
+export async function createTypeOneQuoteLead(input: {
+  customerName: string;
+  customerPhone: string;
+  lineId?: string;
+  lineDisplayName?: string;
+  email?: string;
+  sClass?: string;
+  brand: string;
+  model: string;
+  year: string;
+  cubicCapacity: string;
+}): Promise<{ ok: true; leadNumber: string }> {
+  const customerName = normalizeShortText(input.customerName, 120, 'Customer name');
+  const customerPhone = normalizePhone(input.customerPhone, 'Customer phone');
+  const email = normalizeEmail(input.email ?? null, 'Customer email');
+  const lineId = normalizeShortText(input.lineId ?? '', 120, 'LINE ID');
+  const lineDisplayName = normalizeShortText(input.lineDisplayName ?? '', 120, 'LINE display name');
+  const sClass = normalizeShortText(input.sClass ?? '', 20, 'Vehicle class');
+  const brand = normalizeShortText(input.brand, 120, 'Brand');
+  const model = normalizeShortText(input.model, 120, 'Model');
+  const cubicCapacity = normalizeShortText(input.cubicCapacity, 80, 'Cubic capacity');
+  const carYear = Number.parseInt(input.year, 10);
+
+  if (!customerName || !customerPhone || !brand || !model || !cubicCapacity) {
+    throw new Error('Required quote lead fields are missing');
+  }
+
+  const currentYear = new Date().getFullYear();
+  if (!Number.isFinite(carYear) || carYear < 1950 || carYear > currentYear + 1) {
+    throw new Error(`Car year must be between 1950 and ${currentYear + 1}`);
+  }
+
+  let leadNumber = formatLeadNumber();
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const existing = await prisma.typeOneQuoteLead.findUnique({
+      where: {
+        leadNumber
+      }
+    });
+
+    if (!existing) {
+      break;
+    }
+
+    leadNumber = formatLeadNumber();
+  }
+
+  const salesEmail = normalizeEmail(process.env.SALES_LEAD_EMAIL ?? null, 'Sales lead email');
+  const subject = `[Type 1 Quote] ${leadNumber} - ${brand} ${model} ${carYear}`;
+  const body = [
+    'New Type 1 quote request',
+    '',
+    `Lead number: ${leadNumber}`,
+    `Customer: ${customerName}`,
+    `Phone: ${customerPhone}`,
+    lineId ? `LINE ID: ${lineId}` : null,
+    lineDisplayName ? `LINE display name: ${lineDisplayName}` : null,
+    email ? `Email: ${email}` : null,
+    '',
+    `Vehicle class: ${sClass ?? '-'}`,
+    `Brand: ${brand}`,
+    `Model: ${model}`,
+    `Registration year: ${carYear}`,
+    `Cubic capacity: ${cubicCapacity}`,
+    '',
+    'This is an automated broker system message.'
+  ]
+    .filter((line): line is string => line !== null)
+    .join('\n');
+
+  const lead = await prisma.typeOneQuoteLead.create({
+    data: {
+      leadNumber,
+      customerName,
+      customerPhone,
+      lineId,
+      lineDisplayName,
+      email,
+      sClass,
+      brand,
+      model,
+      carYear,
+      cubicCapacity
+    }
+  });
+
+  const outbox = await prisma.emailOutbox.create({
+    data: {
+      recipient: salesEmail,
+      subject,
+      body,
+      status: salesEmail ? 'QUEUED' : 'MISSING_RECIPIENT',
+      errorAt: salesEmail ? null : new Date(),
+      errorMessage: salesEmail ? null : 'SALES_LEAD_EMAIL is missing. Set this env value to notify the sales team.'
+    }
+  });
+
+  await prisma.typeOneQuoteLead.update({
+    where: {
+      id: lead.id
+    },
+    data: {
+      emailOutboxId: outbox.id
+    }
+  });
+
+  if (salesEmail) {
+    await deliverEmailOutboxItem(outbox.id);
+  }
+
+  revalidatePath('/admin');
+  return { ok: true, leadNumber };
 }
 
 export async function submitCheckout(formData: FormData): Promise<void> {

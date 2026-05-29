@@ -216,17 +216,17 @@ export default async function SearchInsurancePage({
 
       <div className="mx-auto flex min-h-[calc(100vh-72px)] max-w-md flex-col px-4 pb-6 pt-6">
         <section className="rounded-3xl bg-white/80 p-4 shadow-[0_10px_30px_rgba(4,16,61,0.08)] ring-1 ring-white/70 backdrop-blur-md">
-          <div className="flex items-start gap-4">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#e9efff] text-[#0047BA] shadow-inner">
-              <svg viewBox="0 0 24 24" className="h-8 w-8" fill="none" stroke="currentColor" strokeWidth="2">
+          <div className="flex items-start gap-3">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#e9efff] text-[#0047BA] shadow-inner">
+              <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 13l1.5-4.5A2 2 0 0 1 6.4 7h11.2a2 2 0 0 1 1.9 1.5L21 13" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13h14a2 2 0 0 1 2 2v2H3v-2a2 2 0 0 1 2-2Z" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 17.5h.01M16.5 17.5h.01" />
               </svg>
             </div>
 
-            <div>
-              <h2 className="font-[Kanit,sans-serif] text-2xl font-bold leading-tight text-[#0047BA]">ข้อมูลรถยนต์ของคุณ</h2>
+            <div className="min-w-0 flex-1">
+              <h2 className="whitespace-nowrap font-[Kanit,sans-serif] text-[22px] font-bold leading-tight text-[#0047BA]">ข้อมูลรถยนต์ของคุณ</h2>
               <p className="mt-1 text-sm leading-6 text-[#4b5265]">
                 กรุณาระบุรายละเอียดเพื่อดูแผนประกันและราคาทุนจากข้อมูลจริง
               </p>

@@ -333,7 +333,7 @@ export default function CompareSelection({
               }`}
             >
               <div className="relative p-5">
-                <div className="mb-4 flex items-start gap-3">
+                <div className="relative mb-4 flex items-start gap-3">
                   <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[rgba(195,198,214,0.35)] bg-[#eef3ff] shadow-sm">
                     {pkg.logoUrl && !failedLogoIdSet.has(pkg.id) ? (
                       <img
@@ -350,8 +350,8 @@ export default function CompareSelection({
                   </div>
 
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm leading-5 text-[#434654]">{pkg.company}</p>
-                    <p className="mt-1 font-[Kanit,sans-serif] text-lg font-bold leading-tight text-[#0052CC]">
+                    <p className="break-words pr-32 text-sm leading-5 text-[#434654]">{pkg.company}</p>
+                    <p className="mt-1 break-words font-[Kanit,sans-serif] text-lg font-bold leading-tight text-[#0052CC]">
                       {[pkg.brand, pkg.model].filter(Boolean).join(' · ') || '-'}
                     </p>
                   </div>
@@ -360,7 +360,7 @@ export default function CompareSelection({
                     type="button"
                     onClick={() => togglePackage(pkg.id)}
                     aria-pressed={isSelected}
-                    className={`inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold transition ${
+                    className={`absolute right-0 top-0 inline-flex w-[7.25rem] items-center justify-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition ${
                       isSelected
                         ? 'bg-[#0052CC] text-white shadow-[0_2px_8px_rgba(0,82,204,0.25)]'
                         : 'bg-[#eef3ff] text-[#0052CC] hover:bg-[#dde7ff]'

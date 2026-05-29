@@ -96,6 +96,8 @@ It also stores rating/search fields imported from insurer CSV rows:
 
 `EmailOutbox` stores provider email audit records, including recipient, subject, body, Magic Link path, queue/error status, and sent/error timestamps.
 
+`TypeOneQuoteLead` stores Type 1 quote requests for sales follow-up when customers need a manual quote instead of instant package search.
+
 ## Completed Tasks
 
 ### Customer Flow
@@ -124,6 +126,7 @@ It also stores rating/search fields imported from insurer CSV rows:
 - Search Premium preserves vehicle selections when changing policy type or repair coverage, and only clears downstream vehicle fields when the old value is not available in the newly filtered data.
 - Search Premium now derives repair coverage options from the selected vehicle class and policy type. If a new policy type only has one repair coverage, such as `ประเภท 3` with only `ซ่อมอู่`, the form auto-switches to that repair coverage and keeps the vehicle selections when still valid.
 - Search Premium now supports packages with `MinSI`/`MaxSI` equal to `0`, such as some `ประเภท 3` rows, by showing `ไม่มีทุนประกัน` as a selectable sum-insured option.
+- Search Premium now routes `ประเภท 1` to a quote request form instead of instant package search. It collects customer name, phone, LINE ID/LIFF profile when available, optional email, brand, model, registration year, and cubic capacity, stores a `TypeOneQuoteLead`, and queues an email to `SALES_LEAD_EMAIL` when configured. Because Type 1 packages are not sold from CSV results, the Type 1 form uses broader vehicle option data from the selected SClass so customers can still submit a lead.
 - Results page supports pagination.
 - Result cards encode uploaded logo URLs before rendering and fall back to company text if the image cannot be loaded.
 - Result cards and compare table display repair type from `GarageCd` as `ซ่อมห้าง` or `ซ่อมอู่`.
@@ -360,6 +363,11 @@ Last verified on 2026-05-21 using localhost dev server after the customer search
 - Compare page supports removing individual compared plans and has a separate `เก็บใส่ตะกร้า` button per plan.
 - Compare page no longer shows the rows for general market price, coverage, or discount, per the latest comparison-table cleanup.
 
+- Search page vehicle info intro heading is tightened for mobile so `??????????????????` stays on one line.
+- Results package card headers now let insurer/vehicle text use the available right-side space under the compare button on mobile.
+- Root `/` page no longer shows the internal project intro/stack copy; it only keeps quick links to Customer and Admin.
+- Search Premium vehicle selectors no longer hide older registration years just because `ซ่อมห้าง` is selected; the form can use the broader vehicle option data for year/engine/sum-insured selection, then alerts `ไม่มีแคมเปญสำหรับรถรุ่นดังกล่าว` if the selected repair type has no exact campaign.
+- The no-campaign search feedback now uses an in-app modal instead of the browser alert, with a clear `ปรับเงื่อนไขใหม่` action.
 - Customer Policy Info form now initializes LINE MINI App / LIFF profile data when `NEXT_PUBLIC_LIFF_ID` is configured, storing LINE user ID, display name, and picture URL on `User`; the form also includes an optional customer email field.
 - Compare table no longer shows the top-left detail label or the bottom package details row, keeping only the useful comparison rows.
 - Customer `/line-app` layout no longer shows the internal `Customer Area / LINE Mini App Insurance Quote` header so production customer pages start directly with the app screen header.

@@ -20,6 +20,27 @@ model User {
   createdAt       DateTime  @default(now())
 }
 
+model TypeOneQuoteLead {
+  id              String   @id @default(uuid())
+  leadNumber      String   @unique
+  customerName    String
+  customerPhone   String
+  lineId          String?
+  lineDisplayName String?
+  email           String?
+  sClass          String?
+  brand           String
+  model           String
+  carYear         Int
+  cubicCapacity   String
+  emailOutboxId   String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([createdAt])
+  @@index([customerPhone])
+}
+
 model InsurancePackage {
   id                   String   @id @default(uuid())
   name                 String
