@@ -41,6 +41,13 @@ model TypeOneQuoteLead {
   @@index([customerPhone])
 }
 
+model SystemSetting {
+  key       String   @id
+  value     String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model InsurancePackage {
   id                   String   @id @default(uuid())
   name                 String

@@ -298,7 +298,8 @@ export default function SearchPremiumForm({
     }
 
     const selectedCapacity = Number.parseInt(cubicCapacity, 10);
-    const values = vehicleSelectionRows
+    const sourceRows = coverage === '1' ? vehicleSelectionRows : filteredRows;
+    const values = sourceRows
       .filter(
         (row) =>
           row.brand === brand &&
@@ -311,7 +312,7 @@ export default function SearchPremiumForm({
       .filter((value) => value >= 0);
 
     return Array.from(new Set(values)).sort((left, right) => left - right);
-  }, [brand, cubicCapacity, model, vehicleSelectionRows, year]);
+  }, [brand, coverage, cubicCapacity, filteredRows, model, vehicleSelectionRows, year]);
 
   useEffect(() => {
     if (coverage === '1') {

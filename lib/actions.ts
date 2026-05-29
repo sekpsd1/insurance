@@ -10,6 +10,11 @@ import { isCtpSelected } from '@/lib/ctp';
 import { getCtpOptionForSClass } from '@/lib/ctp-rates';
 import { getOrderStatusLabel, getPaymentMethodLabel, getPaymentStatusLabel } from '@/lib/status-labels';
 import {
+  getSalesLeadEmailSetting,
+  SALES_LEAD_EMAIL_SETTING_KEY,
+  upsertSystemSettingValue
+} from '@/lib/app-settings';
+import {
   deleteInsuranceCampaignByCode,
   importInsuranceCampaignFromCsv
 } from '@/lib/insurance-import';
@@ -1235,7 +1240,8 @@ export async function createTypeOneQuoteLead(input: {
     leadNumber = formatLeadNumber();
   }
 
-  const salesEmail = normalizeEmail(process.env.SALES_LEAD_EMAIL ?? null, 'Sales lead email');
+  const configuredSalesEmail = await getSalesLeadEmailSetting();
+  const salesEmail = normalizeEmail(configuredSalesEmail ?? process.env.SALES_LEAD_EMAIL ?? null, 'Sales lead email');
   const subject = `[Type 1 Quote] ${leadNumber} - ${brand} ${model} ${carYear}`;
   const body = [
     'New Type 1 quote request',
@@ -1300,6 +1306,19 @@ export async function createTypeOneQuoteLead(input: {
 
   revalidatePath('/admin');
   return { ok: true, leadNumber };
+}
+
+export async function updateSalesLeadEmailSetting(formData: FormData): Promise<void> {
+  const salesEmail = normalizeEmail(getRequiredFormValue(formData, 'salesLeadEmail'), 'Sales lead email');
+
+  if (!salesEmail) {
+    throw new Error('Sales lead email is required');
+  }
+
+  await upsertSystemSettingValue(SALES_LEAD_EMAIL_SETTING_KEY, salesEmail);
+
+  revalidatePath('/admin/insurance');
+  revalidatePath('/admin/readiness');
 }
 
 export async function submitCheckout(formData: FormData): Promise<void> {

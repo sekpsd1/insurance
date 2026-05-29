@@ -98,6 +98,8 @@ It also stores rating/search fields imported from insurer CSV rows:
 
 `TypeOneQuoteLead` stores Type 1 quote requests for sales follow-up when customers need a manual quote instead of instant package search.
 
+`SystemSetting` stores small editable operational settings such as the sales recipient email for Type 1 quote requests. The app reads this DB setting first and falls back to environment variables when unset.
+
 ## Completed Tasks
 
 ### Customer Flow
@@ -127,6 +129,8 @@ It also stores rating/search fields imported from insurer CSV rows:
 - Search Premium now derives repair coverage options from the selected vehicle class and policy type. If a new policy type only has one repair coverage, such as `ประเภท 3` with only `ซ่อมอู่`, the form auto-switches to that repair coverage and keeps the vehicle selections when still valid.
 - Search Premium now supports packages with `MinSI`/`MaxSI` equal to `0`, such as some `ประเภท 3` rows, by showing `ไม่มีทุนประกัน` as a selectable sum-insured option.
 - Search Premium now routes `ประเภท 1` to a quote request form instead of instant package search. It collects customer name, phone, LINE ID/LIFF profile when available, optional email, brand, model, registration year, and cubic capacity, stores a `TypeOneQuoteLead`, and queues an email to `SALES_LEAD_EMAIL` when configured. Because Type 1 packages are not sold from CSV results, the Type 1 form uses broader vehicle option data from the selected SClass so customers can still submit a lead.
+- Type 1 quote request email now reads the editable admin sales recipient first, then falls back to `SALES_LEAD_EMAIL`.
+- Search Premium sum-insured options now respect the selected repair type so customers do not select a sum insured that only exists under a different repair group.
 - Results page supports pagination.
 - Result cards encode uploaded logo URLs before rendering and fall back to company text if the image cannot be loaded.
 - Result cards and compare table display repair type from `GarageCd` as `ซ่อมห้าง` or `ซ่อมอู่`.
@@ -214,6 +218,7 @@ It also stores rating/search fields imported from insurer CSV rows:
 - Checkout now attempts to send the provider email automatically after creating the `EmailOutbox` row.
 - Admin Email Outbox send button is now primarily for retry/manual recovery rather than the normal checkout path.
 - Provider email delivery can now use Resend when `EMAIL_PROVIDER=resend`, `RESEND_API_KEY`, `EMAIL_FROM`, and `APP_BASE_URL` are configured. Local development still supports mock email logging; production fails visibly if email delivery is not configured.
+- Admin insurance dashboard includes an editable sales lead email setting for Type 1 quote requests, so operators can change the recipient without editing Plesk environment variables or restarting the app.
 - Real LINE notifications are intentionally deferred for a later implementation slice.
 
 ### Payment Flow Decision

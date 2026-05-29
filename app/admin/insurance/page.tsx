@@ -8,7 +8,8 @@ import {
   updateCtpRate,
   updateInsuranceCampaignLogo,
   updateInsuranceCampaignPaymentSetup,
-  updateInsuranceCampaignProviderContact
+  updateInsuranceCampaignProviderContact,
+  updateSalesLeadEmailSetting
 } from '@/lib/actions';
 import { CampaignImportModal } from './_components/campaign-import-modal';
 import { ConfirmSubmitButton } from './_components/confirm-submit-button';
@@ -18,6 +19,7 @@ import {
   getPremiumImportAuditSummary
 } from '@/lib/insurance-import';
 import { getAdminCtpRates } from '@/lib/ctp-rates';
+import { getSalesLeadEmailSetting } from '@/lib/app-settings';
 
 export const dynamic = 'force-dynamic';
 
@@ -76,9 +78,10 @@ async function getInsuranceDashboardStats() {
 }
 
 export default async function InsuranceCampaignAdminPage() {
-  const [{ campaignSummaries, companySummaries, packageCount, companyCount, premiumAudit }, ctpRates] = await Promise.all([
+  const [{ campaignSummaries, companySummaries, packageCount, companyCount, premiumAudit }, ctpRates, salesLeadEmail] = await Promise.all([
     getInsuranceDashboardStats(),
-    getAdminCtpRates()
+    getAdminCtpRates(),
+    getSalesLeadEmailSetting()
   ]);
 
   return (
@@ -126,6 +129,37 @@ export default async function InsuranceCampaignAdminPage() {
           </Link>
           <CampaignImportModal action={importInsuranceCampaign} />
         </div>
+      </div>
+
+      <div className="mb-8 rounded-3xl border border-white/10 bg-white p-5 shadow-2xl shadow-black/10">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-700">Sales Lead Email</p>
+            <h3 className="mt-1 text-lg font-semibold text-slate-950">อีเมลรับคำขอประกันชั้น 1</h3>
+            <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-500">
+              ใช้รับคำขอใบเสนอราคาประกันประเภท 1 จากหน้าลูกค้า เปลี่ยนตรงนี้ได้ทันทีโดยไม่ต้องแก้ Plesk หรือ restart app
+            </p>
+          </div>
+          <form action={updateSalesLeadEmailSetting} className="flex w-full flex-col gap-3 sm:flex-row lg:max-w-xl">
+            <input
+              name="salesLeadEmail"
+              type="email"
+              defaultValue={salesLeadEmail ?? process.env.SALES_LEAD_EMAIL ?? ''}
+              required
+              placeholder="sales@example.com"
+              className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
+            />
+            <button
+              type="submit"
+              className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-700"
+            >
+              บันทึกอีเมล
+            </button>
+          </form>
+        </div>
+        <p className="mt-3 text-xs text-slate-500">
+          ถ้ายังไม่บันทึก ระบบจะใช้ค่า fallback จาก SALES_LEAD_EMAIL ใน environment
+        </p>
       </div>
 
       <div className="mb-8 rounded-3xl border border-white/10 bg-white p-5 shadow-2xl shadow-black/10">
