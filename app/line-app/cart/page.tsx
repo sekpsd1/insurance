@@ -122,7 +122,7 @@ function formatSumInsuredRange(min: unknown, max: unknown) {
   const hasMax = maxValue !== null && Number.isFinite(maxValue);
 
   if (minValue === 0 && maxValue === 0) {
-    return 'ไม่มีทุนประกัน';
+    return 'ไม่คุ้มครอง';
   }
 
   if (!hasMin && !hasMax) {
@@ -457,14 +457,21 @@ export default async function CartPage({
                     <p className="mt-1 font-[Kanit,sans-serif] text-3xl font-bold leading-tight text-[#111827]">{formatMoney(payableTotal)} บาท</p>
                   </div>
 
-
-                  <Link
-                    href={buildFormHref(baseParams, pkg.id, Boolean(ctpOption))}
-                    className="mt-4 flex w-full items-center justify-center gap-2 bg-[#0052CC] py-4 font-[Kanit,sans-serif] text-base font-semibold text-white transition-colors hover:bg-[#0040a2]"
-                  >
-                    ดูรายละเอียด / เลือกแผนนี้
-                    <span aria-hidden="true">→</span>
-                  </Link>
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    <Link
+                      href={buildFormHref(baseParams, pkg.id, Boolean(ctpOption))}
+                      className="flex items-center justify-center border border-[#0052CC] bg-white py-3 font-[Kanit,sans-serif] text-base font-semibold text-[#0052CC] transition-colors hover:bg-[#eef3ff]"
+                    >
+                      ดูรายละเอียด
+                    </Link>
+                    <Link
+                      href={buildFormHref(baseParams, pkg.id, Boolean(ctpOption))}
+                      className="flex items-center justify-center gap-2 bg-[#0052CC] py-3 font-[Kanit,sans-serif] text-base font-semibold text-white transition-colors hover:bg-[#0040a2]"
+                    >
+                      เลือกแผนนี้
+                      <span aria-hidden="true">→</span>
+                    </Link>
+                  </div>
                 </article>
               );
             })}

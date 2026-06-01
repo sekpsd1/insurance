@@ -171,7 +171,7 @@ function getRepairTypeLabel(value: string) {
 function formatSumInsured(value: string) {
   const parsed = Number.parseInt(value.replace(/,/g, ''), 10);
   if (parsed === 0) {
-    return 'ไม่มีทุนประกัน';
+    return 'ไม่คุ้มครอง';
   }
 
   return Number.isFinite(parsed) ? parsed.toLocaleString('th-TH') : value;
@@ -620,9 +620,9 @@ export default async function LineAppPage({
         </div>
       </header>
 
-      <div className="mx-auto flex w-full max-w-md flex-1 flex-col space-y-6 px-4 py-6">
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col space-y-4 px-4 py-4">
         {hasFilters ? (
-          <section className="rounded-2xl border border-[#cfd8ff] bg-[#eef3ff] px-4 py-3 text-sm font-medium text-[#24406f] shadow-[0_8px_24px_rgba(0,0,0,0.04)]">
+          <section className="hidden rounded-2xl border border-[#cfd8ff] bg-[#eef3ff] px-4 py-3 text-sm font-medium text-[#24406f] shadow-[0_8px_24px_rgba(0,0,0,0.04)]">
             ผลลัพธ์สำหรับ: <span className="font-semibold">{searchSummary}</span>
             {searchMeta.usedFallbackYearSearch ? (
               <span className="mt-1 block text-xs font-normal text-[#4c6394]">
@@ -647,7 +647,7 @@ export default async function LineAppPage({
           />
         ) : null}
 
-        <section className="rounded-xl bg-[#e1e2ec] p-4 shadow-[0_8px_24px_rgba(0,0,0,0.06)]">
+        <section className="hidden rounded-xl bg-[#e1e2ec] p-4 shadow-[0_8px_24px_rgba(0,0,0,0.06)]">
           <div className="flex items-start gap-3">
             <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#0052CC] text-sm font-bold text-white">
               i
@@ -662,7 +662,7 @@ export default async function LineAppPage({
         </section>
 
         {totalItems > 0 ? (
-          <section className="rounded-2xl bg-white px-4 py-3 text-sm text-[#434654] shadow-[0_8px_24px_rgba(0,0,0,0.04)]">
+          <section className="hidden rounded-2xl bg-white px-4 py-3 text-sm text-[#434654] shadow-[0_8px_24px_rgba(0,0,0,0.04)]">
             แสดงผล {resultRange.start}-{resultRange.end} จาก {totalItems} แผน
           </section>
         ) : null}
@@ -670,13 +670,14 @@ export default async function LineAppPage({
         {totalItems >= 2 ? (
           <Link
             href={buildCompareHref(baseParams)}
-            className="flex items-center justify-between rounded-2xl border border-[#cfd8ff] bg-[#eef3ff] px-4 py-4 text-sm font-semibold text-[#24406f] shadow-[0_8px_24px_rgba(0,0,0,0.04)] transition hover:bg-[#e1ebff]"
+            className="hidden items-center justify-between rounded-2xl border border-[#cfd8ff] bg-[#eef3ff] px-4 py-4 text-sm font-semibold text-[#24406f] shadow-[0_8px_24px_rgba(0,0,0,0.04)] transition hover:bg-[#e1ebff]"
           >
             <span>ไปหน้าเปรียบเทียบแผน เพื่อเลือกแผนมาเทียบ</span>
             <span aria-hidden="true">→</span>
           </Link>
         ) : null}
 
+        <div className="-order-10">
         {insurancePackages.length === 0 ? (
           <div className="rounded-2xl bg-white px-5 py-8 text-center shadow-[0_8px_24px_rgba(0,0,0,0.06)]">
             <p className="font-[Kanit,sans-serif] text-lg font-semibold text-[#0052CC]">
@@ -693,7 +694,6 @@ export default async function LineAppPage({
               name: pkg.name,
               company: pkg.company,
               logoUrl: pkg.logoUrl,
-              details: pkg.details,
               repairType: pkg.repairType,
               coverage: pkg.coverage,
               coverageCode: pkg.coverageCode,
@@ -718,6 +718,7 @@ export default async function LineAppPage({
             initialCtpPackageIds={initialCtpPackageIds}
           />
         )}
+        </div>
 
         {totalItems > PAGE_SIZE ? (
           <PaginationControls currentPage={safePage} totalPages={totalPages} baseParams={baseParams} />

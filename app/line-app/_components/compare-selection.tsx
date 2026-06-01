@@ -9,7 +9,6 @@ type ComparePackageCard = {
   name: string;
   company: string;
   logoUrl: string | null;
-  details: string | null;
   repairType: string | null;
   coverage: string | null;
   coverageCode: string | null;
@@ -60,6 +59,29 @@ function getCoverageLabel(value: string) {
   return value;
 }
 
+function getCoverageGroup(pkg: Pick<ComparePackageCard, 'coverageType' | 'coverage' | 'coverageCode'>) {
+  const values = [pkg.coverageType, pkg.coverage, pkg.coverageCode].map((value) => value?.trim()).filter(Boolean);
+  const normalized = values.join(' ').toLowerCase();
+
+  if (values.includes('2+') || normalized.includes('2 พลัส') || normalized.includes('2 plus') || normalized.includes('2+')) {
+    return '2+';
+  }
+
+  if (values.includes('3+') || normalized.includes('3 พลัส') || normalized.includes('3 plus') || normalized.includes('3+')) {
+    return '3+';
+  }
+
+  if (values.includes('3') || normalized.includes('ประเภท 3') || normalized === '3') {
+    return '3';
+  }
+
+  if (values.includes('1') || normalized.includes('ประเภท 1')) {
+    return '1';
+  }
+
+  return pkg.coverageType?.trim() || '';
+}
+
 function getDeductibleLabel(coverageCode: string | null | undefined) {
   const normalized = coverageCode?.trim();
 
@@ -91,7 +113,7 @@ function formatSumInsuredRange(min: unknown, max: unknown) {
   const hasMax = maxValue !== null && Number.isFinite(maxValue);
 
   if (minValue === 0 && maxValue === 0) {
-    return 'ไม่มีทุนประกัน';
+    return 'ไม่คุ้มครอง';
   }
 
   if (!hasMin && !hasMax) {
@@ -151,8 +173,8 @@ function DetailIcon({ icon, tone }: { icon: 'car' | 'shield' | 'money' | 'star' 
   }[icon];
 
   return (
-    <span className={`flex h-9 w-9 shrink-0 items-center justify-center ${toneClass}`}>
-      <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2">
+    <span className={`flex h-7 w-7 shrink-0 items-center justify-center ${toneClass}`}>
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
         {icons}
       </svg>
     </span>
@@ -173,6 +195,7 @@ export default function CompareSelection({
   const [cartIds, setCartIds] = useState<string[]>([]);
   const [ctpPackageIds, setCtpPackageIds] = useState<string[]>([]);
   const [failedLogoIds, setFailedLogoIds] = useState<string[]>([]);
+  const [expandedDetailIds, setExpandedDetailIds] = useState<string[]>([]);
   const [error, setError] = useState('');
   const [isCompareStorageLoaded, setIsCompareStorageLoaded] = useState(false);
   const [isCartStorageLoaded, setIsCartStorageLoaded] = useState(false);
@@ -183,6 +206,7 @@ export default function CompareSelection({
   const cartIdSet = useMemo(() => new Set(cartIds), [cartIds]);
   const ctpPackageIdSet = useMemo(() => new Set(ctpPackageIds), [ctpPackageIds]);
   const failedLogoIdSet = useMemo(() => new Set(failedLogoIds), [failedLogoIds]);
+  const expandedDetailIdSet = useMemo(() => new Set(expandedDetailIds), [expandedDetailIds]);
 
   useEffect(() => {
     try {
@@ -280,6 +304,10 @@ export default function CompareSelection({
     setCtpPackageIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
   }
 
+  function toggleDetails(id: string) {
+    setExpandedDetailIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
+  }
+
   function buildFormHref(id: string, includeCtp: boolean) {
     const params = new URLSearchParams(baseQueryString);
 
@@ -324,6 +352,12 @@ export default function CompareSelection({
           const totalPrice = pkg.netPrice + ctpTotal;
           const payableTotal = (pkg.payablePrice ?? pkg.netPrice) + ctpTotal;
           const deductibleLabel = getDeductibleLabel(pkg.coverageCode);
+          const isDetailsOpen = expandedDetailIdSet.has(pkg.id);
+          const selectedSumInsuredLabel = formatSumInsuredRange(pkg.minSumInsured, pkg.maxSumInsured);
+          const coverageGroup = getCoverageGroup(pkg);
+          const isTypeTwoPlus = coverageGroup === '2+';
+          const isTypeThreePlus = coverageGroup === '3+';
+          const isTypeThree = coverageGroup === '3';
 
           return (
             <div
@@ -332,9 +366,9 @@ export default function CompareSelection({
                 isSelected ? 'ring-2 ring-[#0052CC]' : ''
               }`}
             >
-              <div className="relative p-5">
-                <div className="relative mb-4 flex items-start gap-3">
-                  <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[rgba(195,198,214,0.35)] bg-[#eef3ff] shadow-sm">
+              <div className="relative p-3">
+                <div className="relative mb-3 flex items-start gap-2">
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[rgba(195,198,214,0.35)] bg-[#eef3ff] shadow-sm">
                     {pkg.logoUrl && !failedLogoIdSet.has(pkg.id) ? (
                       <img
                         src={encodeLogoUrl(pkg.logoUrl)}
@@ -350,8 +384,8 @@ export default function CompareSelection({
                   </div>
 
                   <div className="min-w-0 flex-1">
-                    <p className="break-words pr-32 text-sm leading-5 text-[#434654]">{pkg.company}</p>
-                    <p className="mt-1 break-words font-[Kanit,sans-serif] text-lg font-bold leading-tight text-[#0052CC]">
+                    <p className="break-words pr-32 text-[13px] leading-4 text-[#434654]">{pkg.company}</p>
+                    <p className="mt-0.5 break-words font-[Kanit,sans-serif] text-lg font-bold leading-tight text-[#0052CC]">
                       {[pkg.brand, pkg.model].filter(Boolean).join(' · ') || '-'}
                     </p>
                   </div>
@@ -371,9 +405,9 @@ export default function CompareSelection({
                   </button>
                 </div>
 
-                <div className="mb-4 overflow-hidden rounded-2xl border border-[#dfe4ef] bg-white shadow-[0_6px_18px_rgba(15,32,67,0.06)]">
-                  <div className="space-y-3 p-4 text-sm text-[#2f3545]">
-                    <div className="flex items-start gap-3">
+                <div className="mb-3 overflow-hidden rounded-xl border border-[#dfe4ef] bg-white shadow-[0_6px_18px_rgba(15,32,67,0.06)]">
+                  <div className="space-y-2 p-3 text-[13px] text-[#2f3545]">
+                    <div className="flex items-start gap-2">
                       <DetailIcon icon="car" tone="blue" />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-start justify-between gap-3">
@@ -381,14 +415,14 @@ export default function CompareSelection({
                           <span className="text-right leading-5">{vehicleTypeLabel || '-'}</span>
                         </div>
                         {(registrationYear || cubicCapacityLabel) ? (
-                          <p className="mt-1 text-xs text-[#667085]">
+                          <p className="mt-0.5 text-xs text-[#667085]">
                             {[registrationYear ? `ปี ${registrationYear}` : '', cubicCapacityLabel].filter(Boolean).join(' · ')}
                           </p>
                         ) : null}
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                       <DetailIcon icon="shield" tone="indigo" />
                       <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
                         <span className="font-medium text-[#4b5265]">ประเภท</span>
@@ -396,7 +430,7 @@ export default function CompareSelection({
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                       <DetailIcon icon="money" tone="green" />
                       <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
                         <span className="font-medium text-[#4b5265]">ทุนประกัน</span>
@@ -404,7 +438,7 @@ export default function CompareSelection({
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                       <DetailIcon icon="star" tone="amber" />
                       <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
                         <span className="font-medium text-[#4b5265]">ความเสียหายส่วนแรก</span>
@@ -412,7 +446,7 @@ export default function CompareSelection({
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                       <DetailIcon icon="wrench" tone="slate" />
                       <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
                         <span className="font-medium text-[#4b5265]">ประเภทการซ่อม</span>
@@ -422,8 +456,8 @@ export default function CompareSelection({
                   </div>
                 </div>
 
-                <div className="mb-5 overflow-hidden rounded-2xl bg-[#eef1f4] shadow-[0_8px_22px_rgba(15,32,67,0.08)]">
-                  <div className="border-b border-[#d8dde7] px-4 py-3">
+                <div className="mb-3 overflow-hidden rounded-xl bg-[#eef1f4] shadow-[0_8px_22px_rgba(15,32,67,0.08)]">
+                  <div className="border-b border-[#d8dde7] px-3 py-2">
                     <div className="flex items-center justify-between gap-3">
                       <h3 className="font-[Kanit,sans-serif] text-base font-bold text-[#1f2a44]">สรุปค่าใช้จ่าย</h3>
                       {ctpOption ? (
@@ -440,8 +474,8 @@ export default function CompareSelection({
                     </div>
                   </div>
 
-                  <div className="space-y-3 px-4 py-4 text-sm text-[#2f3545]">
-                    <div className="flex items-center gap-3">
+                  <div className="space-y-2 px-3 py-3 text-[13px] text-[#2f3545]">
+                    <div className="flex items-center gap-2">
                       <DetailIcon icon="tag" tone="orange" />
                       <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
                         <span className="font-medium">เบี้ยประกัน</span>
@@ -450,7 +484,7 @@ export default function CompareSelection({
                     </div>
 
                     {ctpOption ? (
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
                         <DetailIcon icon="ctp" tone="blue" />
                         <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
                           <span className="font-medium">พ.ร.บ. เพิ่มเติม</span>
@@ -460,22 +494,22 @@ export default function CompareSelection({
                     ) : null}
                   </div>
 
-                  <div className="flex items-center justify-between gap-4 border-t border-[#d8dde7] px-4 py-4 text-lg font-bold text-[#1f2a44]">
+                  <div className="flex items-center justify-between gap-3 border-t border-[#d8dde7] px-3 py-3 text-base font-bold text-[#1f2a44]">
                     <span>รวม</span>
                     <span>{formatMoney(totalPrice)} บาท</span>
                   </div>
                 </div>
 
-                <div className="mb-5 rounded-2xl border border-[#d6c27a] bg-[#fffdf4] px-4 py-4 shadow-[0_8px_20px_rgba(154,118,20,0.10)]">
+                <div className="mb-3 rounded-xl border border-[#d6c27a] bg-[#fffdf4] px-3 py-3 shadow-[0_8px_20px_rgba(154,118,20,0.10)]">
                   <p className="text-sm font-semibold text-[#4b3a0b]">คงเหลือชำระ</p>
-                  <p className="mt-1 font-[Kanit,sans-serif] text-3xl font-bold leading-tight text-[#111827]">{formatMoney(payableTotal)} บาท</p>
+                  <p className="mt-0.5 font-[Kanit,sans-serif] text-2xl font-bold leading-tight text-[#111827]">{formatMoney(payableTotal)} บาท</p>
                 </div>
 
                 <button
                   type="button"
                   onClick={() => toggleCart(pkg.id)}
                   aria-pressed={isInCart}
-                  className={`mb-3 flex w-full items-center justify-center gap-2 border py-3 font-[Kanit,sans-serif] text-base font-semibold transition-colors ${
+                  className={`mb-2 flex w-full items-center justify-center gap-2 border py-2.5 font-[Kanit,sans-serif] text-base font-semibold transition-colors ${
                     isInCart
                       ? 'border-[#0052CC] bg-[#eef3ff] text-[#0052CC]'
                       : 'border-[#0052CC] bg-white text-[#0052CC] hover:bg-[#eef3ff]'
@@ -485,13 +519,64 @@ export default function CompareSelection({
                   {isInCart ? 'อยู่ในตะกร้าแล้ว' : 'เก็บใส่ตะกร้า'}
                 </button>
 
-                <a
-                  href={buildFormHref(pkg.id, isCtpSelected)}
-                  className="flex w-full items-center justify-center gap-2 bg-[#0052CC] py-4 font-[Kanit,sans-serif] text-base font-semibold text-white transition-colors hover:bg-[#0040a2]"
-                >
-                  ดูรายละเอียด / เลือกแผนนี้
-                  <span aria-hidden="true" className="text-sm">→</span>
-                </a>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => toggleDetails(pkg.id)}
+                    aria-expanded={isDetailsOpen}
+                    className="flex items-center justify-center border border-[#0052CC] bg-white py-3 font-[Kanit,sans-serif] text-base font-semibold text-[#0052CC] transition-colors hover:bg-[#eef3ff]"
+                  >
+                    ดูรายละเอียด
+                  </button>
+                  <a
+                    href={buildFormHref(pkg.id, isCtpSelected)}
+                    className="flex items-center justify-center gap-2 bg-[#0052CC] py-3 font-[Kanit,sans-serif] text-base font-semibold text-white transition-colors hover:bg-[#0040a2]"
+                  >
+                    เลือกแผนนี้
+                    <span aria-hidden="true" className="text-sm">→</span>
+                  </a>
+                </div>
+
+                {isDetailsOpen ? (
+                  <div className="mt-3 rounded-xl border border-[#dfe4ef] bg-[#f8faff] px-3 py-3 text-sm leading-6 text-[#4b5265]">
+                    {isTypeTwoPlus ? (
+                      <div className="space-y-2">
+                        <div className="flex items-start justify-between gap-3">
+                          <span className="font-medium text-[#1f2a44]">รถสูญหาย/ไฟไหม้</span>
+                          <span className="text-right font-semibold text-[#1f2a44]">{selectedSumInsuredLabel}</span>
+                        </div>
+                        <div className="flex items-start justify-between gap-3">
+                          <span className="font-medium text-[#1f2a44]">ความเสียหายต่อตัวรถ</span>
+                          <span className="text-right font-semibold text-[#1f2a44]">{selectedSumInsuredLabel}</span>
+                        </div>
+                      </div>
+                    ) : isTypeThreePlus ? (
+                      <div className="space-y-2">
+                        <div className="flex items-start justify-between gap-3">
+                          <span className="font-medium text-[#1f2a44]">รถสูญหาย/ไฟไหม้</span>
+                          <span className="text-right font-semibold text-[#1f2a44]">ไม่คุ้มครอง</span>
+                        </div>
+                        <div className="flex items-start justify-between gap-3">
+                          <span className="font-medium text-[#1f2a44]">ความเสียหายต่อตัวรถ</span>
+                          <span className="text-right font-semibold text-[#1f2a44]">{selectedSumInsuredLabel}</span>
+                        </div>
+                      </div>
+                    ) : isTypeThree ? (
+                      <div className="space-y-2">
+                        <div className="flex items-start justify-between gap-3">
+                          <span className="font-medium text-[#1f2a44]">รถสูญหาย/ไฟไหม้</span>
+                          <span className="text-right font-semibold text-[#1f2a44]">ไม่คุ้มครอง</span>
+                        </div>
+                        <div className="flex items-start justify-between gap-3">
+                          <span className="font-medium text-[#1f2a44]">ความเสียหายต่อตัวรถ</span>
+                          <span className="text-right font-semibold text-[#1f2a44]">ไม่คุ้มครอง</span>
+                        </div>
+                      </div>
+                    ) : (
+                      'รายละเอียดความคุ้มครองตามเงื่อนไขแผนที่เลือก'
+                    )}
+                  </div>
+                ) : null}
               </div>
             </div>
           );

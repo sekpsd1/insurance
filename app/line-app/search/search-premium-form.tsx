@@ -72,7 +72,7 @@ function normalizeRepairType(value: string | undefined) {
 
 function formatSumInsured(value: number) {
   if (value === 0) {
-    return 'ไม่มีทุนประกัน';
+    return 'ไม่คุ้มครอง';
   }
 
   return value.toLocaleString('th-TH');
@@ -190,6 +190,7 @@ export default function SearchPremiumForm({
   const [cubicCapacity, setCubicCapacity] = useState(initialCubicCapacity);
   const [sumInsured, setSumInsured] = useState(initialSumInsured);
   const [noCampaignModalOpen, setNoCampaignModalOpen] = useState(false);
+  const [dismissedNoCampaignKey, setDismissedNoCampaignKey] = useState('');
   const [leadCustomerName, setLeadCustomerName] = useState('');
   const [leadCustomerPhone, setLeadCustomerPhone] = useState('');
   const [leadLineId, setLeadLineId] = useState('');
@@ -236,6 +237,7 @@ export default function SearchPremiumForm({
       availableRepairTypes.length === 1 &&
       !availableRepairTypes.includes(repairType as RepairType)
   );
+  const noCampaignKey = [sClass, coverage, repairType, brand, model, year, cubicCapacity].join('|');
 
   const brands = useMemo(() => uniqueValues(vehicleSelectionRows.map((row) => row.brand)), [vehicleSelectionRows]);
 
@@ -366,6 +368,47 @@ export default function SearchPremiumForm({
       cancelled = true;
     };
   }, [coverage]);
+
+  useEffect(() => {
+    if (coverage === '3' && sumInsured) {
+      setSumInsured('');
+    }
+  }, [coverage, sumInsured]);
+
+  useEffect(() => {
+    if (
+      isRepairAutoSwitchPending ||
+      noCampaignModalOpen ||
+      dismissedNoCampaignKey === noCampaignKey ||
+      !sClass ||
+      !coverage ||
+      coverage === '1' ||
+      !repairType ||
+      !brand ||
+      !model ||
+      !year ||
+      !cubicCapacity
+    ) {
+      return;
+    }
+
+    if (sumInsuredOptions.length === 0) {
+      setNoCampaignModalOpen(true);
+    }
+  }, [
+    brand,
+    coverage,
+    cubicCapacity,
+    dismissedNoCampaignKey,
+    isRepairAutoSwitchPending,
+    model,
+    noCampaignKey,
+    noCampaignModalOpen,
+    repairType,
+    sClass,
+    sumInsuredOptions.length,
+    year
+  ]);
 
   useEffect(() => {
     if (isRepairAutoSwitchPending) {
@@ -521,6 +564,7 @@ export default function SearchPremiumForm({
 
     const selectedCapacity = Number.parseInt(cubicCapacity, 10);
     const selectedSumInsured = Number.parseInt(sumInsured, 10);
+    const shouldFilterBySumInsured = coverage !== '3' || Boolean(sumInsured);
     const hasMatchingCampaign = filteredRows.some(
       (row) =>
         row.brand === brand &&
@@ -528,7 +572,7 @@ export default function SearchPremiumForm({
         rowMatchesRegistrationYear(row, year) &&
         (row.minCubicCapacity ?? 0) <= selectedCapacity &&
         (row.maxCubicCapacity ?? 999999) >= selectedCapacity &&
-        row.sumInsuredValues.includes(selectedSumInsured)
+        (!shouldFilterBySumInsured || row.sumInsuredValues.includes(selectedSumInsured))
     );
 
     if (!hasMatchingCampaign) {
@@ -544,7 +588,9 @@ export default function SearchPremiumForm({
     params.set('model', model);
     params.set('year', year);
     params.set('cubicCapacity', cubicCapacity);
-    params.set('sumInsured', sumInsured);
+    if (sumInsured) {
+      params.set('sumInsured', sumInsured);
+    }
 
     router.push(`/line-app?${params.toString()}`);
   }
@@ -729,7 +775,7 @@ export default function SearchPremiumForm({
           </div>
         </div>
 
-        {coverage !== '1' ? (
+        {coverage !== '1' && coverage !== '3' ? (
         <div>
           <label htmlFor="sumInsured" className="mb-2 block text-base font-semibold text-[#12131a]">
             เลือกทุนประกัน
@@ -850,7 +896,7 @@ export default function SearchPremiumForm({
           disabled={
             coverage === '1'
               ? !sClass || !coverage || !brand || !model || !year || !cubicCapacity || !leadCustomerName || !leadCustomerPhone || isLeadPending
-              : !sClass || !coverage || !repairType || !brand || !model || !year || !cubicCapacity || !sumInsured
+              : !sClass || !coverage || !repairType || !brand || !model || !year || !cubicCapacity || (coverage !== '3' && !sumInsured)
           }
           className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#0047BA] px-4 py-4 text-base font-semibold text-white shadow-[0_12px_30px_rgba(0,71,186,0.28)] transition hover:bg-[#003c9d] disabled:cursor-not-allowed disabled:bg-[#7f9fe0]"
         >
@@ -890,12 +936,12 @@ export default function SearchPremiumForm({
           <h2 id="no-campaign-title" className="mt-4 text-xl font-bold text-[#071129]">
             ไม่มีแคมเปญสำหรับรถรุ่นดังกล่าว
           </h2>
-          <p className="mt-3 text-sm leading-6 text-[#4f5c73]">
-            เงื่อนไขที่เลือกยังไม่มีแผนประกันที่ตรงกัน กรุณาลองเปลี่ยนความคุ้มครอง ประเภทซ่อม หรือทุนประกันใหม่
-          </p>
           <button
             type="button"
-            onClick={() => setNoCampaignModalOpen(false)}
+            onClick={() => {
+              setDismissedNoCampaignKey(noCampaignKey);
+              setNoCampaignModalOpen(false);
+            }}
             className="mt-6 w-full rounded-2xl bg-[#0047BA] px-4 py-3 text-base font-semibold text-white shadow-[0_12px_28px_rgba(0,71,186,0.25)] transition hover:bg-[#003c9d]"
           >
             ปรับเงื่อนไขใหม่

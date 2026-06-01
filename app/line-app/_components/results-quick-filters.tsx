@@ -38,7 +38,7 @@ const REPAIR_TYPE_OPTIONS: Array<{ value: RepairType; label: string }> = [
 
 function formatSumInsured(value: number) {
   if (value === 0) {
-    return 'ไม่มีทุนประกัน';
+    return 'ไม่คุ้มครอง';
   }
 
   return `${value.toLocaleString('th-TH')} บาท`;
@@ -120,7 +120,10 @@ export default function ResultsQuickFilters({
     const nextSumOptions = optionRows
       .filter((row) => row.coverageType === nextCoverage && row.repairType === nextRepairType)
       .flatMap((row) => row.sumInsuredValues);
-    const nextSumInsured = getNextSumInsured(Array.from(new Set(nextSumOptions)).sort((left, right) => left - right), currentSumInsured);
+    const nextSumInsured =
+      nextCoverage === '3'
+        ? ''
+        : getNextSumInsured(Array.from(new Set(nextSumOptions)).sort((left, right) => left - right), currentSumInsured);
 
     if (nextRepairType) {
       navigate(nextCoverage, nextRepairType, nextSumInsured);
@@ -131,7 +134,10 @@ export default function ResultsQuickFilters({
     const nextSumOptions = optionRows
       .filter((row) => row.coverageType === currentCoverage && row.repairType === nextRepairType)
       .flatMap((row) => row.sumInsuredValues);
-    const nextSumInsured = getNextSumInsured(Array.from(new Set(nextSumOptions)).sort((left, right) => left - right), currentSumInsured);
+    const nextSumInsured =
+      currentCoverage === '3'
+        ? ''
+        : getNextSumInsured(Array.from(new Set(nextSumOptions)).sort((left, right) => left - right), currentSumInsured);
 
     navigate(currentCoverage, nextRepairType, nextSumInsured);
   }
@@ -208,6 +214,7 @@ export default function ResultsQuickFilters({
           </div>
         </div>
 
+        {currentCoverage !== '3' ? (
         <label className="block">
           <span className="mb-2 block text-sm font-semibold text-[#434654]">ทุนประกัน</span>
           <select
@@ -222,6 +229,7 @@ export default function ResultsQuickFilters({
             ))}
           </select>
         </label>
+        ) : null}
 
         <p className="rounded-2xl bg-[#eef3ff] px-3 py-2 text-xs leading-5 text-[#4c6394]">
           กำลังแสดง {getCoverageLabel(currentCoverage)} / {getRepairTypeLabel(currentRepairType)} เปลี่ยนตัวเลือกด้านบนได้โดยไม่ต้องกรอกรถใหม่

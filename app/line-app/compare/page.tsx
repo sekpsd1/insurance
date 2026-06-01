@@ -149,7 +149,7 @@ function getRepairTypeLabel(value: string) {
 function formatSumInsured(value: string) {
   const parsed = Number.parseInt(value.replace(/,/g, ''), 10);
   if (parsed === 0) {
-    return 'ไม่มีทุนประกัน';
+    return 'ไม่คุ้มครอง';
   }
 
   return Number.isFinite(parsed) ? parsed.toLocaleString('th-TH') : value;
@@ -592,7 +592,7 @@ export default async function ComparePage({
                     { label: 'ขนาดเครื่องยนต์', values: packages.map((pkg) => (pkg.minCubicCapacity || pkg.maxCubicCapacity ? `${formatMoney(pkg.minCubicCapacity ?? 0)}-${formatMoney(pkg.maxCubicCapacity ?? 0)} ซีซี` : '-')) },
                     { label: 'ทุนประกัน', values: packages.map((pkg) => (pkg.minSumInsured || pkg.maxSumInsured ? `${formatMoney(pkg.minSumInsured ?? pkg.maxSumInsured ?? 0)} บาท` : '-')) },
                     { label: 'ประเภทซ่อม', values: packages.map((pkg) => pkg.repairType || 'อู่ประกัน') },
-                    { label: 'เบี้ยประกันราคาทุน', values: packages.map((pkg) => `${formatMoney(pkg.netPrice)} บาท`) },
+                    { label: 'เบี้ยประกัน', values: packages.map((pkg) => `${formatMoney(pkg.netPrice)} บาท`) },
                     { label: 'พ.ร.บ. เพิ่มเติม', values: packages.map((pkg) => {
                       const ctpOption = ctpOptionByPackageId.get(pkg.id);
                       return ctpOption ? `${formatMoney(ctpOption.total)} บาท` : '-';

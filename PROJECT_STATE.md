@@ -1,6 +1,6 @@
 # Project State
 
-Last updated: 2026-05-29
+Last updated: 2026-06-01
 
 ## Current Architecture
 
@@ -138,6 +138,17 @@ It also stores rating/search fields imported from insurer CSV rows:
 - Compare selection flow exists.
 - Compare page displays selected packages side by side.
 - Results and compare preserve query parameters.
+- Results page now hides the extra result-summary/count blocks above the plan list and shows the plan cards before the quick-filter card so customers reach the payable section sooner while keeping the remaining payable box in its original position inside each plan card.
+- Results plan cards now use tighter padding, smaller detail icons, and shorter section spacing so more of the selected plan card is visible in the first mobile viewport.
+- Customer-facing zero sum-insured display text now says `ไม่คุ้มครอง` instead of `ไม่มีทุนประกัน` across search, results, cart, and compare views.
+- Search Premium no longer shows or requires the sum-insured selector for policy type 3; customers can search type 3 packages after choosing vehicle, repair, year, and engine details.
+- Search Premium now opens the `ไม่มีแคมเปญสำหรับรถรุ่นดังกล่าว` popup when policy type 2+, 3+, or 3 has no premium/campaign for the selected vehicle details.
+- Compare table now labels the package premium row as `เบี้ยประกัน` instead of `เบี้ยประกันราคาทุน`.
+- Results and cart plan cards now split the combined `ดูรายละเอียด / เลือกแผนนี้` action into separate `ดูรายละเอียด` and `เลือกแผนนี้` buttons.
+- Type 3 plan details now show `รถสูญหาย/ไฟไหม้` and `ความเสียหายต่อตัวรถ` as `ไม่คุ้มครอง`.
+- Type 2+ plan details now show `รถสูญหาย/ไฟไหม้` and `ความเสียหายต่อตัวรถ` as the selected sum insured amount.
+- Plan detail expansion now normalizes coverage labels/codes before applying coverage-specific detail rules and no longer exposes raw imported package `details` strings to customers.
+- Results plan cards no longer pass imported package `details` into the client payload, preventing raw importer strings such as `brand=... | model=...` from appearing in the detail expansion or page hydration data.
 - Results, compare, search, and Policy Info back navigation now preserve search query parameters so users return to the same filtered result/search state instead of the unfiltered package list.
 - Policy Info page has been redesigned to match the Stitch-style form:
   - Personal information card.
