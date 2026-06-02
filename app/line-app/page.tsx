@@ -88,6 +88,15 @@ type InsurancePackageRow = {
   netPrice: number;
   payablePrice: number | null;
   discount: number;
+  uom1V: string | null;
+  uom2V: string | null;
+  uom5V: string | null;
+  seats41: string | null;
+  mv411: string | null;
+  mv412: string | null;
+  mv42: string | null;
+  mv43: string | null;
+  dedod: string | null;
   createdAt: Date;
 };
 
@@ -507,6 +516,15 @@ export default async function LineAppPage({
       netPrice,
       payablePrice,
       discount,
+      JSON_UNQUOTE(COALESCE(JSON_EXTRACT(rawData, '$.uom1_v'), JSON_EXTRACT(rawData, '$.UOM1_V'))) AS uom1V,
+      JSON_UNQUOTE(COALESCE(JSON_EXTRACT(rawData, '$.uom2_v'), JSON_EXTRACT(rawData, '$.UOM2_V'))) AS uom2V,
+      JSON_UNQUOTE(COALESCE(JSON_EXTRACT(rawData, '$.uom5_v'), JSON_EXTRACT(rawData, '$.UOM5_V'))) AS uom5V,
+      JSON_UNQUOTE(COALESCE(JSON_EXTRACT(rawData, '$.Seats41'), JSON_EXTRACT(rawData, '$.seats41'))) AS seats41,
+      JSON_UNQUOTE(COALESCE(JSON_EXTRACT(rawData, '$.mv411'), JSON_EXTRACT(rawData, '$.MV411'))) AS mv411,
+      JSON_UNQUOTE(COALESCE(JSON_EXTRACT(rawData, '$.mv412'), JSON_EXTRACT(rawData, '$.MV412'))) AS mv412,
+      JSON_UNQUOTE(COALESCE(JSON_EXTRACT(rawData, '$.mv42'), JSON_EXTRACT(rawData, '$.MV42'))) AS mv42,
+      JSON_UNQUOTE(COALESCE(JSON_EXTRACT(rawData, '$.mv43'), JSON_EXTRACT(rawData, '$.MV43'))) AS mv43,
+      JSON_UNQUOTE(COALESCE(JSON_EXTRACT(rawData, '$.Dedod'), JSON_EXTRACT(rawData, '$.dedod'))) AS dedod,
       createdAt
     FROM InsurancePackage
     ${effectiveWhereClause}
@@ -708,7 +726,16 @@ export default async function LineAppPage({
               fullPrice: toNumber(pkg.fullPrice),
               netPrice: toNumber(pkg.netPrice),
               payablePrice: toNumberOrNull(pkg.payablePrice),
-              discount: toNumber(pkg.discount)
+              discount: toNumber(pkg.discount),
+              uom1V: pkg.uom1V,
+              uom2V: pkg.uom2V,
+              uom5V: pkg.uom5V,
+              seats41: pkg.seats41,
+              mv411: pkg.mv411,
+              mv412: pkg.mv412,
+              mv42: pkg.mv42,
+              mv43: pkg.mv43,
+              dedod: pkg.dedod
             }))}
             ctpOptionsBySClass={ctpOptionsBySClass}
             baseQueryString={baseQueryString}

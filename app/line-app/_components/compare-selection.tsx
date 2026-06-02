@@ -24,6 +24,15 @@ type ComparePackageCard = {
   netPrice: number;
   payablePrice: number | null;
   discount: number;
+  uom1V: string | null;
+  uom2V: string | null;
+  uom5V: string | null;
+  seats41: string | null;
+  mv411: string | null;
+  mv412: string | null;
+  mv42: string | null;
+  mv43: string | null;
+  dedod: string | null;
 };
 
 type CompareSelectionProps = {
@@ -125,6 +134,105 @@ function formatSumInsuredRange(min: unknown, max: unknown) {
   }
 
   return `${formatMoney(hasMin ? minValue : maxValue ?? 0)} บาท`;
+}
+
+function parseNumber(value: unknown) {
+  if (value == null) {
+    return null;
+  }
+
+  const normalized = String(value).replace(/,/g, '').trim();
+  if (!normalized) {
+    return null;
+  }
+
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function formatCoverageAmount(value: unknown, unit: string, zeroLabel = '-') {
+  const parsed = parseNumber(value);
+
+  if (parsed == null) {
+    return '-';
+  }
+
+  if (parsed === 0) {
+    return zeroLabel;
+  }
+
+  return `${formatMoney(parsed)} ${unit}`;
+}
+
+function formatSeatText(value: unknown, offset = 0) {
+  const parsed = parseNumber(value);
+
+  if (parsed == null) {
+    return '';
+  }
+
+  const seatCount = Math.max(parsed - offset, 0);
+  return ` (จำนวน ${formatMoney(seatCount)} คน)`;
+}
+
+function buildCoverageDetailRows(pkg: ComparePackageCard, coverageGroup: string, selectedSumInsuredLabel: string) {
+  const isTypeThreePlus = coverageGroup === '3+';
+  const isTypeThree = coverageGroup === '3';
+  const ownDamageLabel = isTypeThree
+    ? '3.2 ความคุ้มครองความเสียหายต่อรถยนต์'
+    : '3.2 ความคุ้มครองความเสียหายต่อรถยนต์ เนื่องจากการชนกับพาหนะทางบก(ร.ย.ภ.10)';
+  const lostFireValue = isTypeThreePlus || isTypeThree ? 'ไม่คุ้มครอง' : selectedSumInsuredLabel;
+  const ownDamageValue = isTypeThree ? 'ไม่คุ้มครอง' : selectedSumInsuredLabel;
+
+  return [
+    { kind: 'heading' as const, label: 'ความรับผิดต่อบุคคลภายนอก' },
+    {
+      kind: 'row' as const,
+      label: '1) ความเสียหายต่อชีวิต ร่างกาย หรืออนามัย',
+      value: formatCoverageAmount(pkg.uom1V, 'บาท/คน')
+    },
+    {
+      kind: 'row' as const,
+      label: 'เฉพาะส่วนเกินวงเงินสูงสุดตาม พรบ.',
+      value: formatCoverageAmount(pkg.uom2V, 'บาท/ครั้ง')
+    },
+    {
+      kind: 'row' as const,
+      label: '2) ความเสียหายต่อทรัพย์สิน',
+      value: formatCoverageAmount(pkg.uom5V, 'บาท/ครั้ง')
+    },
+    { kind: 'row' as const, label: 'ความเสียหายส่วนแรก', value: 'ไม่มี' },
+    { kind: 'row' as const, label: '3.1รถยนต์ สูญหาย/ไฟไหม้', value: lostFireValue },
+    { kind: 'row' as const, label: ownDamageLabel, value: ownDamageValue },
+    {
+      kind: 'row' as const,
+      label: 'ความเสียหายส่วนแรก',
+      value: formatCoverageAmount(pkg.dedod, 'บาท/ครั้ง', 'ไม่มี')
+    },
+    { kind: 'heading' as const, label: 'ความคุ้มครองตามเอกสารแนบท้าย' },
+    { kind: 'subheading' as const, label: '4.1 อุบัติเหตุส่วนบุคคล' },
+    { kind: 'subheading' as const, label: 'เสียชีวิต สูญเสียอวัยวะ ทุพพลภาพถาวร' },
+    {
+      kind: 'row' as const,
+      label: 'คุ้มครองผู้ขับขี่ 1 คน',
+      value: formatCoverageAmount(pkg.mv411, 'บาท/คน')
+    },
+    {
+      kind: 'row' as const,
+      label: `ผู้โดยสาร${formatSeatText(pkg.seats41, 1)}`,
+      value: formatCoverageAmount(pkg.mv412, 'บาท/คน')
+    },
+    {
+      kind: 'row' as const,
+      label: `4.2 ค่ารักษาพยาบาล${formatSeatText(pkg.seats41)}`,
+      value: formatCoverageAmount(pkg.mv42, 'บาท/คน')
+    },
+    {
+      kind: 'row' as const,
+      label: '4.3 การประกันตัวผู้ขับขี่',
+      value: formatCoverageAmount(pkg.mv43, 'บาท/ครั้ง')
+    }
+  ];
 }
 
 function encodeLogoUrl(logoUrl: string) {
@@ -355,6 +463,7 @@ export default function CompareSelection({
           const isDetailsOpen = expandedDetailIdSet.has(pkg.id);
           const selectedSumInsuredLabel = formatSumInsuredRange(pkg.minSumInsured, pkg.maxSumInsured);
           const coverageGroup = getCoverageGroup(pkg);
+          const coverageDetailRows = buildCoverageDetailRows(pkg, coverageGroup, selectedSumInsuredLabel);
           const isTypeTwoPlus = coverageGroup === '2+';
           const isTypeThreePlus = coverageGroup === '3+';
           const isTypeThree = coverageGroup === '3';
@@ -539,6 +648,33 @@ export default function CompareSelection({
 
                 {isDetailsOpen ? (
                   <div className="mt-3 rounded-xl border border-[#dfe4ef] bg-[#f8faff] px-3 py-3 text-sm leading-6 text-[#4b5265]">
+                    <div className="space-y-2">
+                      {coverageDetailRows.map((row, index) => {
+                        if (row.kind === 'heading') {
+                          return (
+                            <p key={`${row.label}-${index}`} className={index === 0 ? 'font-semibold text-[#0052CC]' : 'pt-2 font-semibold text-[#0052CC]'}>
+                              {row.label}
+                            </p>
+                          );
+                        }
+
+                        if (row.kind === 'subheading') {
+                          return (
+                            <p key={`${row.label}-${index}`} className="text-xs font-semibold text-[#4b5265]">
+                              {row.label}
+                            </p>
+                          );
+                        }
+
+                        return (
+                          <div key={`${row.label}-${index}`} className="flex items-start justify-between gap-3">
+                            <span className="font-medium text-[#1f2a44]">{row.label}</span>
+                            <span className="shrink-0 text-right font-semibold text-[#1f2a44]">{row.value}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="hidden">
                     {isTypeTwoPlus ? (
                       <div className="space-y-2">
                         <div className="flex items-start justify-between gap-3">
@@ -575,6 +711,7 @@ export default function CompareSelection({
                     ) : (
                       'รายละเอียดความคุ้มครองตามเงื่อนไขแผนที่เลือก'
                     )}
+                    </div>
                   </div>
                 ) : null}
               </div>
