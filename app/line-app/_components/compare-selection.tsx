@@ -179,8 +179,9 @@ function buildCoverageDetailRows(pkg: ComparePackageCard, coverageGroup: string,
   const isTypeThreePlus = coverageGroup === '3+';
   const isTypeThree = coverageGroup === '3';
   const ownDamageLabel = isTypeThree
-    ? '3.2 ความคุ้มครองความเสียหายต่อรถยนต์'
+    ? '3.1 ความคุ้มครองความเสียหายต่อรถยนต์'
     : '3.2 ความคุ้มครองความเสียหายต่อรถยนต์ เนื่องจากการชนกับพาหนะทางบก(ร.ย.ภ.10)';
+  const lostFireLabel = isTypeThree ? '3.2 รถยนต์ สูญหาย/ไฟไหม้' : '3.1รถยนต์ สูญหาย/ไฟไหม้';
   const lostFireValue = isTypeThreePlus || isTypeThree ? 'ไม่คุ้มครอง' : selectedSumInsuredLabel;
   const ownDamageValue = isTypeThree ? 'ไม่คุ้มครอง' : selectedSumInsuredLabel;
 
@@ -202,8 +203,8 @@ function buildCoverageDetailRows(pkg: ComparePackageCard, coverageGroup: string,
       value: formatCoverageAmount(pkg.uom5V, 'บาท/ครั้ง')
     },
     { kind: 'row' as const, label: 'ความเสียหายส่วนแรก', value: 'ไม่มี' },
-    { kind: 'row' as const, label: '3.1รถยนต์ สูญหาย/ไฟไหม้', value: lostFireValue },
     { kind: 'row' as const, label: ownDamageLabel, value: ownDamageValue },
+    { kind: 'row' as const, label: lostFireLabel, value: lostFireValue },
     {
       kind: 'row' as const,
       label: 'ความเสียหายส่วนแรก',

@@ -150,6 +150,7 @@ It also stores rating/search fields imported from insurer CSV rows:
 - Plan detail expansion now normalizes coverage labels/codes before applying coverage-specific detail rules and no longer exposes raw imported package `details` strings to customers.
 - Results plan cards no longer pass imported package `details` into the client payload, preventing raw importer strings such as `brand=... | model=...` from appearing in the detail expansion or page hydration data.
 - Results plan detail expansion now follows the uploaded coverage-detail Excel template and reads CSV/rawData columns such as `uom1_v`, `uom2_v`, `uom5_v`, `MinSI`, `Dedod`, `Seats41`, `mv411`, `mv412`, `mv42`, and `mv43` instead of showing only the two temporary own-damage rows.
+- Results plan detail expansion now places own-damage coverage before lost/fire coverage, and type 3 uses the shorter `3.1 ความคุ้มครองความเสียหายต่อรถยนต์` label without the land-vehicle collision wording.
 - Results, compare, search, and Policy Info back navigation now preserve search query parameters so users return to the same filtered result/search state instead of the unfiltered package list.
 - Policy Info page has been redesigned to match the Stitch-style form:
   - Personal information card.
