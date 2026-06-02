@@ -204,12 +204,12 @@ function buildCoverageDetailRows(pkg: ComparePackageCard, coverageGroup: string,
     },
     { kind: 'row' as const, label: 'ความเสียหายส่วนแรก', value: 'ไม่มี' },
     { kind: 'row' as const, label: ownDamageLabel, value: ownDamageValue },
-    { kind: 'row' as const, label: lostFireLabel, value: lostFireValue },
     {
       kind: 'row' as const,
       label: 'ความเสียหายส่วนแรก',
       value: formatCoverageAmount(pkg.dedod, 'บาท/ครั้ง', 'ไม่มี')
     },
+    { kind: 'row' as const, label: lostFireLabel, value: lostFireValue },
     { kind: 'heading' as const, label: 'ความคุ้มครองตามเอกสารแนบท้าย' },
     { kind: 'subheading' as const, label: '4.1 อุบัติเหตุส่วนบุคคล' },
     { kind: 'subheading' as const, label: 'เสียชีวิต สูญเสียอวัยวะ ทุพพลภาพถาวร' },

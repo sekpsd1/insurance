@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getCustomerCtpOptionsBySClass } from '@/lib/ctp-rates';
-import { ClearCartButton, RemoveCartPackageButton } from './cart-actions';
+import { CartPlanActions, ClearCartButton, RemoveCartPackageButton } from './cart-actions';
 
 type CartSearchParams = {
   sClass?: string;
@@ -33,6 +33,15 @@ type CartPackageRow = {
   model: string | null;
   netPrice: number;
   payablePrice: number | null;
+  uom1V: string | null;
+  uom2V: string | null;
+  uom5V: string | null;
+  seats41: string | null;
+  mv411: string | null;
+  mv412: string | null;
+  mv42: string | null;
+  mv43: string | null;
+  dedod: string | null;
 };
 
 const MAX_CART_PACKAGES = 30;
@@ -77,12 +86,139 @@ function formatMoney(value: number) {
   return value.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+function formatCoverageMoney(value: number) {
+  return value.toLocaleString('th-TH', { maximumFractionDigits: 2 });
+}
+
+function parseNumber(value: unknown) {
+  if (value == null) {
+    return null;
+  }
+
+  const normalized = String(value).replace(/,/g, '').trim();
+  if (!normalized) {
+    return null;
+  }
+
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function formatCoverageAmount(value: unknown, unit: string, zeroLabel = '-') {
+  const parsed = parseNumber(value);
+
+  if (parsed == null) {
+    return '-';
+  }
+
+  if (parsed === 0) {
+    return zeroLabel;
+  }
+
+  return `${formatCoverageMoney(parsed)} ${unit}`;
+}
+
+function formatSeatText(value: unknown, offset = 0) {
+  const parsed = parseNumber(value);
+
+  if (parsed == null) {
+    return '';
+  }
+
+  const seatCount = Math.max(parsed - offset, 0);
+  return ` (จำนวน ${formatCoverageMoney(seatCount)} คน)`;
+}
+
 function getCoverageLabel(value: string | null | undefined) {
   if (value === '1') return 'ประเภท 1';
   if (value === '2+') return 'ประเภท 2 พลัส';
   if (value === '3+') return 'ประเภท 3 พลัส';
   if (value === '3') return 'ประเภท 3';
   return value || '-';
+}
+
+function getCoverageGroup(pkg: Pick<CartPackageRow, 'coverageType' | 'coverageCode'>) {
+  const values = [pkg.coverageType, pkg.coverageCode].map((value) => value?.trim()).filter(Boolean);
+  const normalized = values.join(' ').toLowerCase();
+
+  if (values.includes('2+') || normalized.includes('2 พลัส') || normalized.includes('2 plus') || normalized.includes('2+')) {
+    return '2+';
+  }
+
+  if (values.includes('3+') || normalized.includes('3 พลัส') || normalized.includes('3 plus') || normalized.includes('3+')) {
+    return '3+';
+  }
+
+  if (values.includes('3') || normalized.includes('ประเภท 3') || normalized === '3') {
+    return '3';
+  }
+
+  if (values.includes('1') || normalized.includes('ประเภท 1')) {
+    return '1';
+  }
+
+  return pkg.coverageType?.trim() || '';
+}
+
+function buildCoverageDetailRows(pkg: CartPackageRow, coverageGroup: string, selectedSumInsuredLabel: string) {
+  const isTypeThreePlus = coverageGroup === '3+';
+  const isTypeThree = coverageGroup === '3';
+  const ownDamageLabel = isTypeThree
+    ? '3.1 ความคุ้มครองความเสียหายต่อรถยนต์'
+    : '3.1 ความคุ้มครองความเสียหายต่อรถยนต์ เนื่องจากการชนกับพาหนะทางบก(ร.ย.ภ.10)';
+  const lostFireLabel = '3.2 รถยนต์ สูญหาย/ไฟไหม้';
+  const lostFireValue = isTypeThreePlus || isTypeThree ? 'ไม่คุ้มครอง' : selectedSumInsuredLabel;
+  const ownDamageValue = isTypeThree ? 'ไม่คุ้มครอง' : selectedSumInsuredLabel;
+
+  return [
+    { kind: 'heading' as const, label: 'ความรับผิดต่อบุคคลภายนอก' },
+    {
+      kind: 'row' as const,
+      label: '1) ความเสียหายต่อชีวิต ร่างกาย หรืออนามัย',
+      value: formatCoverageAmount(pkg.uom1V, 'บาท/คน')
+    },
+    {
+      kind: 'row' as const,
+      label: 'เฉพาะส่วนเกินวงเงินสูงสุดตาม พรบ.',
+      value: formatCoverageAmount(pkg.uom2V, 'บาท/ครั้ง')
+    },
+    {
+      kind: 'row' as const,
+      label: '2) ความเสียหายต่อทรัพย์สิน',
+      value: formatCoverageAmount(pkg.uom5V, 'บาท/ครั้ง')
+    },
+    { kind: 'row' as const, label: 'ความเสียหายส่วนแรก', value: 'ไม่มี' },
+    { kind: 'row' as const, label: ownDamageLabel, value: ownDamageValue },
+    {
+      kind: 'row' as const,
+      label: 'ความเสียหายส่วนแรก',
+      value: formatCoverageAmount(pkg.dedod, 'บาท/ครั้ง', 'ไม่มี')
+    },
+    { kind: 'row' as const, label: lostFireLabel, value: lostFireValue },
+    { kind: 'heading' as const, label: 'ความคุ้มครองตามเอกสารแนบท้าย' },
+    { kind: 'subheading' as const, label: '4.1 อุบัติเหตุส่วนบุคคล' },
+    { kind: 'subheading' as const, label: 'เสียชีวิต สูญเสียอวัยวะ ทุพพลภาพถาวร' },
+    {
+      kind: 'row' as const,
+      label: 'คุ้มครองผู้ขับขี่ 1 คน',
+      value: formatCoverageAmount(pkg.mv411, 'บาท/คน')
+    },
+    {
+      kind: 'row' as const,
+      label: `ผู้โดยสาร${formatSeatText(pkg.seats41, 1)}`,
+      value: formatCoverageAmount(pkg.mv412, 'บาท/คน')
+    },
+    {
+      kind: 'row' as const,
+      label: `4.2 ค่ารักษาพยาบาล${formatSeatText(pkg.seats41)}`,
+      value: formatCoverageAmount(pkg.mv42, 'บาท/คน')
+    },
+    {
+      kind: 'row' as const,
+      label: '4.3 การประกันตัวผู้ขับขี่',
+      value: formatCoverageAmount(pkg.mv43, 'บาท/ครั้ง')
+    }
+  ];
 }
 
 function getSClassLabel(value: string | null | undefined) {
@@ -287,7 +423,16 @@ export default async function CartPage({
         brand,
         model,
         netPrice,
-        payablePrice
+        payablePrice,
+        JSON_UNQUOTE(COALESCE(JSON_EXTRACT(rawData, '$.uom1_v'), JSON_EXTRACT(rawData, '$.UOM1_V'))) AS uom1V,
+        JSON_UNQUOTE(COALESCE(JSON_EXTRACT(rawData, '$.uom2_v'), JSON_EXTRACT(rawData, '$.UOM2_V'))) AS uom2V,
+        JSON_UNQUOTE(COALESCE(JSON_EXTRACT(rawData, '$.uom5_v'), JSON_EXTRACT(rawData, '$.UOM5_V'))) AS uom5V,
+        JSON_UNQUOTE(COALESCE(JSON_EXTRACT(rawData, '$.Seats41'), JSON_EXTRACT(rawData, '$.seats41'))) AS seats41,
+        JSON_UNQUOTE(COALESCE(JSON_EXTRACT(rawData, '$.mv411'), JSON_EXTRACT(rawData, '$.MV411'))) AS mv411,
+        JSON_UNQUOTE(COALESCE(JSON_EXTRACT(rawData, '$.mv412'), JSON_EXTRACT(rawData, '$.MV412'))) AS mv412,
+        JSON_UNQUOTE(COALESCE(JSON_EXTRACT(rawData, '$.mv42'), JSON_EXTRACT(rawData, '$.MV42'))) AS mv42,
+        JSON_UNQUOTE(COALESCE(JSON_EXTRACT(rawData, '$.mv43'), JSON_EXTRACT(rawData, '$.MV43'))) AS mv43,
+        JSON_UNQUOTE(COALESCE(JSON_EXTRACT(rawData, '$.Dedod'), JSON_EXTRACT(rawData, '$.dedod'))) AS dedod
       FROM InsurancePackage
       WHERE id IN (${Prisma.join(selectedIds.map((id) => Prisma.sql`${id}`))})
       ORDER BY createdAt DESC, id DESC
@@ -352,6 +497,9 @@ export default async function CartPage({
               const premiumTotal = toNumber(pkg.netPrice) + ctpTotal;
               const payableTotal = toNumber(pkg.payablePrice ?? pkg.netPrice) + ctpTotal;
               const deductibleLabel = getDeductibleLabel(pkg.coverageCode);
+              const coverageGroup = getCoverageGroup(pkg);
+              const selectedSumInsuredLabel = formatSumInsuredRange(pkg.minSumInsured, pkg.maxSumInsured);
+              const coverageDetailRows = buildCoverageDetailRows(pkg, coverageGroup, selectedSumInsuredLabel);
 
               return (
                 <article key={pkg.id} className="overflow-hidden rounded-3xl bg-white p-5 shadow-[0_10px_30px_rgba(4,16,61,0.08)] ring-1 ring-white/70">
@@ -457,21 +605,7 @@ export default async function CartPage({
                     <p className="mt-1 font-[Kanit,sans-serif] text-3xl font-bold leading-tight text-[#111827]">{formatMoney(payableTotal)} บาท</p>
                   </div>
 
-                  <div className="mt-4 grid grid-cols-2 gap-2">
-                    <Link
-                      href={buildFormHref(baseParams, pkg.id, Boolean(ctpOption))}
-                      className="flex items-center justify-center border border-[#0052CC] bg-white py-3 font-[Kanit,sans-serif] text-base font-semibold text-[#0052CC] transition-colors hover:bg-[#eef3ff]"
-                    >
-                      ดูรายละเอียด
-                    </Link>
-                    <Link
-                      href={buildFormHref(baseParams, pkg.id, Boolean(ctpOption))}
-                      className="flex items-center justify-center gap-2 bg-[#0052CC] py-3 font-[Kanit,sans-serif] text-base font-semibold text-white transition-colors hover:bg-[#0040a2]"
-                    >
-                      เลือกแผนนี้
-                      <span aria-hidden="true">→</span>
-                    </Link>
-                  </div>
+                  <CartPlanActions formHref={buildFormHref(baseParams, pkg.id, Boolean(ctpOption))} coverageDetailRows={coverageDetailRows} />
                 </article>
               );
             })}
