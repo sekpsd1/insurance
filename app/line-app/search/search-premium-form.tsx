@@ -70,6 +70,10 @@ function normalizeRepairType(value: string | undefined) {
   return REPAIR_TYPE_OPTIONS.some((option) => option.value === value) ? (value as RepairType) : '';
 }
 
+function getVehicleOptionCoverage(coverage: string) {
+  return coverage === '2+' || coverage === '3+' ? '3' : coverage;
+}
+
 function formatSumInsured(value: number) {
   if (value === 0) {
     return 'ไม่คุ้มครอง';
@@ -257,7 +261,8 @@ export default function SearchPremiumForm({
       return [];
     }
 
-    return optionRows.filter((row) => row.sClass === sClass && (coverage === '1' || row.coverageType === coverage));
+    const vehicleOptionCoverage = getVehicleOptionCoverage(coverage);
+    return optionRows.filter((row) => row.sClass === sClass && (coverage === '1' || row.coverageType === vehicleOptionCoverage));
   }, [coverage, optionRows, sClass]);
 
   const isRepairAutoSwitchPending = Boolean(
@@ -963,7 +968,7 @@ export default function SearchPremiumForm({
             </svg>
           </div>
           <h2 id="no-campaign-title" className="mt-4 text-xl font-bold text-[#071129]">
-            ไม่มีแคมเปญสำหรับรถรุ่นดังกล่าว
+            ไม่มีแคมเปญสำหรับรุ่นนี้ สามารถเลือกแผนอื่นได้
           </h2>
           <button
             type="button"

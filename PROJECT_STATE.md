@@ -122,6 +122,7 @@ It also stores rating/search fields imported from insurer CSV rows:
 - Search Premium option payload is grouped on the server and computes registration year options in the client from age ranges to avoid sending one option row per premium row.
 - Search Premium now exposes cubic-capacity ranges from `MinCST`/`MaxCST` as a "ขนาดเครื่องยนต์" selector because no separate vehicle submodel master exists in the imported CSV.
 - Search Premium treats `SClass 210` van/blue-plate rows as seat-count based because imported `MinCST`/`MaxCST` is `0-12`; customer-facing search/results/compare labels show `จำนวนที่นั่ง` / `ไม่เกิน 12 ที่นั่ง` while keeping the internal `cubicCapacity` query and `MinCST`/`MaxCST` filtering unchanged.
+- Search Premium now uses type 3 vehicle option data for policy type 2+ and 3+ vehicle dropdowns, including brand, model, registration year, cubic capacity, and seat-count options, while still filtering actual search results by the selected policy type.
 - Search year now maps registration year to vehicle age and filters against CSV `MinYear`/`MaxYear`.
 - Search Results filters by coverage, repair type, brand, model, and year.
 - Search Results preserve and apply `sClass`, `repairType`, `cubicCapacity`, and `sumInsured` query parameters.
@@ -140,10 +141,11 @@ It also stores rating/search fields imported from insurer CSV rows:
 - Compare page displays selected packages side by side.
 - Results and compare preserve query parameters.
 - Results page now hides the extra result-summary/count blocks above the plan list and shows the plan cards before the quick-filter card so customers reach the payable section sooner while keeping the remaining payable box in its original position inside each plan card.
+- Results page now uses a compact blue header without the unused menu button and tighter top/card spacing so customers can see the remaining payable section sooner in LINE Mini App.
 - Results plan cards now use tighter padding, smaller detail icons, and shorter section spacing so more of the selected plan card is visible in the first mobile viewport.
 - Customer-facing zero sum-insured display text now says `ไม่คุ้มครอง` instead of `ไม่มีทุนประกัน` across search, results, cart, and compare views.
 - Search Premium no longer shows or requires the sum-insured selector for policy type 3; customers can search type 3 packages after choosing vehicle, repair, year, and engine details.
-- Search Premium now opens the `ไม่มีแคมเปญสำหรับรถรุ่นดังกล่าว` popup when policy type 2+, 3+, or 3 has no premium/campaign for the selected vehicle details.
+- Search Premium now opens the `ไม่มีแคมเปญสำหรับรุ่นนี้ สามารถเลือกแผนอื่นได้` popup when policy type 2+, 3+, or 3 has no premium/campaign for the selected vehicle details.
 - Compare table now labels the package premium row as `เบี้ยประกัน` instead of `เบี้ยประกันราคาทุน`.
 - Results and cart plan cards now split the combined `ดูรายละเอียด / เลือกแผนนี้` action into separate `ดูรายละเอียด` and `เลือกแผนนี้` buttons.
 - Type 3 plan details now show `รถสูญหาย/ไฟไหม้` and `ความเสียหายต่อตัวรถ` as `ไม่คุ้มครอง`.

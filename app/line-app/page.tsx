@@ -655,23 +655,19 @@ export default async function LineAppPage({
 
   return (
     <main className="flex min-h-screen flex-col bg-[#faf8ff] text-[#191b23] antialiased">
-      <header className="sticky top-0 z-10 flex w-full items-center justify-between bg-[#0052CC] px-4 py-3 text-white shadow-sm">
-        <div className="mx-auto flex max-w-md items-center justify-between">
-          <Link href={buildSearchHref(baseParams)} aria-label="กลับไปหน้า Search Premium" className="-ml-2 rounded-full p-2 transition-colors hover:bg-white/10">
-            <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2">
+      <header className="sticky top-0 z-10 flex w-full items-center justify-between bg-[#0052CC] px-4 py-2 text-white shadow-sm">
+        <div className="mx-auto grid w-full max-w-md grid-cols-[2rem_1fr_2rem] items-center">
+          <Link href={buildSearchHref(baseParams)} aria-label="กลับไปหน้า Search Premium" className="-ml-1 rounded-full p-1.5 transition-colors hover:bg-white/10">
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
             </svg>
           </Link>
-          <h1 className="font-[Kanit,sans-serif] text-lg font-semibold tracking-wide">เลือกแผนประกันราคาทุน</h1>
-          <button type="button" aria-label="Menu" className="-mr-2 rounded-full p-2 transition-colors hover:bg-white/10">
-            <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 7h16M4 12h16M4 17h16" />
-            </svg>
-          </button>
+          <h1 className="truncate text-center font-[Kanit,sans-serif] text-sm font-semibold tracking-wide">เลือกแผนประกันราคาทุน</h1>
+          <div className="h-8 w-8" />
         </div>
       </header>
 
-      <div className="mx-auto flex w-full max-w-md flex-1 flex-col space-y-4 px-4 py-4">
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col space-y-3 px-4 py-2">
         {hasFilters ? (
           <section className="hidden rounded-2xl border border-[#cfd8ff] bg-[#eef3ff] px-4 py-3 text-sm font-medium text-[#24406f] shadow-[0_8px_24px_rgba(0,0,0,0.04)]">
             ผลลัพธ์สำหรับ: <span className="font-semibold">{searchSummary}</span>

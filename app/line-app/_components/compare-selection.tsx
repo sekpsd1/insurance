@@ -451,7 +451,7 @@ export default function CompareSelection({
 
   return (
     <>
-      <div className="space-y-4">
+      <div className="space-y-3">
         {packages.map((pkg) => {
           const isSelected = selectedIdSet.has(pkg.id);
           const isInCart = cartIdSet.has(pkg.id);
@@ -476,8 +476,8 @@ export default function CompareSelection({
                 isSelected ? 'ring-2 ring-[#0052CC]' : ''
               }`}
             >
-              <div className="relative p-3">
-                <div className="relative mb-3 flex items-start gap-2">
+              <div className="relative p-2.5">
+                <div className="relative mb-2.5 flex items-start gap-2">
                   <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[rgba(195,198,214,0.35)] bg-[#eef3ff] shadow-sm">
                     {pkg.logoUrl && !failedLogoIdSet.has(pkg.id) ? (
                       <img
@@ -515,7 +515,7 @@ export default function CompareSelection({
                   </button>
                 </div>
 
-                <div className="mb-3 overflow-hidden rounded-xl border border-[#dfe4ef] bg-white shadow-[0_6px_18px_rgba(15,32,67,0.06)]">
+                <div className="mb-2.5 overflow-hidden rounded-xl border border-[#dfe4ef] bg-white shadow-[0_6px_18px_rgba(15,32,67,0.06)]">
                   <div className="space-y-2 p-3 text-[13px] text-[#2f3545]">
                     <div className="flex items-start gap-2">
                       <DetailIcon icon="car" tone="blue" />
@@ -566,7 +566,7 @@ export default function CompareSelection({
                   </div>
                 </div>
 
-                <div className="mb-3 overflow-hidden rounded-xl bg-[#eef1f4] shadow-[0_8px_22px_rgba(15,32,67,0.08)]">
+                <div className="mb-2.5 overflow-hidden rounded-xl bg-[#eef1f4] shadow-[0_8px_22px_rgba(15,32,67,0.08)]">
                   <div className="border-b border-[#d8dde7] px-3 py-2">
                     <div className="flex items-center justify-between gap-3">
                       <h3 className="font-[Kanit,sans-serif] text-base font-bold text-[#1f2a44]">สรุปค่าใช้จ่าย</h3>
@@ -610,7 +610,7 @@ export default function CompareSelection({
                   </div>
                 </div>
 
-                <div className="mb-3 rounded-xl border border-[#d6c27a] bg-[#fffdf4] px-3 py-3 shadow-[0_8px_20px_rgba(154,118,20,0.10)]">
+                <div className="mb-2.5 rounded-xl border border-[#d6c27a] bg-[#fffdf4] px-3 py-2.5 shadow-[0_8px_20px_rgba(154,118,20,0.10)]">
                   <p className="text-sm font-semibold text-[#4b3a0b]">คงเหลือชำระ</p>
                   <p className="mt-0.5 font-[Kanit,sans-serif] text-2xl font-bold leading-tight text-[#111827]">{formatMoney(payableTotal)} บาท</p>
                 </div>
