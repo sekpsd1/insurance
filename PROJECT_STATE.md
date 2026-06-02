@@ -121,6 +121,7 @@ It also stores rating/search fields imported from insurer CSV rows:
   - `ประเภท 3` from CSV `covcod` `3`
 - Search Premium option payload is grouped on the server and computes registration year options in the client from age ranges to avoid sending one option row per premium row.
 - Search Premium now exposes cubic-capacity ranges from `MinCST`/`MaxCST` as a "ขนาดเครื่องยนต์" selector because no separate vehicle submodel master exists in the imported CSV.
+- Search Premium treats `SClass 210` van/blue-plate rows as seat-count based because imported `MinCST`/`MaxCST` is `0-12`; customer-facing search/results/compare labels show `จำนวนที่นั่ง` / `ไม่เกิน 12 ที่นั่ง` while keeping the internal `cubicCapacity` query and `MinCST`/`MaxCST` filtering unchanged.
 - Search year now maps registration year to vehicle age and filters against CSV `MinYear`/`MaxYear`.
 - Search Results filters by coverage, repair type, brand, model, and year.
 - Search Results preserve and apply `sClass`, `repairType`, `cubicCapacity`, and `sumInsured` query parameters.
@@ -168,6 +169,7 @@ It also stores rating/search fields imported from insurer CSV rows:
   - `SClass 320` sells CTP rate `1.40A` at total `967.28`.
   - Other vehicle classes cannot select the CTP add-on.
 - Admin insurance dashboard now includes editable CTP/CMI rate settings for SClass `110`, `210`, and `320`; `210` is present but defaults to not sellable until a price is configured and enabled.
+- Admin CTP/CMI settings now clarify that `Total` is the customer payable price while `Rate Code` is only a reference code; money fields accept comma-formatted decimal text such as `1,182.35` and are easier to read.
 - Selected CTP/CMI add-ons are carried into Policy Info, stored on `Order`, and included in `paymentAmount`.
 - Checkout page supports:
   - Bank transfer with slip upload.

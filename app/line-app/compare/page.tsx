@@ -155,13 +155,44 @@ function formatSumInsured(value: string) {
   return Number.isFinite(parsed) ? parsed.toLocaleString('th-TH') : value;
 }
 
-function formatCubicCapacity(value: string) {
+function isSeatBasedVehicleType(sClass: string | null | undefined) {
+  return sClass === '210';
+}
+
+function formatCubicCapacity(value: string, sClass = '') {
   const parsed = Number.parseInt(value.replace(/,/g, ''), 10);
   if (!Number.isFinite(parsed)) {
     return value;
   }
 
+  if (isSeatBasedVehicleType(sClass)) {
+    return `ไม่เกิน ${parsed.toLocaleString('th-TH')} ที่นั่ง`;
+  }
+
   return `${parsed.toLocaleString('th-TH')} ซีซี`;
+}
+
+function formatVehicleSizeRange(pkg: Pick<ComparePackage, 'sClass' | 'minCubicCapacity' | 'maxCubicCapacity'>) {
+  const minValue = pkg.minCubicCapacity ?? 0;
+  const maxValue = pkg.maxCubicCapacity ?? minValue;
+
+  if (!minValue && !maxValue) {
+    return '-';
+  }
+
+  if (isSeatBasedVehicleType(pkg.sClass)) {
+    if (minValue === 0) {
+      return `ไม่เกิน ${formatMoney(maxValue)} ที่นั่ง`;
+    }
+
+    if (minValue === maxValue) {
+      return `${formatMoney(minValue)} ที่นั่ง`;
+    }
+
+    return `${formatMoney(minValue)}-${formatMoney(maxValue)} ที่นั่ง`;
+  }
+
+  return `${formatMoney(minValue)}-${formatMoney(maxValue)} ซีซี`;
 }
 
 function buildSearchSummary(filters: { sClass: string; coverage: string; repairType: string; brand: string; model: string; year: string; cubicCapacity: string; sumInsured: string }) {
@@ -172,7 +203,7 @@ function buildSearchSummary(filters: { sClass: string; coverage: string; repairT
     filters.brand,
     filters.model,
     filters.year,
-    filters.cubicCapacity ? formatCubicCapacity(filters.cubicCapacity) : '',
+    filters.cubicCapacity ? formatCubicCapacity(filters.cubicCapacity, filters.sClass) : '',
     filters.sumInsured ? `ทุน ${formatSumInsured(filters.sumInsured)}` : ''
   ]
     .filter(Boolean)
@@ -589,7 +620,7 @@ export default async function ComparePage({
                     { label: 'ยี่ห้อ', values: packages.map((pkg) => pkg.brand || '-') },
                     { label: 'รุ่น', values: packages.map((pkg) => pkg.model || '-') },
                     { label: 'ปี', values: packages.map((pkg) => (pkg.year ? String(pkg.year) : year || '-')) },
-                    { label: 'ขนาดเครื่องยนต์', values: packages.map((pkg) => (pkg.minCubicCapacity || pkg.maxCubicCapacity ? `${formatMoney(pkg.minCubicCapacity ?? 0)}-${formatMoney(pkg.maxCubicCapacity ?? 0)} ซีซี` : '-')) },
+                    { label: packages.some((pkg) => isSeatBasedVehicleType(pkg.sClass)) ? 'จำนวนที่นั่ง' : 'ขนาดเครื่องยนต์', values: packages.map((pkg) => formatVehicleSizeRange(pkg)) },
                     { label: 'ทุนประกัน', values: packages.map((pkg) => (pkg.minSumInsured || pkg.maxSumInsured ? `${formatMoney(pkg.minSumInsured ?? pkg.maxSumInsured ?? 0)} บาท` : '-')) },
                     { label: 'ประเภทซ่อม', values: packages.map((pkg) => pkg.repairType || 'อู่ประกัน') },
                     { label: 'เบี้ยประกัน', values: packages.map((pkg) => `${formatMoney(pkg.netPrice)} บาท`) },

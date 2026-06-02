@@ -86,7 +86,35 @@ function formatCubicCapacity(value: number) {
   return `${value.toLocaleString('th-TH')} ซีซี`;
 }
 
-function formatCubicCapacityRange(min: number, max: number) {
+function isSeatBasedVehicleType(sClass: string) {
+  return sClass === '210';
+}
+
+function formatSeatCount(value: number) {
+  return `${value.toLocaleString('th-TH')} ที่นั่ง`;
+}
+
+function formatCubicCapacityRange(min: number, max: number, seatBased = false) {
+  if (seatBased) {
+    if (min === 0 && max >= 9999) {
+      return 'ทุกจำนวนที่นั่ง';
+    }
+
+    if (min === 0) {
+      return `ไม่เกิน ${formatSeatCount(max)}`;
+    }
+
+    if (max >= 9999) {
+      return `ตั้งแต่ ${formatSeatCount(min)} ขึ้นไป`;
+    }
+
+    if (min === max) {
+      return formatSeatCount(min);
+    }
+
+    return `${formatSeatCount(min)} - ${formatSeatCount(max)}`;
+  }
+
   if (min === 0 && max >= 9999) {
     return 'ทุกขนาดเครื่องยนต์';
   }
@@ -198,6 +226,7 @@ export default function SearchPremiumForm({
   const [hasLiffProfile, setHasLiffProfile] = useState(false);
   const [leadEmail, setLeadEmail] = useState('');
   const [leadSuccessNumber, setLeadSuccessNumber] = useState('');
+  const isSeatBasedSelection = isSeatBasedVehicleType(sClass);
   const [leadError, setLeadError] = useState('');
   const [isLeadPending, startLeadTransition] = useTransition();
 
@@ -284,7 +313,7 @@ export default function SearchPremiumForm({
         const min = row.minCubicCapacity ?? 0;
         const max = row.maxCubicCapacity ?? min;
         const value = max >= 9999 ? String(min || max) : String(max);
-        const label = formatCubicCapacityRange(min, max);
+        const label = formatCubicCapacityRange(min, max, isSeatBasedSelection);
         optionMap.set(`${min}-${max}`, {
           value,
           label,
@@ -293,7 +322,7 @@ export default function SearchPremiumForm({
       });
 
     return Array.from(optionMap.values()).sort((left, right) => left.sortValue - right.sortValue);
-  }, [brand, vehicleSelectionRows, model, year]);
+  }, [brand, isSeatBasedSelection, vehicleSelectionRows, model, year]);
 
   const sumInsuredOptions = useMemo(() => {
     if (!brand || !model || !year || !cubicCapacity) {
@@ -752,7 +781,7 @@ export default function SearchPremiumForm({
 
         <div>
           <label htmlFor="cubicCapacity" className="mb-2 block text-base font-semibold text-[#12131a]">
-            ขนาดเครื่องยนต์
+            {isSeatBasedSelection ? 'จำนวนที่นั่ง' : 'ขนาดเครื่องยนต์'}
           </label>
           <div className="relative">
             <select
@@ -764,7 +793,7 @@ export default function SearchPremiumForm({
               disabled={!year}
               className="w-full appearance-none rounded-2xl border border-[#d8dcec] bg-[#eaecf7] px-4 py-4 pr-12 text-[16px] text-[#12131a] outline-none transition disabled:cursor-not-allowed disabled:opacity-60 focus:border-[#0047BA] focus:bg-white focus:ring-4 focus:ring-[#0047BA]/10"
             >
-              <option value="">{year ? '-- เลือกขนาดเครื่องยนต์ --' : 'กรุณาเลือกปีจดทะเบียนก่อน'}</option>
+              <option value="">{year ? (isSeatBasedSelection ? '-- เลือกจำนวนที่นั่ง --' : '-- เลือกขนาดเครื่องยนต์ --') : 'กรุณาเลือกปีจดทะเบียนก่อน'}</option>
               {cubicCapacityOptions.map((item) => (
                 <option key={`${item.value}-${item.label}`} value={item.value}>
                   {item.label}
@@ -790,7 +819,7 @@ export default function SearchPremiumForm({
               disabled={!cubicCapacity}
               className="w-full appearance-none rounded-2xl border border-[#d8dcec] bg-[#eaecf7] px-4 py-4 pr-12 text-[16px] text-[#12131a] outline-none transition disabled:cursor-not-allowed disabled:opacity-60 focus:border-[#0047BA] focus:bg-white focus:ring-4 focus:ring-[#0047BA]/10"
             >
-              <option value="">{cubicCapacity ? '-- ทุนประกัน --' : 'กรุณาเลือกขนาดเครื่องยนต์ก่อน'}</option>
+              <option value="">{cubicCapacity ? '-- ทุนประกัน --' : isSeatBasedSelection ? 'กรุณาเลือกจำนวนที่นั่งก่อน' : 'กรุณาเลือกขนาดเครื่องยนต์ก่อน'}</option>
               {sumInsuredOptions.map((item) => (
                 <option key={item} value={item}>
                   {formatSumInsured(item)}
@@ -885,7 +914,7 @@ export default function SearchPremiumForm({
             i
           </div>
           <p className="text-sm font-medium leading-6">
-            ระบบจะกรองจากประเภทรถ ประเภทกรมธรรม์ ความคุ้มครอง อายุรถ ขนาดเครื่องยนต์ และทุนประกันตามตารางเบี้ยของบริษัทประกัน
+            ระบบจะกรองจากประเภทรถ ประเภทกรมธรรม์ ความคุ้มครอง อายุรถ {isSeatBasedSelection ? 'จำนวนที่นั่ง' : 'ขนาดเครื่องยนต์'} และทุนประกันตามตารางเบี้ยของบริษัทประกัน
           </p>
         </div>
       </section>

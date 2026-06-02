@@ -1246,6 +1246,7 @@ export async function createTypeOneQuoteLead(input: {
   const configuredSalesEmail = await getSalesLeadEmailSetting();
   const salesEmail = normalizeEmail(configuredSalesEmail ?? process.env.SALES_LEAD_EMAIL ?? null, 'Sales lead email');
   const subject = `[Type 1 Quote] ${leadNumber} - ${brand} ${model} ${carYear}`;
+  const vehicleSizeLabel = sClass === '210' ? `Seat count: up to ${cubicCapacity}` : `Cubic capacity: ${cubicCapacity} cc`;
   const body = [
     'New Type 1 quote request',
     '',
@@ -1260,7 +1261,7 @@ export async function createTypeOneQuoteLead(input: {
     `Brand: ${brand}`,
     `Model: ${model}`,
     `Registration year: ${carYear}`,
-    `Cubic capacity: ${cubicCapacity}`,
+    vehicleSizeLabel,
     '',
     'This is an automated broker system message.'
   ]

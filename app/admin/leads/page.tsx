@@ -48,6 +48,14 @@ function formatDate(date: Date) {
   }).format(date);
 }
 
+function formatLeadVehicleSize(sClass: string | null, cubicCapacity: string) {
+  if (sClass === '210') {
+    return `ไม่เกิน ${cubicCapacity} ที่นั่ง`;
+  }
+
+  return `${cubicCapacity} ซีซี`;
+}
+
 function getEmailStatusStyles(status?: string | null) {
   switch (status) {
     case 'QUEUED':
@@ -304,7 +312,7 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
                       {lead.brand} {lead.model}
                     </p>
                     <p className="mt-1 text-slate-600">
-                      ปี {lead.carYear} / {lead.cubicCapacity} ซีซี
+                      ปี {lead.carYear} / {formatLeadVehicleSize(lead.sClass, lead.cubicCapacity)}
                     </p>
                     <p className="mt-1 text-xs text-slate-500">SClass {lead.sClass || '-'}</p>
                   </div>

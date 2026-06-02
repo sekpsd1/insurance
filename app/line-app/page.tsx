@@ -186,10 +186,18 @@ function formatSumInsured(value: string) {
   return Number.isFinite(parsed) ? parsed.toLocaleString('th-TH') : value;
 }
 
-function formatCubicCapacity(value: string) {
+function isSeatBasedVehicleType(sClass: string) {
+  return sClass === '210';
+}
+
+function formatCubicCapacity(value: string, sClass = '') {
   const parsed = Number.parseInt(value.replace(/,/g, ''), 10);
   if (!Number.isFinite(parsed)) {
     return value;
+  }
+
+  if (isSeatBasedVehicleType(sClass)) {
+    return `ไม่เกิน ${parsed.toLocaleString('th-TH')} ที่นั่ง`;
   }
 
   return `${parsed.toLocaleString('th-TH')} ซีซี`;
@@ -203,7 +211,7 @@ function buildSearchSummary(filters: { sClass: string; coverage: string; repairT
     filters.brand,
     filters.model,
     filters.year,
-    filters.cubicCapacity ? formatCubicCapacity(filters.cubicCapacity) : '',
+    filters.cubicCapacity ? formatCubicCapacity(filters.cubicCapacity, filters.sClass) : '',
     filters.sumInsured ? `ทุน ${formatSumInsured(filters.sumInsured)}` : ''
   ]
     .filter(Boolean)
@@ -684,7 +692,7 @@ export default async function LineAppPage({
             currentRepairType={repairType}
             currentSumInsured={sumInsured}
             vehicleTitle={[brand, model, year].filter(Boolean).join(' ') || 'ข้อมูลรถของคุณ'}
-            vehicleSubtitle={[sClass ? getSClassLabel(sClass) : '', cubicCapacity ? formatCubicCapacity(cubicCapacity) : '']
+            vehicleSubtitle={[sClass ? getSClassLabel(sClass) : '', cubicCapacity ? formatCubicCapacity(cubicCapacity, sClass) : '']
               .filter(Boolean)
               .join(' · ')}
           />
@@ -766,7 +774,7 @@ export default async function LineAppPage({
             baseQueryString={baseQueryString}
             vehicleTypeLabel={sClass ? getSClassLabel(sClass) : ''}
             registrationYear={year}
-            cubicCapacityLabel={cubicCapacity ? formatCubicCapacity(cubicCapacity) : ''}
+            cubicCapacityLabel={cubicCapacity ? formatCubicCapacity(cubicCapacity, sClass) : ''}
             initialCtpPackageIds={initialCtpPackageIds}
           />
         )}

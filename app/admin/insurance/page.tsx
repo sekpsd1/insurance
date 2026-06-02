@@ -36,6 +36,12 @@ function formatNumberInput(value: number) {
   return Number.isInteger(value) ? String(value) : value.toFixed(2);
 }
 
+const textInputClass =
+  'w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 outline-none placeholder:text-slate-400 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100';
+
+const moneyInputClass =
+  'w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-right text-base font-semibold tabular-nums text-slate-950 outline-none placeholder:text-slate-400 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100';
+
 function formatDate(value: Date | null) {
   if (!value) {
     return '-';
@@ -243,6 +249,9 @@ export default async function InsuranceCampaignAdminPage() {
         <div className="mb-4">
           <h3 className="text-lg font-semibold text-slate-950">ตั้งค่า พ.ร.บ.</h3>
           <p className="mt-1 text-sm text-slate-500">แก้ไขราคา พ.ร.บ. ตามประเภทรถ ถ้าปิด “ขาย พ.ร.บ.” ลูกค้าจะไม่เห็นตัวเลือกเพิ่ม พ.ร.บ. ของรหัสนั้น</p>
+          <p className="mt-2 rounded-2xl bg-cyan-50 px-4 py-3 text-sm font-medium text-cyan-900">
+            ช่องราคาที่ลูกค้าต้องชำระคือ <span className="font-black">Total</span> ส่วน <span className="font-black">Rate Code</span> เป็นรหัสอ้างอิง ไม่ใช่ช่องราคา
+          </p>
         </div>
 
         <div className="grid gap-4 lg:grid-cols-3">
@@ -267,38 +276,38 @@ export default async function InsuranceCampaignAdminPage() {
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-600">Rate Code</label>
-                <input name="rateCode" defaultValue={rate.rateCode} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100" />
+                <label className="mb-1 block text-xs font-medium text-slate-600">Rate Code <span className="font-normal text-slate-400">(รหัส ไม่ใช่ราคา)</span></label>
+                <input name="rateCode" defaultValue={rate.rateCode} placeholder={rate.sClass === '210' ? 'เช่น 210' : 'เช่น 1.10'} className={textInputClass} />
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-slate-600">CMI Vehicle Type Code</label>
-                <input name="cmiVehicleTypeCode" defaultValue={rate.cmiVehicleTypeCode} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100" />
+                <input name="cmiVehicleTypeCode" defaultValue={rate.cmiVehicleTypeCode} placeholder={`เช่น ${rate.sClass}`} className={textInputClass} />
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-slate-600">ชื่อรายการ</label>
-                <input name="label" defaultValue={rate.label} required className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100" />
+                <input name="label" defaultValue={rate.label} required className={textInputClass} />
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-slate-600">เงื่อนไขแสดงผล</label>
-                <input name="eligibilityLabel" defaultValue={rate.eligibilityLabel} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100" />
+                <input name="eligibilityLabel" defaultValue={rate.eligibilityLabel} className={textInputClass} />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="mb-1 block text-xs font-medium text-slate-600">Premium</label>
-                  <input name="premium" type="number" step="0.01" min="0" defaultValue={formatNumberInput(rate.premium)} required className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100" />
+                  <input name="premium" inputMode="decimal" defaultValue={formatNumberInput(rate.premium)} placeholder="0.00" required className={moneyInputClass} />
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium text-slate-600">Stamp</label>
-                  <input name="stamp" type="number" step="0.01" min="0" defaultValue={formatNumberInput(rate.stamp)} required className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100" />
+                  <input name="stamp" inputMode="decimal" defaultValue={formatNumberInput(rate.stamp)} placeholder="0.00" required className={moneyInputClass} />
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium text-slate-600">VAT</label>
-                  <input name="vat" type="number" step="0.01" min="0" defaultValue={formatNumberInput(rate.vat)} required className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100" />
+                  <input name="vat" inputMode="decimal" defaultValue={formatNumberInput(rate.vat)} placeholder="0.00" required className={moneyInputClass} />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-600">Total</label>
-                  <input name="total" type="number" step="0.01" min="0" defaultValue={formatNumberInput(rate.total)} required className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100" />
+                  <label className="mb-1 block text-xs font-medium text-slate-600">Total <span className="font-normal text-cyan-700">(ยอดที่ลูกค้าจ่าย)</span></label>
+                  <input name="total" inputMode="decimal" defaultValue={formatNumberInput(rate.total)} placeholder="เช่น 1,182.35" required className={`${moneyInputClass} border-cyan-200 bg-cyan-50/40`} />
                 </div>
               </div>
 
