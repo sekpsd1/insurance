@@ -151,6 +151,8 @@ It also stores rating/search fields imported from insurer CSV rows:
 - Results plan cards no longer pass imported package `details` into the client payload, preventing raw importer strings such as `brand=... | model=...` from appearing in the detail expansion or page hydration data.
 - Results plan detail expansion now follows the uploaded coverage-detail Excel template and reads CSV/rawData columns such as `uom1_v`, `uom2_v`, `uom5_v`, `MinSI`, `Dedod`, `Seats41`, `mv411`, `mv412`, `mv42`, and `mv43` instead of showing only the two temporary own-damage rows.
 - Results plan detail expansion now places own-damage coverage before lost/fire coverage, and type 3 uses the shorter `3.1 ความคุ้มครองความเสียหายต่อรถยนต์` label without the land-vehicle collision wording.
+- Results and cart plan cards now hide cubic capacity from the vehicle detail card while keeping registration year visible; cubic capacity remains part of the search/filter query.
+- Results now normalizes stale or invalid sum-insured query values for the selected policy type and repair type before rendering, preventing mismatched URLs such as dealer coverage with an unavailable 50,000 baht sum insured from showing an error/no-result state.
 - Results, compare, search, and Policy Info back navigation now preserve search query parameters so users return to the same filtered result/search state instead of the unfiltered package list.
 - Policy Info page has been redesigned to match the Stitch-style form:
   - Personal information card.

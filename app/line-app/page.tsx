@@ -609,6 +609,31 @@ export default async function LineAppPage({
     ];
   });
 
+  const currentQuickFilterOption = quickFilterOptions.find(
+    (option) => option.coverageType === coverage && option.repairType === repairType
+  );
+  const validCurrentSumInsuredValues = currentQuickFilterOption?.sumInsuredValues ?? [];
+
+  if (coverage === '3' && sumInsured) {
+    const normalizedParams = new URLSearchParams(baseParams);
+    normalizedParams.delete('sumInsured');
+    normalizedParams.delete('page');
+    redirect(`/line-app?${normalizedParams.toString()}`);
+  }
+
+  if (
+    coverage &&
+    coverage !== '3' &&
+    repairType &&
+    validCurrentSumInsuredValues.length > 0 &&
+    !validCurrentSumInsuredValues.some((value) => String(value) === sumInsured)
+  ) {
+    const normalizedParams = new URLSearchParams(baseParams);
+    normalizedParams.set('sumInsured', String(validCurrentSumInsuredValues[0]));
+    normalizedParams.delete('page');
+    redirect(`/line-app?${normalizedParams.toString()}`);
+  }
+
   let searchMeta: SearchResultMeta = {
     exactYearMatched: exactYearTotal > 0 || !year,
     usedFallbackYearSearch: false,

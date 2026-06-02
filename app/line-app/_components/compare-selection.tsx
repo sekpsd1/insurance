@@ -524,9 +524,9 @@ export default function CompareSelection({
                           <span className="font-semibold text-[#1f2a44]">{getSClassShortLabel(pkg.sClass, vehicleTypeLabel)}</span>
                           <span className="text-right leading-5">{vehicleTypeLabel || '-'}</span>
                         </div>
-                        {(registrationYear || cubicCapacityLabel) ? (
+                        {registrationYear ? (
                           <p className="mt-0.5 text-xs text-[#667085]">
-                            {[registrationYear ? `ปี ${registrationYear}` : '', cubicCapacityLabel].filter(Boolean).join(' · ')}
+                            ปี {registrationYear}
                           </p>
                         ) : null}
                       </div>
