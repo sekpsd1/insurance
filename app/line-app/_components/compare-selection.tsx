@@ -495,8 +495,8 @@ export default function CompareSelection({
 
                   <div className="min-w-0 flex-1">
                     <p className="break-words pr-32 text-[13px] leading-4 text-[#434654]">{pkg.company}</p>
-                    <p className="mt-0.5 break-words font-[Kanit,sans-serif] text-lg font-bold leading-tight text-[#0052CC]">
-                      {[pkg.brand, pkg.model].filter(Boolean).join(' · ') || '-'}
+                    <p className="mt-0.5 break-words font-[Kanit,sans-serif] text-[17px] font-bold leading-tight text-[#0052CC]">
+                      {[pkg.brand, pkg.model, registrationYear].filter(Boolean).join(' · ') || '-'}
                     </p>
                   </div>
 
@@ -524,11 +524,6 @@ export default function CompareSelection({
                           <span className="font-semibold text-[#1f2a44]">{getSClassShortLabel(pkg.sClass, vehicleTypeLabel)}</span>
                           <span className="text-right leading-5">{vehicleTypeLabel || '-'}</span>
                         </div>
-                        {registrationYear ? (
-                          <p className="mt-0.5 text-xs text-[#667085]">
-                            ปี {registrationYear}
-                          </p>
-                        ) : null}
                       </div>
                     </div>
 
@@ -604,7 +599,7 @@ export default function CompareSelection({
                     ) : null}
                   </div>
 
-                  <div className="flex items-center justify-between gap-3 border-t border-[#d8dde7] px-3 py-3 text-base font-bold text-[#1f2a44]">
+                  <div className="flex items-center justify-between gap-3 border-t border-[#d8dde7] px-3 py-2 text-base font-bold text-[#1f2a44]">
                     <span>รวม</span>
                     <span>{formatMoney(totalPrice)} บาท</span>
                   </div>

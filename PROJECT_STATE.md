@@ -142,7 +142,7 @@ It also stores rating/search fields imported from insurer CSV rows:
 - Results and compare preserve query parameters.
 - Results page now hides the extra result-summary/count blocks above the plan list and shows the plan cards before the quick-filter card so customers reach the payable section sooner while keeping the remaining payable box in its original position inside each plan card.
 - Results page now uses a compact blue header without the unused menu button and tighter top/card spacing so customers can see the remaining payable section sooner in LINE Mini App.
-- Results plan cards now use tighter padding, smaller detail icons, and shorter section spacing so more of the selected plan card is visible in the first mobile viewport.
+- Results plan cards now use tighter padding, smaller detail icons, smaller vehicle-title text, and append registration year to the vehicle title to preserve space so more of the selected plan card is visible in the first mobile viewport.
 - Customer-facing zero sum-insured display text now says `ไม่คุ้มครอง` instead of `ไม่มีทุนประกัน` across search, results, cart, and compare views.
 - Search Premium no longer shows or requires the sum-insured selector for policy type 3; customers can search type 3 packages after choosing vehicle, repair, year, and engine details.
 - Search Premium now opens the `ไม่มีแคมเปญสำหรับรุ่นนี้ สามารถเลือกแผนอื่นได้` popup when policy type 2+, 3+, or 3 has no premium/campaign for the selected vehicle details.
