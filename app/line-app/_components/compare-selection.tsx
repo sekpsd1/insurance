@@ -495,9 +495,6 @@ export default function CompareSelection({
 
                   <div className="min-w-0 flex-1">
                     <p className="break-words pr-32 text-[13px] leading-4 text-[#434654]">{pkg.company}</p>
-                    <p className="mt-0.5 break-words font-[Kanit,sans-serif] text-[17px] font-bold leading-tight text-[#0052CC]">
-                      {[pkg.brand, pkg.model, registrationYear].filter(Boolean).join(' · ') || '-'}
-                    </p>
                   </div>
 
                   <button
@@ -514,6 +511,10 @@ export default function CompareSelection({
                     {isSelected ? 'เลือกเทียบแล้ว' : 'เลือกเทียบ'}
                   </button>
                 </div>
+
+                <p className="mb-2.5 break-words font-[Kanit,sans-serif] text-[15px] font-bold leading-tight text-[#0052CC]">
+                  {[pkg.brand, pkg.model, registrationYear].filter(Boolean).join(' · ') || '-'}
+                </p>
 
                 <div className="mb-2.5 overflow-hidden rounded-xl border border-[#dfe4ef] bg-white shadow-[0_6px_18px_rgba(15,32,67,0.06)]">
                   <div className="space-y-2 p-3 text-[13px] text-[#2f3545]">

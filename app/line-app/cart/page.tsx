@@ -83,7 +83,7 @@ function toNumber(value: unknown) {
 }
 
 function formatMoney(value: number) {
-  return value.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return value.toLocaleString('th-TH');
 }
 
 function formatCoverageMoney(value: number) {
@@ -312,8 +312,8 @@ function DetailIcon({
   }[icon];
 
   return (
-    <span className={`flex h-9 w-9 shrink-0 items-center justify-center ${toneClass}`}>
-      <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2">
+    <span className={`flex h-7 w-7 shrink-0 items-center justify-center ${toneClass}`}>
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
         {icons}
       </svg>
     </span>
@@ -502,30 +502,32 @@ export default async function CartPage({
               const coverageDetailRows = buildCoverageDetailRows(pkg, coverageGroup, selectedSumInsuredLabel);
 
               return (
-                <article key={pkg.id} className="overflow-hidden rounded-3xl bg-white p-5 shadow-[0_10px_30px_rgba(4,16,61,0.08)] ring-1 ring-white/70">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[rgba(195,198,214,0.35)] bg-[#eef3ff] shadow-sm">
+                <article key={pkg.id} className="overflow-hidden rounded-xl bg-white shadow-[0_8px_24px_rgba(0,0,0,0.06)] ring-1 ring-white/70">
+                  <div className="relative p-2.5">
+                    <div className="relative mb-2.5 flex items-start gap-2">
+                      <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[rgba(195,198,214,0.35)] bg-[#eef3ff] shadow-sm">
                       {pkg.logoUrl ? (
                         <img src={encodeLogoUrl(pkg.logoUrl)} alt={pkg.company} className="h-full w-full object-contain p-1" />
                       ) : (
                         <span className="px-1 text-center text-xs font-bold leading-4 text-[#0052CC]">{pkg.company.slice(0, 6)}</span>
                       )}
-                    </div>
-
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between gap-3">
-                        <p className="text-sm text-[#434654]">{pkg.company}</p>
-                        <RemoveCartPackageButton href={buildCartHrefWithIds(baseParams, remainingIds, remainingCtpIds)} remainingIds={remainingIds} remainingCtpIds={remainingCtpIds} />
                       </div>
-                      <p className="mt-1 font-[Kanit,sans-serif] text-lg font-bold leading-tight text-[#0052CC]">
-                        {[pkg.brand, pkg.model].filter(Boolean).join(' · ') || '-'}
-                      </p>
-                    </div>
-                  </div>
 
-                  <div className="mt-4 overflow-hidden rounded-2xl border border-[#dfe4ef] bg-white shadow-[0_6px_18px_rgba(15,32,67,0.06)]">
-                    <div className="space-y-3 p-4 text-sm text-[#2f3545]">
-                      <div className="flex items-start gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-3">
+                          <p className="break-words pr-14 text-[13px] leading-4 text-[#434654]">{pkg.company}</p>
+                          <RemoveCartPackageButton href={buildCartHrefWithIds(baseParams, remainingIds, remainingCtpIds)} remainingIds={remainingIds} remainingCtpIds={remainingCtpIds} />
+                        </div>
+                      </div>
+                    </div>
+
+                  <p className="mb-2.5 break-words font-[Kanit,sans-serif] text-[15px] font-bold leading-tight text-[#0052CC]">
+                    {[pkg.brand, pkg.model, normalizeSearchValue(resolvedSearchParams.year)].filter(Boolean).join(' · ') || '-'}
+                  </p>
+
+                  <div className="mb-2.5 overflow-hidden rounded-xl border border-[#dfe4ef] bg-white shadow-[0_6px_18px_rgba(15,32,67,0.06)]">
+                    <div className="space-y-2 p-3 text-[13px] text-[#2f3545]">
+                      <div className="flex items-start gap-2">
                         <DetailIcon icon="car" tone="blue" />
                         <div className="min-w-0 flex-1">
                           <div className="flex items-start justify-between gap-3">
@@ -535,7 +537,7 @@ export default async function CartPage({
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
                         <DetailIcon icon="shield" tone="indigo" />
                         <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
                           <span className="font-medium text-[#4b5265]">ประเภท</span>
@@ -543,7 +545,7 @@ export default async function CartPage({
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
                         <DetailIcon icon="money" tone="green" />
                         <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
                           <span className="font-medium text-[#4b5265]">ทุนประกัน</span>
@@ -551,7 +553,7 @@ export default async function CartPage({
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
                         <DetailIcon icon="star" tone="amber" />
                         <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
                           <span className="font-medium text-[#4b5265]">ความเสียหายส่วนแรก</span>
@@ -559,7 +561,7 @@ export default async function CartPage({
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
                         <DetailIcon icon="wrench" tone="slate" />
                         <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
                           <span className="font-medium text-[#4b5265]">ประเภทการซ่อม</span>
@@ -569,13 +571,13 @@ export default async function CartPage({
                     </div>
                   </div>
 
-                  <div className="mt-4 overflow-hidden rounded-2xl bg-[#eef1f4] shadow-[0_8px_22px_rgba(15,32,67,0.08)]">
-                    <div className="border-b border-[#d8dde7] px-4 py-3">
+                  <div className="mb-2.5 overflow-hidden rounded-xl bg-[#eef1f4] shadow-[0_8px_22px_rgba(15,32,67,0.08)]">
+                    <div className="border-b border-[#d8dde7] px-3 py-2">
                       <h3 className="font-[Kanit,sans-serif] text-base font-bold text-[#1f2a44]">สรุปค่าใช้จ่าย</h3>
                     </div>
 
-                    <div className="space-y-3 px-4 py-4 text-sm text-[#2f3545]">
-                      <div className="flex items-center gap-3">
+                    <div className="space-y-2 px-3 py-3 text-[13px] text-[#2f3545]">
+                      <div className="flex items-center gap-2">
                         <DetailIcon icon="tag" tone="orange" />
                         <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
                           <span className="font-medium">เบี้ยประกัน</span>
@@ -584,7 +586,7 @@ export default async function CartPage({
                       </div>
 
                       {ctpOption ? (
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
                           <DetailIcon icon="ctp" tone="blue" />
                           <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
                             <span className="font-medium">พ.ร.บ. เพิ่มเติม</span>
@@ -594,18 +596,19 @@ export default async function CartPage({
                       ) : null}
                     </div>
 
-                    <div className="flex items-center justify-between gap-4 border-t border-[#d8dde7] px-4 py-4 text-lg font-bold text-[#1f2a44]">
+                    <div className="flex items-center justify-between gap-3 border-t border-[#d8dde7] px-3 py-2 text-base font-bold text-[#1f2a44]">
                       <span>รวม</span>
                       <span>{formatMoney(premiumTotal)} บาท</span>
                     </div>
                   </div>
 
-                  <div className="mt-4 rounded-2xl border border-[#d6c27a] bg-[#fffdf4] px-4 py-4 shadow-[0_8px_20px_rgba(154,118,20,0.10)]">
+                  <div className="mb-2.5 rounded-xl border border-[#d6c27a] bg-[#fffdf4] px-3 py-2.5 shadow-[0_8px_20px_rgba(154,118,20,0.10)]">
                     <p className="text-sm font-semibold text-[#4b3a0b]">คงเหลือชำระ</p>
-                    <p className="mt-1 font-[Kanit,sans-serif] text-3xl font-bold leading-tight text-[#111827]">{formatMoney(payableTotal)} บาท</p>
+                    <p className="mt-0.5 font-[Kanit,sans-serif] text-2xl font-bold leading-tight text-[#111827]">{formatMoney(payableTotal)} บาท</p>
                   </div>
 
                   <CartPlanActions formHref={buildFormHref(baseParams, pkg.id, Boolean(ctpOption))} coverageDetailRows={coverageDetailRows} />
+                  </div>
                 </article>
               );
             })}

@@ -41,7 +41,7 @@ export function RemoveCartPackageButton({
     <Link
       href={href}
       onClick={syncCartStorage}
-      className="inline-flex shrink-0 items-center rounded-full bg-white px-3 py-1 text-xs font-semibold text-red-600 shadow-sm ring-1 ring-red-100 transition hover:bg-red-50"
+      className="absolute right-0 top-0 inline-flex shrink-0 items-center rounded-full bg-white px-3 py-1 text-xs font-semibold text-red-600 shadow-sm ring-1 ring-red-100 transition hover:bg-red-50"
     >
       ลบ
     </Link>
@@ -70,7 +70,7 @@ export function CartPlanActions({ formHref, coverageDetailRows }: CartPlanAction
 
   return (
     <>
-      <div className="mt-4 grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-2">
         <button
           type="button"
           onClick={() => setIsDetailsOpen((current) => !current)}
