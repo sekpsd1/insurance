@@ -140,7 +140,28 @@ function formatCubicCapacityRange(min: number, max: number, seatBased = false) {
 
 function getCarAgeFromRegistrationYear(year: string) {
   const parsed = Number.parseInt(year, 10);
-  return Number.isFinite(parsed) ? Math.max(new Date().getFullYear() - parsed, 0) : null;
+  return Number.isFinite(parsed) ? Math.max(new Date().getFullYear() - parsed + 1, 1) : null;
+}
+
+function getRegistrationYearFromCarAge(age: number) {
+  const currentYear = new Date().getFullYear();
+  return age <= 0 ? currentYear : currentYear - age + 1;
+}
+
+function getMaxCarAgeForSelection(coverage: string, repairType: string) {
+  if (repairType === 'dealer') {
+    return 7;
+  }
+
+  if (coverage === '2+' && repairType === 'garage') {
+    return 20;
+  }
+
+  if ((coverage === '3+' || coverage === '3') && repairType === 'garage') {
+    return 30;
+  }
+
+  return null;
 }
 
 function rowMatchesRegistrationYear(row: SearchPremiumOptionRow, year: string) {
@@ -288,22 +309,32 @@ export default function SearchPremiumForm({
       return [];
     }
 
-    const currentYear = new Date().getFullYear();
     const yearSet = new Set<string>();
+    const maxAllowedAge = getMaxCarAgeForSelection(coverage, repairType);
 
     vehicleSelectionRows
       .filter((row) => row.brand === brand && row.model === model)
       .forEach((row) => {
-        const minAge = row.minCarAge ?? 0;
-        const maxAge = row.maxCarAge ?? minAge;
+        const minAge = row.minCarAge ?? row.maxCarAge;
 
-        for (let age = minAge; age <= maxAge; age += 1) {
-          yearSet.add(String(currentYear - age));
+        if (minAge === null || minAge === undefined) {
+          return;
+        }
+
+        const maxAge = row.maxCarAge ?? minAge;
+        const effectiveMaxAge = maxAllowedAge === null ? maxAge : Math.min(maxAge, maxAllowedAge);
+
+        if (minAge > effectiveMaxAge) {
+          return;
+        }
+
+        for (let age = minAge; age <= effectiveMaxAge; age += 1) {
+          yearSet.add(String(getRegistrationYearFromCarAge(age)));
         }
       });
 
     return Array.from(yearSet).sort((left, right) => Number(right) - Number(left));
-  }, [brand, vehicleSelectionRows, model]);
+  }, [brand, coverage, repairType, vehicleSelectionRows, model]);
 
   const cubicCapacityOptions = useMemo(() => {
     if (!brand || !model || !year) {

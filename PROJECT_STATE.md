@@ -1,6 +1,6 @@
 # Project State
 
-Last updated: 2026-06-01
+Last updated: 2026-06-03
 
 ## Current Architecture
 
@@ -74,7 +74,7 @@ Main Prisma models:
 It also stores rating/search fields imported from insurer CSV rows:
 
 - `sClass` from `SClass` vehicle class.
-- `repairType` from `GarageCd`, where `G` means `ซ่อมห้าง` and blank means `ซ่อมอู่`.
+- `repairType` from `GarageCd`, where `G`/`DG` means `ซ่อมห้าง` and blank/other values mean `ซ่อมอู่`.
 - `minSumInsured` and `maxSumInsured` from `MinSI`/`MaxSI`.
 - `minCarAge` and `maxCarAge` from `MinYear`/`MaxYear`.
 - `minCubicCapacity` and `maxCubicCapacity` from `MinCST`/`MaxCST`.
@@ -112,7 +112,7 @@ It also stores rating/search fields imported from insurer CSV rows:
   - `รถกระบะ 2 ประตู` maps to `SClass 320`.
   - `รถตู้ / กระบะ ป้ายทะเบียนสีฟ้า` maps to `SClass 210`.
 - Search Premium now supports a repair coverage selector:
-  - `ซ่อมห้าง` maps to CSV `GarageCd = G`.
+  - `ซ่อมห้าง` maps to CSV `GarageCd = G` or `DG`.
   - `ซ่อมอู่` maps to blank `GarageCd`.
 - Search Premium now shows only the four customer-requested policy type groups:
   - `ประเภท 1`
@@ -123,7 +123,8 @@ It also stores rating/search fields imported from insurer CSV rows:
 - Search Premium now exposes cubic-capacity ranges from `MinCST`/`MaxCST` as a "ขนาดเครื่องยนต์" selector because no separate vehicle submodel master exists in the imported CSV.
 - Search Premium treats `SClass 210` van/blue-plate rows as seat-count based because imported `MinCST`/`MaxCST` is `0-12`; customer-facing search/results/compare labels show `จำนวนที่นั่ง` / `ไม่เกิน 12 ที่นั่ง` while keeping the internal `cubicCapacity` query and `MinCST`/`MaxCST` filtering unchanged.
 - Search Premium now uses type 3 vehicle option data for policy type 2+ and 3+ vehicle dropdowns, including brand, model, registration year, cubic capacity, and seat-count options, while still filtering actual search results by the selected policy type.
-- Search year now maps registration year to vehicle age and filters against CSV `MinYear`/`MaxYear`.
+- Search year now maps registration year to insurance-style vehicle age using `current year - registration year + 1`, filters against CSV `MinYear`/`MaxYear`, and builds year dropdown options from the CSV age range using the same registration-year formula.
+- Search year dropdowns now apply the customer age rules: `ซ่อมห้าง` up to 7 years, `ประเภท 2 พลัส`/`ซ่อมอู่` up to 20 years, and `ประเภท 3 พลัส`/`ประเภท 3`/`ซ่อมอู่` up to 30 years.
 - Search Results filters by coverage, repair type, brand, model, and year.
 - Search Results preserve and apply `sClass`, `repairType`, `cubicCapacity`, and `sumInsured` query parameters.
 - Search Results now shows a `เปลี่ยนประเภท / ทุนประกัน / ซ่อมห้าง ซ่อมอู่` button in the search summary box that returns to `/line-app/search` with the current filters prefilled.

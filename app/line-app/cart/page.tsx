@@ -335,7 +335,7 @@ function buildCoverageTypeSql() {
 function buildRepairTypeSql() {
   return Prisma.sql`
     CASE
-      WHEN UPPER(TRIM(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.GarageCd')), ''))) = 'G'
+      WHEN UPPER(TRIM(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.GarageCd')), ''))) IN ('G', 'DG')
         OR TRIM(COALESCE(repairType, '')) IN ('ซ่อมห้าง', 'อู่ห้าง')
         THEN 'dealer'
       ELSE 'garage'

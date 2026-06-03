@@ -297,9 +297,10 @@ export function mapCsvRecordToInsurancePackage(
   }
 
   const garageCode = readRecordValue(record, ['garagecd', 'garage_cd']);
+  const normalizedGarageCode = garageCode.trim().toUpperCase();
   const repairType =
     readRecordValue(record, ['repairtype', 'repair_type']) ||
-    (garageCode.trim().toUpperCase() === 'G' ? 'ซ่อมห้าง' : 'ซ่อมอู่');
+    (normalizedGarageCode === 'G' || normalizedGarageCode === 'DG' ? 'ซ่อมห้าง' : 'ซ่อมอู่');
   const coverage = readRecordValue(record, ['coverage', 'covdesc']) || null;
 
   return {

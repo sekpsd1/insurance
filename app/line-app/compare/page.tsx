@@ -305,7 +305,7 @@ function getCarAgeFromRegistrationYear(year: string) {
     return null;
   }
 
-  return Math.max(new Date().getFullYear() - parsedYear, 0);
+  return Math.max(new Date().getFullYear() - parsedYear + 1, 1);
 }
 
 export default async function ComparePage({
@@ -331,7 +331,7 @@ export default async function ComparePage({
   const coverageTypeSql = buildCoverageTypeSql();
   const repairTypeSql = Prisma.sql`
     CASE
-      WHEN UPPER(TRIM(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.GarageCd')), ''))) = 'G'
+      WHEN UPPER(TRIM(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(rawData, '$.GarageCd')), ''))) IN ('G', 'DG')
         OR TRIM(COALESCE(repairType, '')) IN ('ซ่อมห้าง', 'อู่ห้าง')
         THEN 'dealer'
       ELSE 'garage'
