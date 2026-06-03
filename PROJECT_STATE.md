@@ -124,7 +124,6 @@ It also stores rating/search fields imported from insurer CSV rows:
 - Search Premium treats `SClass 210` van/blue-plate rows as seat-count based because imported `MinCST`/`MaxCST` is `0-12`; customer-facing search/results/compare labels show `จำนวนที่นั่ง` / `ไม่เกิน 12 ที่นั่ง` while keeping the internal `cubicCapacity` query and `MinCST`/`MaxCST` filtering unchanged.
 - Search Premium now uses type 3 vehicle option data for policy type 2+ and 3+ vehicle dropdowns, including brand, model, registration year, cubic capacity, and seat-count options, while still filtering actual search results by the selected policy type.
 - Search year now maps registration year to insurance-style vehicle age using `current year - registration year + 1`, filters against CSV `MinYear`/`MaxYear`, and builds year dropdown options from the CSV age range using the same registration-year formula.
-- Search year dropdowns now apply the customer age rules: `ซ่อมห้าง` up to 7 years, `ประเภท 2 พลัส`/`ซ่อมอู่` up to 20 years, and `ประเภท 3 พลัส`/`ประเภท 3`/`ซ่อมอู่` up to 30 years.
 - Search Results filters by coverage, repair type, brand, model, and year.
 - Search Results preserve and apply `sClass`, `repairType`, `cubicCapacity`, and `sumInsured` query parameters.
 - Search Results now shows a `เปลี่ยนประเภท / ทุนประกัน / ซ่อมห้าง ซ่อมอู่` button in the search summary box that returns to `/line-app/search` with the current filters prefilled.

@@ -148,22 +148,6 @@ function getRegistrationYearFromCarAge(age: number) {
   return age <= 0 ? currentYear : currentYear - age + 1;
 }
 
-function getMaxCarAgeForSelection(coverage: string, repairType: string) {
-  if (repairType === 'dealer') {
-    return 7;
-  }
-
-  if (coverage === '2+' && repairType === 'garage') {
-    return 20;
-  }
-
-  if ((coverage === '3+' || coverage === '3') && repairType === 'garage') {
-    return 30;
-  }
-
-  return null;
-}
-
 function rowMatchesRegistrationYear(row: SearchPremiumOptionRow, year: string) {
   const carAge = getCarAgeFromRegistrationYear(year);
 
@@ -310,8 +294,6 @@ export default function SearchPremiumForm({
     }
 
     const yearSet = new Set<string>();
-    const maxAllowedAge = getMaxCarAgeForSelection(coverage, repairType);
-
     vehicleSelectionRows
       .filter((row) => row.brand === brand && row.model === model)
       .forEach((row) => {
@@ -322,19 +304,18 @@ export default function SearchPremiumForm({
         }
 
         const maxAge = row.maxCarAge ?? minAge;
-        const effectiveMaxAge = maxAllowedAge === null ? maxAge : Math.min(maxAge, maxAllowedAge);
 
-        if (minAge > effectiveMaxAge) {
+        if (minAge > maxAge) {
           return;
         }
 
-        for (let age = minAge; age <= effectiveMaxAge; age += 1) {
+        for (let age = minAge; age <= maxAge; age += 1) {
           yearSet.add(String(getRegistrationYearFromCarAge(age)));
         }
       });
 
     return Array.from(yearSet).sort((left, right) => Number(right) - Number(left));
-  }, [brand, coverage, repairType, vehicleSelectionRows, model]);
+  }, [brand, vehicleSelectionRows, model]);
 
   const cubicCapacityOptions = useMemo(() => {
     if (!brand || !model || !year) {
