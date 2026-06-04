@@ -41,6 +41,15 @@ type ComparePackageRow = {
   netPrice: number;
   payablePrice: number | null;
   discount: number;
+  uom1V: string | null;
+  uom2V: string | null;
+  uom5V: string | null;
+  seats41: string | null;
+  mv411: string | null;
+  mv412: string | null;
+  mv42: string | null;
+  mv43: string | null;
+  dedod: string | null;
   createdAt: Date;
 };
 
@@ -66,6 +75,15 @@ type ComparePackage = {
   netPrice: number;
   payablePrice: number | null;
   discount: number;
+  uom1V: string | null;
+  uom2V: string | null;
+  uom5V: string | null;
+  seats41: string | null;
+  mv411: string | null;
+  mv412: string | null;
+  mv42: string | null;
+  mv43: string | null;
+  dedod: string | null;
   createdAt: Date;
 };
 
@@ -287,6 +305,186 @@ function formatMoney(value: number) {
   return value.toLocaleString('th-TH');
 }
 
+function formatCoverageMoney(value: number) {
+  return value.toLocaleString('th-TH', { maximumFractionDigits: 2 });
+}
+
+function parseNumber(value: unknown) {
+  if (value == null) {
+    return null;
+  }
+
+  const normalized = String(value).replace(/,/g, '').trim();
+  if (!normalized) {
+    return null;
+  }
+
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function formatCoverageAmount(value: unknown, unit: string, zeroLabel = '-') {
+  const parsed = parseNumber(value);
+
+  if (parsed == null) {
+    return '-';
+  }
+
+  if (parsed === 0) {
+    return zeroLabel;
+  }
+
+  return `${formatCoverageMoney(parsed)} ${unit}`;
+}
+
+function formatSeatText(value: unknown, offset = 0) {
+  const parsed = parseNumber(value);
+
+  if (parsed == null) {
+    return '';
+  }
+
+  const seatCount = Math.max(parsed - offset, 0);
+  return ` (จำนวน ${formatCoverageMoney(seatCount)} คน)`;
+}
+
+function formatSumInsuredRange(min: unknown, max: unknown) {
+  const minValue = parseNumber(min);
+  const maxValue = parseNumber(max);
+  const hasMin = minValue !== null;
+  const hasMax = maxValue !== null;
+
+  if (minValue === 0 && maxValue === 0) {
+    return 'ไม่คุ้มครอง';
+  }
+
+  if (hasMin && hasMax) {
+    if (minValue === maxValue) {
+      return `${formatMoney(minValue)} บาท`;
+    }
+
+    return `${formatMoney(minValue)}-${formatMoney(maxValue)} บาท`;
+  }
+
+  if (hasMin) {
+    return `${formatMoney(minValue)} บาท`;
+  }
+
+  if (hasMax) {
+    return `${formatMoney(maxValue)} บาท`;
+  }
+
+  return '-';
+}
+
+function getCoverageGroup(pkg: Pick<ComparePackage, 'coverageType' | 'coverage' | 'coverageCode'>) {
+  const values = [pkg.coverageType, pkg.coverage, pkg.coverageCode].map((value) => value?.trim()).filter(Boolean);
+  const normalized = values.join(' ').toLowerCase();
+
+  if (values.includes('2+') || normalized.includes('2 พลัส') || normalized.includes('2 plus') || normalized.includes('2+')) {
+    return '2+';
+  }
+
+  if (values.includes('3+') || normalized.includes('3 พลัส') || normalized.includes('3 plus') || normalized.includes('3+')) {
+    return '3+';
+  }
+
+  if (values.includes('3') || normalized.includes('ประเภท 3') || normalized === '3') {
+    return '3';
+  }
+
+  if (values.includes('1') || normalized.includes('ประเภท 1')) {
+    return '1';
+  }
+
+  return pkg.coverageType?.trim() || '';
+}
+
+function getOwnDamageValue(pkg: ComparePackage) {
+  const coverageGroup = getCoverageGroup(pkg);
+
+  if (coverageGroup === '3') {
+    return 'ไม่คุ้มครอง';
+  }
+
+  return formatSumInsuredRange(pkg.minSumInsured, pkg.maxSumInsured);
+}
+
+function getLostFireValue(pkg: ComparePackage) {
+  const coverageGroup = getCoverageGroup(pkg);
+
+  if (coverageGroup === '3+' || coverageGroup === '3') {
+    return 'ไม่คุ้มครอง';
+  }
+
+  return formatSumInsuredRange(pkg.minSumInsured, pkg.maxSumInsured);
+}
+
+function getSectionIcon(icon: string | undefined) {
+  if (icon === 'person') {
+    return (
+      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M20 21a8 8 0 0 0-16 0" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" />
+      </svg>
+    );
+  }
+
+  if (icon === 'shield') {
+    return (
+      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />
+      </svg>
+    );
+  }
+
+  if (icon === 'people') {
+    return (
+      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M22 21v-2a4 4 0 0 0-3-3.87" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M16 3.13a4 4 0 0 1 0 7.75" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M20.59 13.41 12 22l-9-9V4h9l8.59 8.59a2 2 0 0 1 0 2.82Z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01" />
+    </svg>
+  );
+}
+
+function getComparisonCellClass(kind: string, index: number, value: string) {
+  const isGreenColumn = index % 2 === 0;
+  const accentTextClass = isGreenColumn ? 'text-[#087f3f]' : 'text-[#0052b8]';
+  const accentBgClass = isGreenColumn ? 'bg-[#059447]' : 'bg-[#0076cf]';
+
+  if (kind === 'section') {
+    return 'bg-[#eaf5ff] font-semibold text-[#0047BA]';
+  }
+
+  if (kind === 'subsection') {
+    return 'bg-white text-slate-500';
+  }
+
+  if (kind === 'total') {
+    return `${accentBgClass} font-[Kanit,sans-serif] text-lg font-bold leading-tight text-white`;
+  }
+
+  if (kind === 'payable') {
+    return `bg-white font-[Kanit,sans-serif] text-3xl font-semibold leading-tight ${isGreenColumn ? 'text-[#059447]' : 'text-[#0047BA]'}`;
+  }
+
+  if (value === 'ไม่มี' || value === 'ไม่คุ้มครอง') {
+    return 'bg-white font-semibold text-[#b42318]';
+  }
+
+  return `bg-white font-semibold ${accentTextClass}`;
+}
+
 function encodeLogoUrl(logoUrl: string) {
   return logoUrl
     .split('/')
@@ -408,6 +606,15 @@ export default async function ComparePage({
       netPrice,
       payablePrice,
       discount,
+      JSON_UNQUOTE(COALESCE(JSON_EXTRACT(rawData, '$.uom1_v'), JSON_EXTRACT(rawData, '$.UOM1_V'))) AS uom1V,
+      JSON_UNQUOTE(COALESCE(JSON_EXTRACT(rawData, '$.uom2_v'), JSON_EXTRACT(rawData, '$.UOM2_V'))) AS uom2V,
+      JSON_UNQUOTE(COALESCE(JSON_EXTRACT(rawData, '$.uom5_v'), JSON_EXTRACT(rawData, '$.UOM5_V'))) AS uom5V,
+      JSON_UNQUOTE(COALESCE(JSON_EXTRACT(rawData, '$.Seats41'), JSON_EXTRACT(rawData, '$.seats41'))) AS seats41,
+      JSON_UNQUOTE(COALESCE(JSON_EXTRACT(rawData, '$.mv411'), JSON_EXTRACT(rawData, '$.MV411'))) AS mv411,
+      JSON_UNQUOTE(COALESCE(JSON_EXTRACT(rawData, '$.mv412'), JSON_EXTRACT(rawData, '$.MV412'))) AS mv412,
+      JSON_UNQUOTE(COALESCE(JSON_EXTRACT(rawData, '$.mv42'), JSON_EXTRACT(rawData, '$.MV42'))) AS mv42,
+      JSON_UNQUOTE(COALESCE(JSON_EXTRACT(rawData, '$.mv43'), JSON_EXTRACT(rawData, '$.MV43'))) AS mv43,
+      JSON_UNQUOTE(COALESCE(JSON_EXTRACT(rawData, '$.Dedod'), JSON_EXTRACT(rawData, '$.dedod'))) AS dedod,
       createdAt
     FROM InsurancePackage
     ${whereClause}
@@ -441,6 +648,15 @@ export default async function ComparePage({
         netPrice,
         payablePrice,
         discount,
+        JSON_UNQUOTE(COALESCE(JSON_EXTRACT(rawData, '$.uom1_v'), JSON_EXTRACT(rawData, '$.UOM1_V'))) AS uom1V,
+        JSON_UNQUOTE(COALESCE(JSON_EXTRACT(rawData, '$.uom2_v'), JSON_EXTRACT(rawData, '$.UOM2_V'))) AS uom2V,
+        JSON_UNQUOTE(COALESCE(JSON_EXTRACT(rawData, '$.uom5_v'), JSON_EXTRACT(rawData, '$.UOM5_V'))) AS uom5V,
+        JSON_UNQUOTE(COALESCE(JSON_EXTRACT(rawData, '$.Seats41'), JSON_EXTRACT(rawData, '$.seats41'))) AS seats41,
+        JSON_UNQUOTE(COALESCE(JSON_EXTRACT(rawData, '$.mv411'), JSON_EXTRACT(rawData, '$.MV411'))) AS mv411,
+        JSON_UNQUOTE(COALESCE(JSON_EXTRACT(rawData, '$.mv412'), JSON_EXTRACT(rawData, '$.MV412'))) AS mv412,
+        JSON_UNQUOTE(COALESCE(JSON_EXTRACT(rawData, '$.mv42'), JSON_EXTRACT(rawData, '$.MV42'))) AS mv42,
+        JSON_UNQUOTE(COALESCE(JSON_EXTRACT(rawData, '$.mv43'), JSON_EXTRACT(rawData, '$.MV43'))) AS mv43,
+        JSON_UNQUOTE(COALESCE(JSON_EXTRACT(rawData, '$.Dedod'), JSON_EXTRACT(rawData, '$.dedod'))) AS dedod,
         createdAt
       FROM InsurancePackage
       WHERE id IN (${Prisma.join(selectedIds.map((id) => Prisma.sql`${id}`))})
@@ -472,6 +688,92 @@ export default async function ComparePage({
       activeCtpIdSet.has(pkg.id) && pkg.sClass ? ctpOptionsBySClass[pkg.sClass] ?? null : null
     ])
   );
+  const comparisonRows = [
+    { kind: 'section', icon: 'person', label: 'ความรับผิดต่อบุคคลภายนอก', values: packages.map(() => '') },
+    {
+      kind: 'row',
+      label: '1) ความเสียหายต่อชีวิต ร่างกาย หรืออนามัย / คน',
+      values: packages.map((pkg) => formatCoverageAmount(pkg.uom1V, 'บาท/คน'))
+    },
+    {
+      kind: 'row',
+      label: 'เฉพาะส่วนเกินวงเงินสูงสุดตาม พ.ร.บ. / ครั้ง',
+      values: packages.map((pkg) => formatCoverageAmount(pkg.uom2V, 'บาท/ครั้ง'))
+    },
+    {
+      kind: 'row',
+      label: '2) ความเสียหายต่อทรัพย์สินบุคคลภายนอก / ครั้ง',
+      values: packages.map((pkg) => formatCoverageAmount(pkg.uom5V, 'บาท/ครั้ง'))
+    },
+    { kind: 'section', icon: 'shield', label: 'ความเสียหายต่อตัวรถยนต์', values: packages.map(() => '') },
+    {
+      kind: 'row',
+      label: '3.1 ความคุ้มครองความเสียหายต่อตัวรถยนต์',
+      values: packages.map((pkg) => getOwnDamageValue(pkg))
+    },
+    {
+      kind: 'row',
+      label: 'ความเสียหายส่วนแรก',
+      values: packages.map((pkg) => formatCoverageAmount(pkg.dedod, 'บาท/ครั้ง', 'ไม่มี'))
+    },
+    {
+      kind: 'row',
+      label: '3.2 รถยนต์สูญหาย/ไฟไหม้',
+      values: packages.map((pkg) => getLostFireValue(pkg))
+    },
+    { kind: 'section', icon: 'people', label: 'ความคุ้มครองตามเอกสารแนบท้าย', values: packages.map(() => '') },
+    { kind: 'subsection', label: '4.1 อุบัติเหตุส่วนบุคคล เสียชีวิต สูญเสียอวัยวะ ทุพพลภาพถาวร', values: packages.map(() => '') },
+    {
+      kind: 'row',
+      label: 'คุ้มครองผู้ขับขี่ 1 คน',
+      values: packages.map((pkg) => formatCoverageAmount(pkg.mv411, 'บาท/คน'))
+    },
+    {
+      kind: 'row',
+      label: `ผู้โดยสาร${formatSeatText(packages[0]?.seats41, 1)}`,
+      values: packages.map((pkg) => formatCoverageAmount(pkg.mv412, 'บาท/คน'))
+    },
+    {
+      kind: 'row',
+      label: `4.2 ค่ารักษาพยาบาล${formatSeatText(packages[0]?.seats41)}`,
+      values: packages.map((pkg) => formatCoverageAmount(pkg.mv42, 'บาท/คน'))
+    },
+    {
+      kind: 'row',
+      label: '4.3 การประกันตัวผู้ขับขี่',
+      values: packages.map((pkg) => formatCoverageAmount(pkg.mv43, 'บาท/ครั้ง'))
+    },
+    { kind: 'section', icon: 'price', label: 'เบี้ยประกัน', values: packages.map(() => '') },
+    {
+      kind: 'row',
+      label: 'เบี้ยประกัน',
+      values: packages.map((pkg) => `${formatMoney(pkg.netPrice)} บาท`)
+    },
+    {
+      kind: 'row',
+      label: 'พ.ร.บ.',
+      values: packages.map((pkg) => {
+        const ctpOption = ctpOptionByPackageId.get(pkg.id);
+        return ctpOption ? `${formatMoney(ctpOption.total)} บาท` : '-';
+      })
+    },
+    {
+      kind: 'total',
+      label: 'รวม',
+      values: packages.map((pkg) => {
+        const ctpOption = ctpOptionByPackageId.get(pkg.id);
+        return `${formatMoney(pkg.netPrice + (ctpOption?.total ?? 0))} บาท`;
+      })
+    },
+    {
+      kind: 'payable',
+      label: 'คงเหลือชำระ',
+      values: packages.map((pkg) => {
+        const ctpOption = ctpOptionByPackageId.get(pkg.id);
+        return `${formatMoney((pkg.payablePrice ?? pkg.netPrice) + (ctpOption?.total ?? 0))} บาท`;
+      })
+    }
+  ];
 
   return (
     <main className="min-h-screen bg-[#f4f5ff] text-[#12131a]">
@@ -489,19 +791,33 @@ export default async function ComparePage({
       </header>
 
       <div className="mx-auto flex min-h-[calc(100vh-72px)] max-w-5xl flex-col gap-5 px-4 py-6">
-        {searchSummary ? (
-          <section className="rounded-3xl border border-[#cfd8ff] bg-[#eef3ff] px-4 py-3 text-sm font-medium text-[#24406f] shadow-[0_8px_24px_rgba(0,0,0,0.04)]">
-            ผลลัพธ์สำหรับ: <span className="font-semibold">{searchSummary}</span>
+        {isComparisonReady ? (
+          <section className="space-y-1 px-1">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <p className="font-[Kanit,sans-serif] text-2xl font-bold text-[#081833]">เปรียบเทียบความคุ้มครอง</p>
+                {searchSummary ? (
+                  <p className="mt-1 text-sm font-medium leading-6 text-[#4b5265]">{searchSummary}</p>
+                ) : null}
+              </div>
+              <span className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0047BA] shadow-[0_8px_24px_rgba(0,0,0,0.04)] ring-1 ring-[#cfd8ff]">
+                {packages.length} แผน
+              </span>
+            </div>
           </section>
-        ) : null}
+        ) : (
+          <>
+            {searchSummary ? (
+              <section className="rounded-3xl border border-[#cfd8ff] bg-[#eef3ff] px-4 py-3 text-sm font-medium text-[#24406f] shadow-[0_8px_24px_rgba(0,0,0,0.04)]">
+                ผลลัพธ์สำหรับ: <span className="font-semibold">{searchSummary}</span>
+              </section>
+            ) : null}
 
-        <section className="rounded-2xl bg-white px-4 py-3 text-sm text-[#434654] shadow-[0_8px_24px_rgba(0,0,0,0.04)]">
-          {isComparisonReady ? (
-            <span>กำลังเปรียบเทียบ {packages.length} แผน</span>
-          ) : (
-            <span>เลือกอย่างน้อย 2 แผนเพื่อดูตารางเปรียบเทียบ</span>
-          )}
-        </section>
+            <section className="rounded-2xl bg-white px-4 py-3 text-sm text-[#434654] shadow-[0_8px_24px_rgba(0,0,0,0.04)]">
+              เลือกอย่างน้อย 2 แผนเพื่อดูตารางเปรียบเทียบ
+            </section>
+          </>
+        )}
 
         {!isComparisonReady ? (
           <section className="rounded-3xl bg-white p-5 shadow-[0_10px_30px_rgba(4,16,61,0.08)] ring-1 ring-white/70">
@@ -580,69 +896,74 @@ export default async function ComparePage({
               <table className="min-w-full border-separate border-spacing-0">
                 <thead>
                   <tr>
-                    <th aria-label="หัวข้อเปรียบเทียบ" className="sticky left-0 z-20 bg-[#f8f9ff] px-4 py-4 text-left text-sm font-semibold text-slate-700" />
-                    {packages.map((pkg) => (
-                      <th key={pkg.id} className="min-w-[220px] border-l border-slate-200 bg-[#eef3ff] px-4 py-4 text-left align-top">
-                        <div className="flex items-start gap-3">
-                          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white text-xs font-semibold text-[#434654] shadow-sm ring-1 ring-slate-200">
-                            {pkg.logoUrl ? (
-                              <img src={encodeLogoUrl(pkg.logoUrl)} alt={pkg.company} className="h-full w-full rounded-full object-contain p-1" />
-                            ) : (
-                              'LOGO'
+                    <th className="sticky left-0 z-20 min-w-[260px] rounded-tl-2xl bg-[#0047BA] px-4 py-4 text-center align-middle font-[Kanit,sans-serif] text-xl font-bold text-white">
+                      <span className="flex min-h-[132px] items-center justify-center">ความคุ้มครอง</span>
+                    </th>
+                    {packages.map((pkg, index) => (
+                      <th
+                        key={pkg.id}
+                        className={`min-w-[220px] border-l border-white/40 px-4 py-4 text-center align-top text-white ${
+                          index % 2 === 0 ? 'bg-[#059447]' : 'bg-[#0076cf]'
+                        } ${index === packages.length - 1 ? 'rounded-tr-2xl' : ''}`}
+                      >
+                        <div className="flex items-start justify-end">
+                          <RemoveComparePackageButton
+                            href={buildCompareHrefWithIds(
+                              compareFilters,
+                              packages.filter((item) => item.id !== pkg.id).map((item) => item.id),
+                              activeCtpIds.filter((id) => id !== pkg.id)
                             )}
-                          </div>
-                          <div className="min-w-0">
-                            <div className="flex items-start justify-between gap-3">
-                              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#4c6394]">{pkg.company}</p>
-                              <RemoveComparePackageButton
-                                href={buildCompareHrefWithIds(
-                                  compareFilters,
-                                  packages.filter((item) => item.id !== pkg.id).map((item) => item.id),
-                                  activeCtpIds.filter((id) => id !== pkg.id)
-                                )}
-                                remainingIds={packages.filter((item) => item.id !== pkg.id).map((item) => item.id)}
-                                remainingCtpIds={activeCtpIds.filter((id) => id !== pkg.id)}
-                              />
-                            </div>
-                            <p className="mt-2 text-sm font-semibold text-[#0f4ec7]">{getCoverageLabel(pkg.coverageType || coverage || '')}</p>
-                            <div className="mt-3">
-                              <CartPackageButton packageId={pkg.id} includeCtp={Boolean(ctpOptionByPackageId.get(pkg.id))} />
-                            </div>
-                          </div>
+                            remainingIds={packages.filter((item) => item.id !== pkg.id).map((item) => item.id)}
+                            remainingCtpIds={activeCtpIds.filter((id) => id !== pkg.id)}
+                          />
+                        </div>
+                        <p className="mt-1 font-[Kanit,sans-serif] text-lg font-bold leading-tight">{getCoverageLabel(pkg.coverageType || coverage || '')}</p>
+                        <p className="mx-auto mt-2 inline-flex rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-[#0047BA]">{pkg.repairType || '-'}</p>
+                        <p className="mt-2 text-xs font-medium leading-5 text-white/90">{pkg.company}</p>
+                        <div className="mt-3">
+                          <CartPackageButton packageId={pkg.id} includeCtp={Boolean(ctpOptionByPackageId.get(pkg.id))} />
                         </div>
                       </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {[
-                    { label: 'บริษัท', values: packages.map((pkg) => pkg.company) },
-                    { label: 'ยี่ห้อ', values: packages.map((pkg) => pkg.brand || '-') },
-                    { label: 'รุ่น', values: packages.map((pkg) => pkg.model || '-') },
-                    { label: 'ปี', values: packages.map((pkg) => (pkg.year ? String(pkg.year) : year || '-')) },
-                    { label: packages.some((pkg) => isSeatBasedVehicleType(pkg.sClass)) ? 'จำนวนที่นั่ง' : 'ขนาดเครื่องยนต์', values: packages.map((pkg) => formatVehicleSizeRange(pkg)) },
-                    { label: 'ทุนประกัน', values: packages.map((pkg) => (pkg.minSumInsured || pkg.maxSumInsured ? `${formatMoney(pkg.minSumInsured ?? pkg.maxSumInsured ?? 0)} บาท` : '-')) },
-                    { label: 'ประเภทซ่อม', values: packages.map((pkg) => pkg.repairType || 'อู่ประกัน') },
-                    { label: 'เบี้ยประกัน', values: packages.map((pkg) => `${formatMoney(pkg.netPrice)} บาท`) },
-                    { label: 'พ.ร.บ. เพิ่มเติม', values: packages.map((pkg) => {
-                      const ctpOption = ctpOptionByPackageId.get(pkg.id);
-                      return ctpOption ? `${formatMoney(ctpOption.total)} บาท` : '-';
-                    }) },
-                    { label: 'รวม', values: packages.map((pkg) => {
-                      const ctpOption = ctpOptionByPackageId.get(pkg.id);
-                      return `${formatMoney(pkg.netPrice + (ctpOption?.total ?? 0))} บาท`;
-                    }) },
-                    { label: 'คงเหลือชำระ', values: packages.map((pkg) => {
-                      const ctpOption = ctpOptionByPackageId.get(pkg.id);
-                      return `${formatMoney((pkg.payablePrice ?? pkg.netPrice) + (ctpOption?.total ?? 0))} บาท`;
-                    }) }
-                  ].map((row) => (
+                  {comparisonRows.map((row) => (
                     <tr key={row.label}>
-                      <th className="sticky left-0 z-10 border-t border-slate-200 bg-white px-4 py-3 text-left text-sm font-semibold text-slate-700">
-                        {row.label}
+                      <th
+                        className={`sticky left-0 z-10 border-t border-slate-200 px-4 text-sm ${
+                          row.kind === 'section'
+                            ? 'bg-[#eaf5ff] py-3 text-left font-[Kanit,sans-serif] font-bold text-[#0047BA]'
+                            : row.kind === 'subsection'
+                              ? 'bg-white py-3 text-left font-semibold text-slate-700'
+                              : row.kind === 'payable'
+                                ? 'bg-[#0047BA] py-5 text-center font-[Kanit,sans-serif] text-xl font-bold text-white'
+                                : row.kind === 'total'
+                                  ? 'bg-[#0047BA] py-5 text-center font-[Kanit,sans-serif] text-xl font-bold text-white'
+                                : 'bg-white py-3 text-left font-semibold text-slate-700'
+                        }`}
+                        style={row.kind === 'total' || row.kind === 'payable' ? { textAlign: 'center' } : undefined}
+                      >
+                        {row.kind === 'section' ? (
+                          <span className="flex items-center gap-2">
+                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0076cf] text-white">
+                              {getSectionIcon(row.icon)}
+                            </span>
+                            <span>{row.label}</span>
+                          </span>
+                        ) : row.kind === 'total' || row.kind === 'payable' ? (
+                          <span className="block w-full text-center">{row.label}</span>
+                        ) : (
+                          row.label
+                        )}
                       </th>
                       {row.values.map((value, index) => (
-                        <td key={`${row.label}-${index}`} className="border-t border-l border-slate-200 px-4 py-3 text-sm leading-6 text-slate-600">
+                        <td
+                          key={`${row.label}-${index}`}
+                          className={`whitespace-nowrap border-t border-l border-slate-200 px-4 text-center leading-6 ${
+                            row.kind === 'total' || row.kind === 'payable' ? 'py-5' : 'py-3 text-sm'
+                          } ${getComparisonCellClass(row.kind, index, String(value))}`}
+                        >
                           {value}
                         </td>
                       ))}
