@@ -74,6 +74,8 @@ function getVehicleOptionCoverage(coverage: string) {
   return coverage === '2+' || coverage === '3+' ? '3' : coverage;
 }
 
+const MAX_FALLBACK_VEHICLE_CAR_AGE = 30;
+
 function formatSumInsured(value: number) {
   if (value === 0) {
     return 'ไม่คุ้มครอง';
@@ -270,6 +272,27 @@ export default function SearchPremiumForm({
     return optionRows.filter((row) => row.sClass === sClass && (coverage === '1' || row.coverageType === vehicleOptionCoverage));
   }, [coverage, optionRows, sClass]);
 
+  const selectedCoverageVehicleRows = useMemo(() => {
+    if (!sClass || !coverage) {
+      return [];
+    }
+
+    return optionRows.filter(
+      (row) =>
+        row.sClass === sClass &&
+        row.coverageType === coverage &&
+        (coverage === '1' || !repairType || row.repairType === repairType)
+    );
+  }, [coverage, optionRows, repairType, sClass]);
+
+  const selectedCoverageFallbackRows = useMemo(() => {
+    if (!sClass || !coverage) {
+      return [];
+    }
+
+    return optionRows.filter((row) => row.sClass === sClass && row.coverageType === coverage);
+  }, [coverage, optionRows, sClass]);
+
   const isRepairAutoSwitchPending = Boolean(
       coverage &&
       repairType &&
@@ -294,16 +317,26 @@ export default function SearchPremiumForm({
     }
 
     const yearSet = new Set<string>();
-    vehicleSelectionRows
-      .filter((row) => row.brand === brand && row.model === model)
-      .forEach((row) => {
+    const exactRows = selectedCoverageVehicleRows.filter((row) => row.brand === brand && row.model === model);
+    const exactFallbackRows = selectedCoverageFallbackRows.filter((row) => row.brand === brand && row.model === model);
+    const sourceRows =
+      exactRows.length > 0
+        ? exactRows
+        : exactFallbackRows.length > 0
+          ? exactFallbackRows
+          : vehicleSelectionRows.filter((row) => row.brand === brand && row.model === model);
+    const usesTypeThreeVehicleFallback = exactRows.length === 0 && exactFallbackRows.length === 0 && (coverage === '2+' || coverage === '3+');
+    const shouldCapVehicleAge = coverage === '1' || usesTypeThreeVehicleFallback;
+
+    sourceRows.forEach((row) => {
         const minAge = row.minCarAge ?? row.maxCarAge;
 
         if (minAge === null || minAge === undefined) {
           return;
         }
 
-        const maxAge = row.maxCarAge ?? minAge;
+        const rowMaxAge = row.maxCarAge ?? minAge;
+        const maxAge = shouldCapVehicleAge ? Math.min(rowMaxAge, MAX_FALLBACK_VEHICLE_CAR_AGE) : rowMaxAge;
 
         if (minAge > maxAge) {
           return;
@@ -315,7 +348,7 @@ export default function SearchPremiumForm({
       });
 
     return Array.from(yearSet).sort((left, right) => Number(right) - Number(left));
-  }, [brand, vehicleSelectionRows, model]);
+  }, [brand, coverage, model, selectedCoverageFallbackRows, selectedCoverageVehicleRows, vehicleSelectionRows]);
 
   const cubicCapacityOptions = useMemo(() => {
     if (!brand || !model || !year) {
@@ -323,9 +356,17 @@ export default function SearchPremiumForm({
     }
 
     const optionMap = new Map<string, { value: string; label: string; sortValue: number }>();
+    const exactRows = selectedCoverageVehicleRows.filter((row) => row.brand === brand && row.model === model);
+    const exactFallbackRows = selectedCoverageFallbackRows.filter((row) => row.brand === brand && row.model === model);
+    const sourceRows =
+      exactRows.length > 0
+        ? exactRows
+        : exactFallbackRows.length > 0
+          ? exactFallbackRows
+          : vehicleSelectionRows.filter((row) => row.brand === brand && row.model === model);
 
-    vehicleSelectionRows
-      .filter((row) => row.brand === brand && row.model === model && rowMatchesRegistrationYear(row, year))
+    sourceRows
+      .filter((row) => rowMatchesRegistrationYear(row, year))
       .forEach((row) => {
         const min = row.minCubicCapacity ?? 0;
         const max = row.maxCubicCapacity ?? min;
@@ -339,7 +380,7 @@ export default function SearchPremiumForm({
       });
 
     return Array.from(optionMap.values()).sort((left, right) => left.sortValue - right.sortValue);
-  }, [brand, isSeatBasedSelection, vehicleSelectionRows, model, year]);
+  }, [brand, isSeatBasedSelection, model, selectedCoverageFallbackRows, selectedCoverageVehicleRows, vehicleSelectionRows, year]);
 
   const sumInsuredOptions = useMemo(() => {
     if (!brand || !model || !year || !cubicCapacity) {
@@ -924,17 +965,6 @@ export default function SearchPremiumForm({
           </section>
         ) : null}
       </div>
-
-      <section className="mt-6 rounded-2xl bg-[#dfe5ff] px-4 py-4 text-[#3a4258] shadow-[0_8px_24px_rgba(0,0,0,0.05)]">
-        <div className="flex items-start gap-3">
-          <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#0047BA] text-xs font-bold text-white">
-            i
-          </div>
-          <p className="text-sm font-medium leading-6">
-            ระบบจะกรองจากประเภทรถ ประเภทกรมธรรม์ ความคุ้มครอง อายุรถ {isSeatBasedSelection ? 'จำนวนที่นั่ง' : 'ขนาดเครื่องยนต์'} และทุนประกันตามตารางเบี้ยของบริษัทประกัน
-          </p>
-        </div>
-      </section>
 
       <div className="mt-6">
         <button
