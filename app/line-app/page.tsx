@@ -122,6 +122,10 @@ function normalizeSearchValue(value: string | string[] | undefined) {
   return value?.trim() ?? "";
 }
 
+function normalizeVehicleSearchValue(value: string | string[] | undefined) {
+  return normalizeSearchValue(value).toLocaleUpperCase('en-US');
+}
+
 function normalizeCoverageType(value: string | string[] | undefined) {
   const normalized = normalizeSearchValue(value);
 
@@ -389,8 +393,8 @@ export default async function LineAppPage({
   const sClass = normalizeSearchValue(resolvedSearchParams.sClass);
   const coverage = normalizeCoverageType(resolvedSearchParams.coverage);
   const repairType = normalizeRepairType(resolvedSearchParams.repairType);
-  const brand = normalizeSearchValue(resolvedSearchParams.brand);
-  const model = normalizeSearchValue(resolvedSearchParams.model);
+  const brand = normalizeVehicleSearchValue(resolvedSearchParams.brand);
+  const model = normalizeVehicleSearchValue(resolvedSearchParams.model);
   const year = normalizeSearchValue(resolvedSearchParams.year);
   const cubicCapacity = normalizeSearchValue(resolvedSearchParams.cubicCapacity);
   const sumInsured = normalizeSearchValue(resolvedSearchParams.sumInsured);
@@ -443,13 +447,13 @@ export default async function LineAppPage({
   }
 
   if (brand) {
-    const condition = Prisma.sql`brand = ${brand}`;
+    const condition = Prisma.sql`UPPER(TRIM(brand)) = ${brand}`;
     searchConditions.push(condition);
     baseConditions.push(condition);
   }
 
   if (model) {
-    const condition = Prisma.sql`model = ${model}`;
+    const condition = Prisma.sql`UPPER(TRIM(model)) = ${model}`;
     searchConditions.push(condition);
     baseConditions.push(condition);
   }
@@ -547,11 +551,11 @@ export default async function LineAppPage({
   }
 
   if (brand) {
-    quickFilterConditions.push(Prisma.sql`brand = ${brand}`);
+    quickFilterConditions.push(Prisma.sql`UPPER(TRIM(brand)) = ${brand}`);
   }
 
   if (model) {
-    quickFilterConditions.push(Prisma.sql`model = ${model}`);
+    quickFilterConditions.push(Prisma.sql`UPPER(TRIM(model)) = ${model}`);
   }
 
   if (selectedCarAge !== null) {

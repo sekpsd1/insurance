@@ -45,7 +45,7 @@ type CompareSelectionProps = {
   initialCtpPackageIds?: string[];
 };
 
-const MAX_COMPARE_PACKAGES = 4;
+const MAX_COMPARE_PACKAGES = 2;
 const COMPARE_STORAGE_KEY = 'insurance.comparePackageIds';
 const COMPARE_CTP_STORAGE_KEY = 'insurance.compareCtpPackageIds';
 const CART_STORAGE_KEY = 'insurance.cartPackageIds';

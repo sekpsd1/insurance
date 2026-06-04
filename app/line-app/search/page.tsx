@@ -57,6 +57,10 @@ function normalizeSearchValue(value: string | string[] | undefined) {
   return value?.trim() ?? '';
 }
 
+function normalizeVehicleOptionValue(value: string | string[] | undefined) {
+  return normalizeSearchValue(value).toLocaleUpperCase('en-US');
+}
+
 function normalizeRepairType(value: string | string[] | undefined) {
   const normalized = normalizeSearchValue(value);
   return normalized === 'dealer' || normalized === 'garage' ? normalized : '';
@@ -116,8 +120,8 @@ export default async function SearchInsurancePage({
   const selectedSClass = normalizeSearchValue(resolvedSearchParams.sClass);
   const selectedCoverage = normalizeSearchValue(resolvedSearchParams.coverage);
   const selectedRepairType = normalizeRepairType(resolvedSearchParams.repairType);
-  const selectedBrand = normalizeSearchValue(resolvedSearchParams.brand);
-  const selectedModel = normalizeSearchValue(resolvedSearchParams.model);
+  const selectedBrand = normalizeVehicleOptionValue(resolvedSearchParams.brand);
+  const selectedModel = normalizeVehicleOptionValue(resolvedSearchParams.model);
   const selectedYear = normalizeSearchValue(resolvedSearchParams.year);
   const selectedCubicCapacity = normalizeSearchValue(resolvedSearchParams.cubicCapacity);
   const selectedSumInsured = normalizeSearchValue(resolvedSearchParams.sumInsured);
@@ -187,8 +191,8 @@ export default async function SearchInsurancePage({
       sClass: row.sClass?.trim() ?? '',
       coverageType: normalizeCoverageType(row.coverageCode),
       repairType: row.repairType,
-      brand: row.brand?.trim() ?? '',
-      model: row.model?.trim() ?? '',
+      brand: normalizeVehicleOptionValue(row.brand ?? ''),
+      model: normalizeVehicleOptionValue(row.model ?? ''),
       minCarAge: toNumberOrNull(row.minCarAge),
       maxCarAge: toNumberOrNull(row.maxCarAge),
       minCubicCapacity: toNumberOrNull(row.minCubicCapacity),

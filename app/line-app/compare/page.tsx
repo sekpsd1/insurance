@@ -87,7 +87,7 @@ type ComparePackage = {
   createdAt: Date;
 };
 
-const MAX_COMPARE_PACKAGES = 4;
+const MAX_COMPARE_PACKAGES = 2;
 
 function normalizeSearchValue(value: string | string[] | undefined) {
   if (Array.isArray(value)) {
@@ -896,7 +896,7 @@ export default async function ComparePage({
               <table className="min-w-full border-separate border-spacing-0">
                 <thead>
                   <tr>
-                    <th className="sticky left-0 z-20 min-w-[260px] rounded-tl-2xl bg-[#0047BA] px-4 py-4 text-center align-middle font-[Kanit,sans-serif] text-xl font-bold text-white">
+                    <th className="min-w-[260px] rounded-tl-2xl bg-[#0047BA] px-4 py-4 text-center align-middle font-[Kanit,sans-serif] text-xl font-bold text-white">
                       <span className="flex min-h-[132px] items-center justify-center">ความคุ้มครอง</span>
                     </th>
                     {packages.map((pkg, index) => (
@@ -931,7 +931,7 @@ export default async function ComparePage({
                   {comparisonRows.map((row) => (
                     <tr key={row.label}>
                       <th
-                        className={`sticky left-0 z-10 border-t border-slate-200 px-4 text-sm ${
+                        className={`border-t border-slate-200 px-4 text-sm ${
                           row.kind === 'section'
                             ? 'bg-[#eaf5ff] py-3 text-left font-[Kanit,sans-serif] font-bold text-[#0047BA]'
                             : row.kind === 'subsection'
