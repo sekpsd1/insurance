@@ -11,7 +11,7 @@ type LineProfile = {
 type LiffClient = {
   init: (config: { liffId: string }) => Promise<void>;
   isLoggedIn: () => boolean;
-  login: () => void;
+  login: (config?: { redirectUri?: string }) => void;
   getProfile: () => Promise<LineProfile>;
 };
 
@@ -63,7 +63,7 @@ export function LineProfileFields({ fallbackLineId }: { fallbackLineId: string }
         await liff.init({ liffId });
 
         if (!liff.isLoggedIn()) {
-          liff.login();
+          liff.login({ redirectUri: window.location.href });
           return;
         }
 
