@@ -155,7 +155,7 @@ export default async function PackageFormPage({ params, searchParams }: FormPage
   return (
     <main className="min-h-screen bg-gradient-to-b from-[#f7f9ff] via-[#f3f6ff] to-white pb-6 text-[#101828]">
       <header className="sticky top-0 z-10 bg-[#0648ad] text-white shadow-[0_10px_30px_rgba(6,72,173,0.18)]">
-        <div className="mx-auto flex h-[82px] max-w-md items-center justify-center px-5">
+        <div className="mx-auto flex h-[68px] max-w-md items-center justify-center px-5">
           <Link
             href={resultsHref}
             aria-label="กลับ"
@@ -165,7 +165,7 @@ export default async function PackageFormPage({ params, searchParams }: FormPage
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19 8 12l7-7" />
             </svg>
           </Link>
-          <h1 className="px-10 text-center text-[22px] font-black leading-tight tracking-[-0.01em] sm:text-[24px]">กรอกข้อมูลผู้เอาประกัน</h1>
+          <h1 className="px-10 text-center text-[18px] font-black leading-tight sm:text-[20px]">กรอกข้อมูลผู้เอาประกัน</h1>
         </div>
       </header>
 
@@ -175,18 +175,6 @@ export default async function PackageFormPage({ params, searchParams }: FormPage
         <input type="hidden" name="carModel" value={packageItem.model ?? ''} />
         <input type="hidden" name="carYear" value={packageItem.year ?? ''} />
         {includeCtp ? <input type="hidden" name="includeCtp" value="1" /> : null}
-
-        {includeCtp && ctpOption ? (
-          <section className="rounded-lg border border-[#b8d9de] bg-white px-5 py-4 text-sm shadow-[0_16px_36px_rgba(15,23,42,0.07)]">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="font-bold text-[#074a52]">เพิ่ม พ.ร.บ. {ctpOption.rateCode}</div>
-                <div className="mt-1 text-xs text-slate-500">{ctpOption.eligibilityLabel}</div>
-              </div>
-              <div className="text-lg font-black text-[#00899a]">฿ {ctpOption.total.toLocaleString('th-TH')}</div>
-            </div>
-          </section>
-        ) : null}
 
         <SectionCard icon="person" title="ข้อมูลส่วนตัว">
           <Field label="ชื่อ - นามสกุล" name="customerName" placeholder="ระบุชื่อและนามสกุลตามบัตรประชาชน" />

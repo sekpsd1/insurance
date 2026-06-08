@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
 
 const ADMIN_SESSION_MAX_AGE_SECONDS = 60 * 60 * 8;
+type AdminRole = 'admin' | 'sales';
 
 function getAdminSessionSecret() {
   return process.env.ADMIN_SESSION_SECRET?.trim() || process.env.ADMIN_PASSWORD?.trim() || '';
@@ -12,10 +13,10 @@ function signAdminSession(payload: string) {
   return createHmac('sha256', getAdminSessionSecret()).update(payload).digest('base64url');
 }
 
-function createAdminSessionToken() {
+function createAdminSessionToken(role: AdminRole) {
   const issuedAt = Math.floor(Date.now() / 1000);
   const nonce = randomBytes(16).toString('base64url');
-  const payload = `${issuedAt}.${nonce}`;
+  const payload = `${role}.${issuedAt}.${nonce}`;
   return `${payload}.${signAdminSession(payload)}`;
 }
 
@@ -29,20 +30,40 @@ function passwordsMatch(input: string, expected: string) {
 async function loginAction(formData: FormData) {
   'use server';
 
+  const username = String(formData.get('username') ?? '').trim().toLowerCase();
   const password = String(formData.get('password') ?? '').trim();
   const adminPassword = process.env.ADMIN_PASSWORD?.trim();
+  const adminUsername = process.env.ADMIN_USERNAME?.trim().toLowerCase();
+  const salesUsername = process.env.SALES_USERNAME?.trim().toLowerCase() || 'sales';
+  const salesPassword = process.env.SALES_PASSWORD?.trim();
 
   if (!adminPassword) {
     redirect('/admin/login?error=missing-config');
   }
 
-  if (!password || !passwordsMatch(password, adminPassword)) {
+  let role: AdminRole | null = null;
+  const adminUsernameMatches = adminUsername ? username === adminUsername : !username || username === 'admin';
+
+  if (password && adminUsernameMatches && passwordsMatch(password, adminPassword)) {
+    role = 'admin';
+  } else if (password && salesPassword && username === salesUsername && passwordsMatch(password, salesPassword)) {
+    role = 'sales';
+  }
+
+  if (!role) {
     redirect('/admin/login?error=invalid');
   }
 
   const cookieStore = await cookies();
 
-  cookieStore.set('admin_token', createAdminSessionToken(), {
+  cookieStore.set('admin_token', createAdminSessionToken(role), {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    path: '/',
+    maxAge: ADMIN_SESSION_MAX_AGE_SECONDS
+  });
+  cookieStore.set('admin_role', role, {
     httpOnly: true,
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
@@ -88,6 +109,23 @@ export default async function AdminLoginPage({ searchParams }: AdminLoginPagePro
         ) : null}
 
         <form action={loginAction} className="space-y-4">
+          <div>
+            <label htmlFor="username" className="mb-1 block text-sm font-medium text-slate-700">
+              Username
+            </label>
+            <input
+              id="username"
+              name="username"
+              type="text"
+              autoComplete="username"
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[16px] outline-none transition placeholder:text-slate-400 focus:border-cyan-500 focus:bg-white focus:ring-4 focus:ring-cyan-100"
+              placeholder="admin หรือ sales"
+            />
+            <p className="mt-1 text-xs leading-5 text-slate-500">
+              Admin เดิมเว้นว่างได้ ส่วน Sales ให้กรอก username ที่ตั้งไว้
+            </p>
+          </div>
+
           <div>
             <label htmlFor="password" className="mb-1 block text-sm font-medium text-slate-700">
               Password

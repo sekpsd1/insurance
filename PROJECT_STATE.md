@@ -38,7 +38,7 @@ The customer flow currently starts at `/line-app/search`. LINE rich menu and con
 
 Admin routes live under `/admin`.
 
-- `/admin/login` - simple password login using `ADMIN_PASSWORD`.
+- `/admin/login` - cookie-based login using `ADMIN_PASSWORD`; optional sales access uses `SALES_USERNAME`/`SALES_PASSWORD`.
 - `/admin` - order monitor/report page.
 - `/admin/orders/[orderId]` - admin order detail page with customer, vehicle, payment, provider, email, and internal timeline detail.
 - `/admin/insurance` - campaign dashboard, CSV import, logo upload, provider contact setup.
@@ -170,6 +170,7 @@ It also stores rating/search fields imported from insurer CSV rows:
   - Compact white input/select fields with lighter borders.
   - Smaller textarea and label spacing.
   - Sticky bottom submit action bar.
+- Policy Info page no longer shows a standalone CTP/CMI add-on banner; selected CTP/CMI is still carried through hidden form state and included in the checkout/order total.
 - Customer results now support an optional CTP/CMI add-on checkbox for eligible vehicle classes:
   - `SClass 110` sells CTP rate `1.10` at total `645.21`.
   - `SClass 320` sells CTP rate `1.40A` at total `967.28`.
@@ -190,7 +191,7 @@ It also stores rating/search fields imported from insurer CSV rows:
 
 ### Admin/Broker Flow
 
-- Admin login exists with cookie-based auth.
+- Admin login exists with cookie-based auth. Admin access still works with `ADMIN_PASSWORD`; optional `SALES_USERNAME`/`SALES_PASSWORD` creates a limited sales role that sees only Orders and Type 1 Leads navigation, while middleware blocks campaign/package/readiness routes.
 - Admin order page has been shifted toward monitor/report behavior.
 - Campaign dashboard supports CSV import.
 - Campaign-level logo upload exists.

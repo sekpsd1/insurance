@@ -1,11 +1,15 @@
 import type { ReactNode } from 'react';
+import { cookies } from 'next/headers';
 import { AdminNav } from './_components/admin-nav';
 
-export default function AdminLayout({
+export default async function AdminLayout({
   children
 }: Readonly<{
   children: ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const role = cookieStore.get('admin_role')?.value === 'sales' ? 'sales' : 'admin';
+
   return (
     <main className="min-h-screen bg-slate-950 text-white">
       <header className="border-b border-white/10 bg-slate-900/80 backdrop-blur">
@@ -16,7 +20,7 @@ export default function AdminLayout({
             </p>
             <h1 className="text-lg font-semibold text-white">LINE Mini App · Admin</h1>
           </div>
-          <AdminNav />
+          <AdminNav role={role} />
         </div>
       </header>
       {children}

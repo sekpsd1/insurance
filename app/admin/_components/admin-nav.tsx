@@ -11,6 +11,8 @@ const navItems = [
   { href: '/admin/readiness', label: 'Readiness' }
 ];
 
+type AdminRole = 'admin' | 'sales';
+
 function isActivePath(pathname: string, href: string, exact?: boolean) {
   if (exact) {
     return pathname === href;
@@ -19,12 +21,16 @@ function isActivePath(pathname: string, href: string, exact?: boolean) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function AdminNav() {
+export function AdminNav({ role }: { role: AdminRole }) {
   const pathname = usePathname() ?? '';
+  const visibleNavItems =
+    role === 'sales'
+      ? navItems.filter((item) => item.href === '/admin' || item.href === '/admin/leads')
+      : navItems;
 
   return (
     <nav className="flex items-center gap-2 text-sm font-semibold">
-      {navItems.map((item) => {
+      {visibleNavItems.map((item) => {
         const isActive = isActivePath(pathname, item.href, item.exact);
 
         return (
