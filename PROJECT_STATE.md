@@ -137,6 +137,7 @@ It also stores rating/search fields imported from insurer CSV rows:
 - Type 1 quote request email now reads the editable admin sales recipient first, then falls back to `SALES_LEAD_EMAIL`.
 - Search Premium sum-insured options now respect the selected repair type so customers do not select a sum insured that only exists under a different repair group.
 - Search Premium no longer shows the blue explanatory filter-info box above the submit button.
+- Search Premium autosaves the selected vehicle/policy filters and Type 1 lead contact inputs to localStorage so customers can reopen the LINE Mini App on the same device and continue.
 - Results page supports pagination.
 - Result cards encode uploaded logo URLs before rendering and fall back to company text if the image cannot be loaded.
 - Result cards and compare table display repair type from `GarageCd` as `ซ่อมห้าง` or `ซ่อมอู่`.
@@ -172,6 +173,7 @@ It also stores rating/search fields imported from insurer CSV rows:
   - Smaller textarea and label spacing.
   - Sticky bottom submit action bar.
 - Policy Info page no longer shows a standalone CTP/CMI add-on banner; selected CTP/CMI is still carried through hidden form state and included in the checkout/order total.
+- Policy Info page autosaves customer/contact/address/plate fields to localStorage and restores them on the same device if the LINE Mini App is closed before submission; the draft is cleared after a valid submit.
 - Customer results now support an optional CTP/CMI add-on checkbox for eligible vehicle classes:
   - `SClass 110` sells CTP rate `1.10` at total `645.21`.
   - `SClass 320` sells CTP rate `1.40A` at total `967.28`.

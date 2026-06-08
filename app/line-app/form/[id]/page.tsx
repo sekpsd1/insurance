@@ -5,6 +5,7 @@ import type { Metadata } from 'next';
 import { createPolicyDraftOrder } from '@/lib/actions';
 import { isCtpSelected } from '@/lib/ctp';
 import { getCtpOptionForSClass } from '@/lib/ctp-rates';
+import { PolicyFormDraftAutosave } from './policy-form-draft-autosave';
 
 type FormPageProps = {
   params: Promise<{ id: string }>;
@@ -169,7 +170,8 @@ export default async function PackageFormPage({ params, searchParams }: FormPage
         </div>
       </header>
 
-      <form action={createPolicyDraftOrder} className="mx-auto flex max-w-md flex-col gap-5 px-4 pb-28 pt-5 sm:px-6">
+      <form id="policy-info-form" action={createPolicyDraftOrder} className="mx-auto flex max-w-md flex-col gap-5 px-4 pb-28 pt-5 sm:px-6">
+        <PolicyFormDraftAutosave formId="policy-info-form" />
         <input type="hidden" name="packageId" value={packageItem.id} />
         <input type="hidden" name="carBrand" value={packageItem.brand ?? ''} />
         <input type="hidden" name="carModel" value={packageItem.model ?? ''} />

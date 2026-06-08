@@ -32,6 +32,21 @@ type SearchPremiumFormProps = {
   initialSumInsured?: string;
 };
 
+type SearchPremiumDraft = {
+  sClass?: string;
+  coverage?: string;
+  repairType?: string;
+  brand?: string;
+  model?: string;
+  year?: string;
+  cubicCapacity?: string;
+  sumInsured?: string;
+  leadCustomerName?: string;
+  leadCustomerPhone?: string;
+  leadLineId?: string;
+  leadEmail?: string;
+};
+
 const COVERAGE_OPTIONS: Array<{ value: CoverageType; label: string }> = [
   { value: '1', label: 'ประเภท 1' },
   { value: '2+', label: 'ประเภท 2 พลัส' },
@@ -49,6 +64,8 @@ const SCLASS_OPTIONS: Array<{ value: string; label: string }> = [
   { value: '320', label: 'รถกระบะ 2 ประตู' },
   { value: '210', label: 'รถตู้ / กระบะ ป้ายทะเบียนสีฟ้า' }
 ];
+
+const SEARCH_DRAFT_STORAGE_KEY = 'line-app:search-draft:v1';
 
 function uniqueValues(values: string[]) {
   return Array.from(new Set(values.filter(Boolean))).sort((left, right) => left.localeCompare(right, 'th'));
@@ -150,6 +167,23 @@ function getRegistrationYearFromCarAge(age: number) {
   return age <= 0 ? currentYear : currentYear - age + 1;
 }
 
+function getStoredSearchDraft() {
+  try {
+    const rawDraft = window.localStorage.getItem(SEARCH_DRAFT_STORAGE_KEY);
+    return rawDraft ? (JSON.parse(rawDraft) as SearchPremiumDraft) : null;
+  } catch {
+    return null;
+  }
+}
+
+function setStoredSearchDraft(draft: SearchPremiumDraft) {
+  try {
+    window.localStorage.setItem(SEARCH_DRAFT_STORAGE_KEY, JSON.stringify(draft));
+  } catch {
+    // Ignore storage failures so the quote form still works in restricted browsers.
+  }
+}
+
 function rowMatchesRegistrationYear(row: SearchPremiumOptionRow, year: string) {
   const carAge = getCarAgeFromRegistrationYear(year);
 
@@ -237,9 +271,20 @@ export default function SearchPremiumForm({
   const [hasLiffProfile, setHasLiffProfile] = useState(false);
   const [leadEmail, setLeadEmail] = useState('');
   const [leadSuccessNumber, setLeadSuccessNumber] = useState('');
+  const [draftLoaded, setDraftLoaded] = useState(false);
   const isSeatBasedSelection = isSeatBasedVehicleType(sClass);
   const [leadError, setLeadError] = useState('');
   const [isLeadPending, startLeadTransition] = useTransition();
+  const hasInitialSearch = Boolean(
+    initialSClass ||
+      initialCoverage ||
+      initialRepairType ||
+      initialBrand ||
+      initialModel ||
+      initialYear ||
+      initialCubicCapacity ||
+      initialSumInsured
+  );
 
   const availableRepairTypes = useMemo(() => {
     if (!sClass || !coverage) {
@@ -262,6 +307,67 @@ export default function SearchPremiumForm({
 
     return optionRows.filter((row) => row.sClass === sClass && row.coverageType === coverage && row.repairType === repairType);
   }, [coverage, optionRows, repairType, sClass]);
+
+  useEffect(() => {
+    if (hasInitialSearch) {
+      setDraftLoaded(true);
+      return;
+    }
+
+    const draft = getStoredSearchDraft();
+
+    if (draft) {
+      setSClass(draft.sClass ?? '');
+      setCoverage(normalizeCoverage(draft.coverage));
+      setRepairType(normalizeRepairType(draft.repairType));
+      setBrand(draft.brand ?? '');
+      setModel(draft.model ?? '');
+      setYear(draft.year ?? '');
+      setCubicCapacity(draft.cubicCapacity ?? '');
+      setSumInsured(draft.sumInsured ?? '');
+      setLeadCustomerName(draft.leadCustomerName ?? '');
+      setLeadCustomerPhone(draft.leadCustomerPhone ?? '');
+      setLeadLineId(draft.leadLineId ?? '');
+      setLeadEmail(draft.leadEmail ?? '');
+    }
+
+    setDraftLoaded(true);
+  }, [hasInitialSearch]);
+
+  useEffect(() => {
+    if (!draftLoaded) {
+      return;
+    }
+
+    setStoredSearchDraft({
+      sClass,
+      coverage,
+      repairType,
+      brand,
+      model,
+      year,
+      cubicCapacity,
+      sumInsured,
+      leadCustomerName,
+      leadCustomerPhone,
+      leadLineId,
+      leadEmail
+    });
+  }, [
+    brand,
+    coverage,
+    cubicCapacity,
+    draftLoaded,
+    leadCustomerName,
+    leadCustomerPhone,
+    leadEmail,
+    leadLineId,
+    model,
+    repairType,
+    sClass,
+    sumInsured,
+    year
+  ]);
 
   const vehicleSelectionRows = useMemo(() => {
     if (!sClass || !coverage) {
