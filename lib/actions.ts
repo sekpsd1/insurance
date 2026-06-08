@@ -69,6 +69,15 @@ function hashMagicToken(token: string) {
   return createHash('sha256').update(token).digest('hex');
 }
 
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function createRawMagicToken() {
   return randomBytes(32).toString('base64url');
 }
@@ -418,6 +427,46 @@ function buildProviderEmail(input: {
   };
 }
 
+function renderProviderEmailHtml(body: string, magicLinkPath: string | null) {
+  const magicLinkUrl = getAbsoluteAppUrl(magicLinkPath);
+  const content = body
+    .split('\n')
+    .filter((line) => !line.startsWith('Update policy status here:'))
+    .map((line) => {
+      if (!line.trim()) {
+        return '<div style="height:12px;line-height:12px">&nbsp;</div>';
+      }
+
+      return `<p style="margin:0 0 8px 0;color:#111827;font-size:14px;line-height:1.6">${escapeHtml(line)}</p>`;
+    })
+    .join('');
+
+  const actionButton = magicLinkUrl
+    ? `
+      <div style="margin:24px 0">
+        <a href="${escapeHtml(magicLinkUrl)}" style="display:inline-block;background:#0052cc;color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;line-height:1;padding:14px 22px;border-radius:10px">
+          Update policy status
+        </a>
+        <p style="margin:12px 0 0 0;color:#6b7280;font-size:12px;line-height:1.5">
+          If the button does not work, open this link:<br>
+          <a href="${escapeHtml(magicLinkUrl)}" style="color:#0052cc;word-break:break-all">${escapeHtml(magicLinkUrl)}</a>
+        </p>
+      </div>
+    `
+    : '';
+
+  return `
+    <div style="margin:0;padding:0;background:#f8fafc">
+      <div style="max-width:640px;margin:0 auto;padding:24px">
+        <div style="background:#ffffff;border:1px solid #e5e7eb;border-radius:16px;padding:24px;font-family:Arial,Helvetica,sans-serif">
+          ${content}
+          ${actionButton}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 async function createProviderEmailOutbox(input: {
   orderId: string;
   token: string;
@@ -569,7 +618,8 @@ async function sendProviderEmail(input: {
         from,
         to: input.recipient,
         subject: input.subject,
-        text: input.body
+        text: input.body,
+        html: renderProviderEmailHtml(input.body, input.magicLinkPath)
       })
     });
 
@@ -1457,11 +1507,15 @@ export async function updateOrderFromMagicLink(formData: FormData): Promise<void
     }
   });
 
-  if (!magicToken || magicToken.expiresAt < new Date() || magicToken.usedAt) {
+  const isMagicLinkClosed = Boolean(
+    magicToken?.usedAt && (magicToken.order.status === 'POLICY_ISSUED' || magicToken.order.status === 'REJECTED')
+  );
+
+  if (!magicToken || magicToken.expiresAt < new Date() || isMagicLinkClosed) {
     throw new Error('Magic link is invalid or expired');
   }
 
-  const isTerminalStatus = status === 'POLICY_APPROVED' || status === 'POLICY_ISSUED' || status === 'REJECTED';
+  const isTerminalStatus = status === 'POLICY_ISSUED' || status === 'REJECTED';
 
   await prisma.$transaction(async (tx) => {
     await tx.order.update({
@@ -1480,8 +1534,7 @@ export async function updateOrderFromMagicLink(formData: FormData): Promise<void
       await tx.magicLinkToken.updateMany({
         where: {
           orderId: magicToken.orderId,
-          purpose: magicToken.purpose,
-          usedAt: null
+          purpose: magicToken.purpose
         },
         data: {
           usedAt: new Date()

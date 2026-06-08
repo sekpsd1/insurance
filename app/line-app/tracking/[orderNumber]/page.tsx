@@ -65,6 +65,9 @@ export default async function TrackingDetailPage({ params }: TrackingPageProps) 
   const steps = ['PENDING_PAYMENT', 'PAYMENT_SUBMITTED', 'PAID', 'SENT_TO_INSURER', 'POLICY_ISSUED'];
   const activeIndex = Math.max(steps.indexOf(order.status), order.status === 'POLICY_APPROVED' ? 3 : -1);
   const visibleStatusHistory = order.statusHistory.filter(isCustomerVisibleStatusHistory);
+  const ctpTotal = order.ctpSelected ? (order.ctpTotal ?? 0) : 0;
+  const paymentAmount = order.paymentAmount ?? (order.pkg.payablePrice ?? order.pkg.netPrice) + ctpTotal;
+  const planPayableAmount = Math.max(paymentAmount - ctpTotal, 0);
 
   return (
     <main className="min-h-screen bg-[#f4f7ff] px-4 py-8 text-[#101828]">
@@ -78,11 +81,22 @@ export default async function TrackingDetailPage({ params }: TrackingPageProps) 
             <div className="text-sm text-slate-600">สถานะปัจจุบัน</div>
             <div className="mt-1 text-xl font-bold text-[#0052CC]">{getStatusLabel(order.status)}</div>
             <div className="mt-2 text-sm text-slate-600">การชำระเงิน: {getPaymentStatusLabel(order.paymentStatus)}</div>
-            {order.ctpSelected ? (
-              <div className="mt-2 text-sm text-slate-600">
-                พ.ร.บ. {order.ctpRateCode ?? '-'}: {formatCurrency(order.ctpTotal)}
+            <div className="mt-3 space-y-2 rounded-2xl bg-white/70 px-4 py-3 text-sm text-slate-600">
+              <div className="flex items-center justify-between gap-3">
+                <span>ยอดคงเหลือชำระแผนหลัก</span>
+                <span className="font-semibold text-slate-900">{formatCurrency(planPayableAmount)}</span>
               </div>
-            ) : null}
+              {order.ctpSelected ? (
+                <div className="flex items-center justify-between gap-3">
+                  <span>พ.ร.บ. {order.ctpRateCode ?? '-'}</span>
+                  <span className="font-semibold text-slate-900">{formatCurrency(order.ctpTotal)}</span>
+                </div>
+              ) : null}
+              <div className="flex items-center justify-between gap-3 border-t border-slate-200 pt-2 font-bold text-slate-950">
+                <span>ยอดที่ต้องชำระรวม</span>
+                <span>{formatCurrency(paymentAmount)}</span>
+              </div>
+            </div>
           </div>
         </section>
 

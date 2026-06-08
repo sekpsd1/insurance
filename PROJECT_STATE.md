@@ -1,6 +1,6 @@
 # Project State
 
-Last updated: 2026-06-03
+Last updated: 2026-06-08
 
 ## Current Architecture
 
@@ -181,6 +181,9 @@ It also stores rating/search fields imported from insurer CSV rows:
   - Bank transfer with slip upload.
   - Gateway mock link flow.
 - Checkout, success, tracking, admin order detail, provider Magic Link, provider email preview, and provider email body now show selected CTP/CMI details when present.
+- Customer tracking detail now shows the payment breakdown for the main plan remaining payable amount, selected CTP/CMI amount, and combined amount due instead of showing only the CTP/CMI line.
+- Provider Magic Link emails sent through Resend now include an HTML `Update policy status` button while preserving the plain-text fallback link.
+- Provider Magic Links now remain usable after `POLICY_APPROVED` so insurers can continue the same link to `POLICY_ISSUED`; links are closed only after `POLICY_ISSUED` or `REJECTED`.
 - Success page shows order summary, payment method, and timeline.
 - Tracking page supports lookup and direct tracking by order number.
 - Customer-facing selection/results/compare now use the four customer-requested policy type groups instead of exposing detailed DD/OD `covcod` labels.

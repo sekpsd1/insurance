@@ -100,7 +100,9 @@ export default async function InsurerUpdatePage({ params, searchParams }: Insure
   const vehicle = [order.carBrand, order.carModel, order.carYear].filter(Boolean).join(' / ') || '-';
   const plate = [order.plateNumber, order.plateProvince].filter(Boolean).join(' ') || '-';
   const providerName = order.pkg.providerName ?? order.pkg.company;
-  const isMagicLinkUsed = Boolean(magicToken.usedAt);
+  const isFinalStatus = order.status === 'POLICY_ISSUED' || order.status === 'REJECTED';
+  const isMagicLinkUsed = Boolean(magicToken.usedAt && isFinalStatus);
+  const statusSelectDefaultValue = order.status === 'POLICY_APPROVED' ? 'POLICY_ISSUED' : 'INSURER_REVIEWING';
 
   return (
     <main className="min-h-screen bg-[#f4f7ff] px-4 py-8 text-[#101828]">
@@ -272,7 +274,7 @@ export default async function InsurerUpdatePage({ params, searchParams }: Insure
                 id="status"
                 name="status"
                 required
-                defaultValue="INSURER_REVIEWING"
+                defaultValue={statusSelectDefaultValue}
                 className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[16px] outline-none focus:border-[#0052CC] focus:bg-white focus:ring-4 focus:ring-blue-100"
               >
                 <option value="INSURER_REVIEWING">รับเรื่อง / กำลังตรวจสอบ</option>
