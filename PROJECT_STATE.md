@@ -185,6 +185,7 @@ It also stores rating/search fields imported from insurer CSV rows:
 - Checkout page supports:
   - Bank transfer with slip upload.
   - Gateway mock link flow.
+- Checkout payment summary now shows only the single payable amount labeled `คงเหลือชำระ`, hiding the itemized premium/CTP breakdown on that page to reduce customer confusion.
 - Checkout, success, tracking, admin order detail, provider Magic Link, provider email preview, and provider email body now show selected CTP/CMI details when present.
 - Customer tracking detail now shows the payment breakdown for the main plan remaining payable amount, selected CTP/CMI amount, and combined amount due instead of showing only the CTP/CMI line.
 - Provider Magic Link emails sent through Resend now include an HTML `Update policy status` button while preserving the plain-text fallback link.
