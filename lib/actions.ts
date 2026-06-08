@@ -1084,7 +1084,7 @@ export async function createInsurerMagicLinkPreview(formData: FormData): Promise
 
 export async function createPolicyDraftOrder(formData: FormData): Promise<void> {
   const packageId = getRequiredFormValue(formData, 'packageId');
-  const lineId = normalizeShortText(getRequiredFormValue(formData, 'lineId'), 120, 'LINE ID') ?? '';
+  const lineId = normalizeShortText(getOptionalFormValue(formData, 'lineId'), 120, 'LINE ID') ?? `guest:${randomUUID()}`;
   const lineDisplayName = normalizeShortText(getOptionalFormValue(formData, 'lineDisplayName'), 120, 'LINE display name');
   const linePictureUrl = normalizeExternalUrl(getOptionalFormValue(formData, 'linePictureUrl'), 'LINE picture URL');
   const customerName = normalizeShortText(getRequiredFormValue(formData, 'customerName'), 120, 'Customer name') ?? '';

@@ -400,7 +400,7 @@ Last verified on 2026-05-21 using localhost dev server after the customer search
 - Search Premium vehicle selectors no longer hide older registration years just because `ซ่อมห้าง` is selected; the form can use the broader vehicle option data for year/engine/sum-insured selection, then alerts `ไม่มีแคมเปญสำหรับรถรุ่นดังกล่าว` if the selected repair type has no exact campaign.
 - The no-campaign search feedback now uses an in-app modal instead of the browser alert, with a clear `ปรับเงื่อนไขใหม่` action.
 - Customer Policy Info form now initializes LINE MINI App / LIFF profile data when `NEXT_PUBLIC_LIFF_ID` is configured, storing LINE user ID, display name, and picture URL on `User`; the form also includes an optional customer email field.
-- Policy Info LIFF login now passes the current form URL as `redirectUri`, so customers return to the selected plan form after LINE Login instead of falling back to the LIFF endpoint/search page.
+- Policy Info LIFF profile capture is now best-effort and does not force an automatic LINE Login redirect; if no LINE profile is available, order creation falls back to an internal `guest:` user key so customers can continue filling the form.
 - Compare table no longer shows the top-left detail label or the bottom package details row, keeping only the useful comparison rows.
 - Customer `/line-app` layout no longer shows the internal `Customer Area / LINE Mini App Insurance Quote` header so production customer pages start directly with the app screen header.
 - Cart and results card sum-insured display now normalizes min/max values before comparison so equal imported values such as `50000` and `50000` render as one amount instead of a duplicated range.

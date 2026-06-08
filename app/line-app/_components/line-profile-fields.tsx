@@ -11,7 +11,6 @@ type LineProfile = {
 type LiffClient = {
   init: (config: { liffId: string }) => Promise<void>;
   isLoggedIn: () => boolean;
-  login: (config?: { redirectUri?: string }) => void;
   getProfile: () => Promise<LineProfile>;
 };
 
@@ -63,7 +62,7 @@ export function LineProfileFields({ fallbackLineId }: { fallbackLineId: string }
         await liff.init({ liffId });
 
         if (!liff.isLoggedIn()) {
-          liff.login({ redirectUri: window.location.href });
+          console.warn('[LIFF] profile is not available because the user is not logged in');
           return;
         }
 
