@@ -5,7 +5,6 @@ import type { Metadata } from 'next';
 import { createPolicyDraftOrder } from '@/lib/actions';
 import { isCtpSelected } from '@/lib/ctp';
 import { getCtpOptionForSClass } from '@/lib/ctp-rates';
-import { LineProfileFields } from '@/app/line-app/_components/line-profile-fields';
 
 type FormPageProps = {
   params: Promise<{ id: string }>;
@@ -150,10 +149,6 @@ export default async function PackageFormPage({ params, searchParams }: FormPage
     notFound();
   }
 
-  const lineId =
-    resolvedSearchParams.lineId?.trim() ||
-    process.env.DEMO_LINE_ID?.trim() ||
-    `demo-${packageId}`;
   const ctpOption = await getCtpOptionForSClass(packageItem.sClass);
   const includeCtp = isCtpSelected(resolvedSearchParams.includeCtp) && Boolean(ctpOption);
 
@@ -176,7 +171,6 @@ export default async function PackageFormPage({ params, searchParams }: FormPage
 
       <form action={createPolicyDraftOrder} className="mx-auto flex max-w-md flex-col gap-5 px-4 pb-28 pt-5 sm:px-6">
         <input type="hidden" name="packageId" value={packageItem.id} />
-        <LineProfileFields fallbackLineId={lineId} />
         <input type="hidden" name="carBrand" value={packageItem.brand ?? ''} />
         <input type="hidden" name="carModel" value={packageItem.model ?? ''} />
         <input type="hidden" name="carYear" value={packageItem.year ?? ''} />
