@@ -147,7 +147,7 @@ It also stores rating/search fields imported from insurer CSV rows:
 - Results page now hides the extra result-summary/count blocks above the plan list and shows the plan cards before the quick-filter card so customers reach the payable section sooner while keeping the remaining payable box in its original position inside each plan card.
 - Results page now uses a compact blue header without the unused menu button and tighter top/card spacing so customers can see the remaining payable section sooner in LINE Mini App.
 - Results plan cards now use tighter padding, smaller detail icons, compact full-width vehicle-title text, and append registration year to the vehicle title to preserve space so more of the selected plan card is visible in the first mobile viewport.
-- Cart plan cards now match the compact results-card layout more closely, including the full-width brand/model/year title, smaller icons, tighter spacing, compact cost summary, and compact remaining-payable section.
+- Cart plan cards now match the compact results-card layout more closely, including the full-width brand/model/year title, smaller icons, tighter spacing, compact cost summary, and compact remaining-payable section. The cart header only shows the number of saved plans and no longer shows a combined remaining-payable total.
 - Customer-facing zero sum-insured display text now says `ไม่คุ้มครอง` instead of `ไม่มีทุนประกัน` across search, results, cart, and compare views.
 - Search Premium no longer shows or requires the sum-insured selector for policy type 3; customers can search type 3 packages after choosing vehicle, repair, year, and engine details.
 - Search Premium now opens the `ไม่มีแคมเปญสำหรับรุ่นนี้ สามารถเลือกแผนอื่นได้` popup when policy type 2+, 3+, or 3 has no premium/campaign for the selected vehicle details.
@@ -197,7 +197,7 @@ It also stores rating/search fields imported from insurer CSV rows:
 ### Admin/Broker Flow
 
 - Admin login exists with cookie-based auth. Admin access still works with `ADMIN_PASSWORD`; optional `SALES_USERNAME`/`SALES_PASSWORD` creates a limited sales role that sees only Orders and Type 1 Leads navigation, while middleware blocks campaign/package/readiness routes. Admin header includes a logout action that clears `admin_token` and `admin_role`.
-- Admin order page has been shifted toward monitor/report behavior.
+- Admin order page has been shifted toward monitor/report behavior. The order list now shows payment amounts with two decimal places and keeps the provider email/Magic Link preview out of the main list actions; admins can still access Magic Link tools from the order detail page.
 - Campaign dashboard supports CSV import.
 - Campaign-level logo upload exists.
 - Package management page exists for package search/edit.

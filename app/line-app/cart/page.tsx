@@ -444,10 +444,6 @@ export default async function CartPage({
   const packages = selectedIds
     .map((id) => packageById.get(id))
     .filter((row): row is CartPackageRow => Boolean(row));
-  const totalPayablePrice = packages.reduce((sum, pkg) => {
-    const ctpOption = selectedCtpIdSet.has(pkg.id) && pkg.sClass ? ctpOptionsBySClass[pkg.sClass] ?? null : null;
-    return sum + toNumber(pkg.payablePrice ?? pkg.netPrice) + (ctpOption?.total ?? 0);
-  }, 0);
 
   return (
     <main className="min-h-screen bg-[#f4f5ff] text-[#12131a]">
@@ -465,14 +461,10 @@ export default async function CartPage({
 
       <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 py-6">
         <section className="rounded-3xl bg-white p-5 shadow-[0_10px_30px_rgba(4,16,61,0.08)] ring-1 ring-white/70">
-          <div className="flex items-start justify-between gap-4">
+          <div>
             <div>
               <p className="text-sm font-medium text-[#4b5265]">แผนที่เก็บไว้</p>
               <h2 className="mt-1 font-[Kanit,sans-serif] text-2xl font-bold text-[#0047BA]">{packages.length} แผน</h2>
-            </div>
-            <div className="rounded-2xl bg-[#eef3ff] px-4 py-3 text-right">
-              <p className="text-xs font-medium text-[#4b5265]">คงเหลือชำระรวม</p>
-              <p className="mt-1 font-[Kanit,sans-serif] text-lg font-bold text-[#0047BA]">{formatMoney(totalPayablePrice)} บาท</p>
             </div>
           </div>
           <p className="mt-3 text-sm leading-6 text-[#4b5265]">รายการนี้เป็นแผนที่เก็บไว้ดูภายหลัง ยังไม่สร้างคำสั่งซื้อจนกว่าจะกดเลือกแผน</p>
