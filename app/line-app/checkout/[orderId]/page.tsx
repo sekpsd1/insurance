@@ -46,8 +46,12 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
           <div className="mt-4 rounded-2xl bg-[#eef3ff] p-4">
             <div className="text-sm text-slate-600">เลขที่คำสั่งซื้อ</div>
             <div className="mt-1 font-semibold text-slate-950">{order.orderNumber}</div>
-            <div className="mt-3 text-sm text-slate-600">คงเหลือชำระ</div>
-            <div className="mt-1 text-2xl font-bold text-[#0052CC]">{formatCurrency(amount)}</div>
+            <div className="mt-3 rounded-xl bg-white p-3 text-slate-700 ring-1 ring-blue-100">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm">คงเหลือชำระ</span>
+                <span className="text-xl font-bold text-[#0052CC]">{formatCurrency(amount)}</span>
+              </div>
+            </div>
           </div>
         </section>
 
