@@ -118,7 +118,7 @@ export default async function AdminLoginPage({ searchParams }: AdminLoginPagePro
               name="username"
               type="text"
               autoComplete="username"
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[16px] outline-none transition placeholder:text-slate-400 focus:border-cyan-500 focus:bg-white focus:ring-4 focus:ring-cyan-100"
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[16px] text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-cyan-500 focus:bg-white focus:ring-4 focus:ring-cyan-100"
               placeholder="admin หรือ sales"
             />
             <p className="mt-1 text-xs leading-5 text-slate-500">
@@ -135,7 +135,7 @@ export default async function AdminLoginPage({ searchParams }: AdminLoginPagePro
               name="password"
               type="password"
               autoComplete="current-password"
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[16px] outline-none transition placeholder:text-slate-400 focus:border-cyan-500 focus:bg-white focus:ring-4 focus:ring-cyan-100"
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[16px] text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-cyan-500 focus:bg-white focus:ring-4 focus:ring-cyan-100"
               placeholder="กรอกรหัสผ่าน"
               required
             />

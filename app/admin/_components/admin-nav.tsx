@@ -23,6 +23,11 @@ function isActivePath(pathname: string, href: string, exact?: boolean) {
 
 export function AdminNav({ role }: { role: AdminRole }) {
   const pathname = usePathname() ?? '';
+
+  if (pathname === '/admin/login' || pathname.startsWith('/admin/login/')) {
+    return null;
+  }
+
   const visibleNavItems =
     role === 'sales'
       ? navItems.filter((item) => item.href === '/admin' || item.href === '/admin/leads')
