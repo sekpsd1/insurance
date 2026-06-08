@@ -110,8 +110,9 @@ async function getAdminSessionRole(token: string | undefined): Promise<AdminRole
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isLoginRoute = pathname === '/admin/login' || pathname.startsWith('/admin/login/');
+  const isLogoutRoute = pathname === '/admin/logout' || pathname.startsWith('/admin/logout/');
 
-  if (pathname.startsWith('/admin') && !isLoginRoute) {
+  if (pathname.startsWith('/admin') && !isLoginRoute && !isLogoutRoute) {
     const adminToken = request.cookies.get('admin_token')?.value;
     const role = await getAdminSessionRole(adminToken);
 
