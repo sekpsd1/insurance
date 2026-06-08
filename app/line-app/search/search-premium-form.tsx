@@ -274,7 +274,11 @@ export default function SearchPremiumForm({
   const [draftLoaded, setDraftLoaded] = useState(false);
   const isSeatBasedSelection = isSeatBasedVehicleType(sClass);
   const [leadError, setLeadError] = useState('');
+  const [isSearchSubmitting, setIsSearchSubmitting] = useState(false);
   const [isLeadPending, startLeadTransition] = useTransition();
+  const isSubmitting = isSearchSubmitting || isLeadPending;
+  const loadingTitle = coverage === '1' ? 'กำลังส่งคำขอใบเสนอราคา' : 'กำลังค้นหาแผนประกัน';
+  const loadingDescription = coverage === '1' ? 'กรุณารอสักครู่ ระบบกำลังบันทึกข้อมูลให้ทีมขาย' : 'กรุณารอสักครู่ ระบบกำลังตรวจสอบแคมเปญที่ตรงกับข้อมูลรถ';
   const hasInitialSearch = Boolean(
     initialSClass ||
       initialCoverage ||
@@ -785,6 +789,7 @@ export default function SearchPremiumForm({
       params.set('sumInsured', sumInsured);
     }
 
+    setIsSearchSubmitting(true);
     router.push(`/line-app?${params.toString()}`);
   }
 
@@ -1077,8 +1082,8 @@ export default function SearchPremiumForm({
           type="submit"
           disabled={
             coverage === '1'
-              ? !sClass || !coverage || !brand || !model || !year || !cubicCapacity || !leadCustomerName || !leadCustomerPhone || isLeadPending
-              : !sClass || !coverage || !repairType || !brand || !model || !year || !cubicCapacity || (coverage !== '3' && !sumInsured)
+              ? !sClass || !coverage || !brand || !model || !year || !cubicCapacity || !leadCustomerName || !leadCustomerPhone || isSubmitting
+              : isSubmitting || !sClass || !coverage || !repairType || !brand || !model || !year || !cubicCapacity || (coverage !== '3' && !sumInsured)
           }
           className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#0047BA] px-4 py-4 text-base font-semibold text-white shadow-[0_12px_30px_rgba(0,71,186,0.28)] transition hover:bg-[#003c9d] disabled:cursor-not-allowed disabled:bg-[#7f9fe0]"
         >
@@ -1086,7 +1091,7 @@ export default function SearchPremiumForm({
             <circle cx="11" cy="11" r="7" />
             <path strokeLinecap="round" strokeLinejoin="round" d="m20 20-3.5-3.5" />
           </svg>
-          {coverage === '1' ? (isLeadPending ? 'กำลังส่งคำขอ...' : 'ขอใบเสนอราคา') : 'ค้นหาแผนประกัน'}
+          {coverage === '1' ? (isLeadPending ? 'กำลังส่งคำขอ...' : 'ขอใบเสนอราคา') : isSearchSubmitting ? 'กำลังค้นหาแผน...' : 'ค้นหาแผนประกัน'}
         </button>
         {leadSuccessNumber ? (
           <p className="mt-3 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-semibold leading-6 text-emerald-700">
@@ -1100,6 +1105,19 @@ export default function SearchPremiumForm({
         ) : null}
       </div>
     </form>
+    {isSubmitting ? (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0b1220]/45 px-4 py-6 backdrop-blur-sm">
+        <div
+          role="status"
+          aria-live="polite"
+          className="w-full max-w-sm rounded-3xl bg-white p-6 text-center shadow-[0_24px_70px_rgba(4,16,61,0.25)] ring-1 ring-white/70"
+        >
+          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-[#dbe7ff] border-t-[#0047BA]" />
+          <h2 className="mt-4 text-xl font-bold text-[#071129]">{loadingTitle}</h2>
+          <p className="mt-2 text-sm leading-6 text-[#4b5265]">{loadingDescription}</p>
+        </div>
+      </div>
+    ) : null}
     {noCampaignModalOpen ? (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0b1220]/45 px-4 py-6 backdrop-blur-sm">
         <div

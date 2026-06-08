@@ -151,6 +151,7 @@ It also stores rating/search fields imported from insurer CSV rows:
 - Customer-facing zero sum-insured display text now says `ไม่คุ้มครอง` instead of `ไม่มีทุนประกัน` across search, results, cart, and compare views.
 - Search Premium no longer shows or requires the sum-insured selector for policy type 3; customers can search type 3 packages after choosing vehicle, repair, year, and engine details.
 - Search Premium now opens the `ไม่มีแคมเปญสำหรับรุ่นนี้ สามารถเลือกแผนอื่นได้` popup when policy type 2+, 3+, or 3 has no premium/campaign for the selected vehicle details.
+- Search Premium now shows a blocking loading popup while searching packages or submitting a Type 1 quote request, so customers see progress and cannot tap submit repeatedly during slow result loads.
 - Compare table now labels the package premium row as `เบี้ยประกัน` instead of `เบี้ยประกันราคาทุน`.
 - Results and cart plan cards now split the combined `ดูรายละเอียด / เลือกแผนนี้` action into separate `ดูรายละเอียด` and `เลือกแผนนี้` buttons.
 - Type 3 plan details now show `รถสูญหาย/ไฟไหม้` and `ความเสียหายต่อตัวรถ` as `ไม่คุ้มครอง`.
