@@ -65,6 +65,7 @@ type LineAppSearchParams = {
   sumInsured?: string;
   page?: string;
   ctpIds?: string | string[];
+  'liff.state'?: string;
 };
 
 type InsurancePackageRow = {
@@ -120,6 +121,20 @@ function normalizeSearchValue(value: string | string[] | undefined) {
   }
 
   return value?.trim() ?? "";
+}
+
+function normalizeLiffState(value: string | string[] | undefined) {
+  const normalized = normalizeSearchValue(value);
+
+  if (!normalized) {
+    return '';
+  }
+
+  try {
+    return decodeURIComponent(normalized);
+  } catch {
+    return normalized;
+  }
 }
 
 function normalizeVehicleSearchValue(value: string | string[] | undefined) {
@@ -390,6 +405,16 @@ export default async function LineAppPage({
   searchParams?: Promise<LineAppSearchParams>;
 }) {
   const resolvedSearchParams = (await searchParams) ?? {};
+  const liffState = normalizeLiffState(resolvedSearchParams['liff.state']);
+
+  if (liffState === '/tracking' || liffState.startsWith('/tracking/')) {
+    redirect(`/line-app${liffState}`);
+  }
+
+  if (liffState === '/line-app/tracking' || liffState.startsWith('/line-app/tracking/')) {
+    redirect(liffState);
+  }
+
   const sClass = normalizeSearchValue(resolvedSearchParams.sClass);
   const coverage = normalizeCoverageType(resolvedSearchParams.coverage);
   const repairType = normalizeRepairType(resolvedSearchParams.repairType);
