@@ -54,7 +54,7 @@ function timingSafeEqual(left: string, right: string) {
 }
 
 function getSalesAllowedPath(pathname: string) {
-  if (pathname === '/admin' || pathname.startsWith('/admin/leads')) {
+  if (pathname === '/admin') {
     return true;
   }
 

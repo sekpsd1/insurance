@@ -30,7 +30,7 @@ export function AdminNav({ role }: { role: AdminRole }) {
 
   const visibleNavItems =
     role === 'sales'
-      ? navItems.filter((item) => item.href === '/admin' || item.href === '/admin/leads')
+      ? navItems.filter((item) => item.href === '/admin')
       : navItems;
 
   return (

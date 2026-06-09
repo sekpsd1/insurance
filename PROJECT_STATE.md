@@ -197,7 +197,7 @@ It also stores rating/search fields imported from insurer CSV rows:
 
 ### Admin/Broker Flow
 
-- Admin login exists with cookie-based auth. Admin access still works with `ADMIN_PASSWORD`; optional `SALES_USERNAME`/`SALES_PASSWORD` creates a limited sales role that sees only Orders and Type 1 Leads navigation, while middleware blocks campaign/package/readiness routes. Admin header includes a logout action that clears `admin_token` and `admin_role`.
+- Admin login exists with cookie-based auth. Admin access still works with `ADMIN_PASSWORD`; optional `SALES_USERNAME`/`SALES_PASSWORD` creates a limited sales role that sees only Orders navigation, while middleware blocks Type 1 Leads, campaign/package/readiness routes, and provider email-preview routes. Admin header includes a logout action that clears `admin_token` and `admin_role`.
 - Admin order page has been shifted toward monitor/report behavior. The order list now shows payment amounts with two decimal places and keeps the provider email/Magic Link preview out of the main list actions; admins can still access Magic Link tools from the order detail page.
 - Campaign dashboard supports CSV import.
 - Campaign-level logo upload exists.
