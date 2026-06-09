@@ -192,6 +192,7 @@ It also stores rating/search fields imported from insurer CSV rows:
 - Provider Magic Links now remain usable after `POLICY_APPROVED` so insurers can continue the same link to `POLICY_ISSUED`; links are closed only after `POLICY_ISSUED` or `REJECTED`.
 - Success page shows order summary, payment method, and timeline.
 - Tracking page supports lookup and direct tracking by order number.
+- Tracking page now uses LIFF profile data to show the current customer's recent orders automatically, while keeping manual order-number lookup as a fallback for non-LINE sessions or older orders without a linked LINE profile.
 - Customer-facing selection/results/compare now use the four customer-requested policy type groups instead of exposing detailed DD/OD `covcod` labels.
 
 ### Admin/Broker Flow

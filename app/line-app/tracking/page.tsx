@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import { TrackingOrdersPanel } from './tracking-orders-panel';
 
 async function findOrder(formData: FormData) {
   'use server';
@@ -21,7 +22,9 @@ export default function TrackingSearchPage() {
             กรอกเลขที่คำสั่งซื้อเพื่อดูสถานะชำระเงินและสถานะกรมธรรม์ล่าสุด
           </p>
 
-          <form action={findOrder} className="mt-6 space-y-4">
+          <TrackingOrdersPanel />
+
+          <form action={findOrder} className="mt-6 space-y-4 border-t border-slate-100 pt-6">
             <div>
               <label htmlFor="orderNumber" className="mb-1 block text-sm font-medium text-slate-700">
                 เลขที่คำสั่งซื้อ
