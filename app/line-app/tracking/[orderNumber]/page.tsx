@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
+import { RememberTrackingOrder } from '@/app/line-app/_components/tracking-order-memory';
 import {
   getPaymentStatusLabel,
   getStatusHistoryMessageLabel,
@@ -71,6 +72,7 @@ export default async function TrackingDetailPage({ params }: TrackingPageProps) 
 
   return (
     <main className="min-h-screen bg-[#f4f7ff] px-4 py-8 text-[#101828]">
+      <RememberTrackingOrder orderNumber={order.orderNumber} />
       <div className="mx-auto flex max-w-md flex-col gap-4">
         <section className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#0052CC]">Order Tracking</p>

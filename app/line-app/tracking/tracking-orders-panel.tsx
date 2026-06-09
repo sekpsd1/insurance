@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { getOrderStatusLabel, getPaymentStatusLabel } from '@/lib/status-labels';
+import { TRACKING_ORDER_MEMORY_KEY } from '@/app/line-app/_components/tracking-order-memory';
 
 type LineProfile = {
   userId: string;
@@ -72,48 +73,101 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
+function readStoredOrderNumbers() {
+  try {
+    const rawValue = window.localStorage.getItem(TRACKING_ORDER_MEMORY_KEY);
+    const parsedValue = rawValue ? JSON.parse(rawValue) : [];
+    return Array.isArray(parsedValue) ? parsedValue.filter((value): value is string => typeof value === 'string' && value.trim().length > 0) : [];
+  } catch {
+    return [];
+  }
+}
+
+async function fetchTrackingOrders(lineId: string, orderNumbers: string[]) {
+  const params = new URLSearchParams();
+
+  if (lineId) {
+    params.set('lineId', lineId);
+  }
+
+  if (orderNumbers.length > 0) {
+    params.set('orderNumbers', orderNumbers.join(','));
+  }
+
+  if (!params.toString()) {
+    return [];
+  }
+
+  const response = await fetch(`/api/line-app/tracking/orders?${params.toString()}`, {
+    cache: 'no-store'
+  });
+
+  if (!response.ok) {
+    throw new Error('Tracking orders request failed');
+  }
+
+  const data = (await response.json()) as { orders?: CustomerOrder[] };
+  return data.orders ?? [];
+}
+
 export function TrackingOrdersPanel() {
   const [orders, setOrders] = useState<CustomerOrder[]>([]);
   const [status, setStatus] = useState<'loading' | 'loaded' | 'unavailable' | 'error'>('loading');
 
   useEffect(() => {
     const liffId = process.env.NEXT_PUBLIC_LIFF_ID?.trim();
+    const storedOrderNumbers = readStoredOrderNumbers();
 
-    if (!liffId) {
+    if (!liffId && storedOrderNumbers.length === 0) {
       setStatus('unavailable');
       return;
     }
 
     let cancelled = false;
 
+    const loadOrders = async (lineId = '') => {
+      const nextOrders = await fetchTrackingOrders(lineId, storedOrderNumbers);
+
+      if (!cancelled) {
+        setOrders(nextOrders);
+        setStatus('loaded');
+      }
+    };
+
+    if (!liffId) {
+      loadOrders().catch((error) => {
+        console.warn('[Tracking] stored order lookup failed', error);
+        if (!cancelled) {
+          setStatus('error');
+        }
+      });
+      return () => {
+        cancelled = true;
+      };
+    }
+
     loadLiffSdk()
       .then(async (liff) => {
         await liff.init({ liffId });
 
         if (!liff.isLoggedIn()) {
-          setStatus('unavailable');
+          await loadOrders();
           return;
         }
 
         const profile = await liff.getProfile();
-        const response = await fetch(`/api/line-app/tracking/orders?lineId=${encodeURIComponent(profile.userId)}`, {
-          cache: 'no-store'
-        });
-
-        if (!response.ok) {
-          throw new Error('Tracking orders request failed');
-        }
-
-        const data = (await response.json()) as { orders?: CustomerOrder[] };
-
-        if (!cancelled) {
-          setOrders(data.orders ?? []);
-          setStatus('loaded');
-        }
+        await loadOrders(profile.userId);
       })
       .catch((error) => {
         console.warn('[LIFF] tracking order lookup failed', error);
-        if (!cancelled) {
+        if (storedOrderNumbers.length > 0) {
+          loadOrders().catch((storedOrderError) => {
+            console.warn('[Tracking] stored order lookup failed', storedOrderError);
+            if (!cancelled) {
+              setStatus('error');
+            }
+          });
+        } else if (!cancelled) {
           setStatus('error');
         }
       });

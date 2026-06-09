@@ -17,23 +17,36 @@ function toPaymentAmount(order: {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const lineId = searchParams.get('lineId')?.trim();
+  const orderNumbers = Array.from(
+    new Set(
+      (searchParams.get('orderNumbers') ?? '')
+        .split(',')
+        .map((orderNumber) => orderNumber.trim())
+        .filter(Boolean)
+    )
+  ).slice(0, 20);
 
-  if (!lineId) {
+  if (!lineId && orderNumbers.length === 0) {
     return NextResponse.json({ orders: [] });
   }
 
-  const user = await prisma.user.findUnique({
-    where: { lineId },
-    select: { id: true }
-  });
+  const user = lineId
+    ? await prisma.user.findUnique({
+        where: { lineId },
+        select: { id: true }
+      })
+    : null;
 
-  if (!user) {
+  if (!user && orderNumbers.length === 0) {
     return NextResponse.json({ orders: [] });
   }
 
   const orders = await prisma.order.findMany({
     where: {
-      userId: user.id
+      OR: [
+        ...(user ? [{ userId: user.id }] : []),
+        ...(orderNumbers.length > 0 ? [{ orderNumber: { in: orderNumbers } }] : [])
+      ]
     },
     include: {
       pkg: {
