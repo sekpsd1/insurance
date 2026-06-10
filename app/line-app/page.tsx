@@ -137,6 +137,25 @@ function normalizeLiffState(value: string | string[] | undefined) {
   }
 }
 
+function getAllowedLiffRedirectPath(liffState: string) {
+  const allowedLineAppPrefixes = ['/line-app/tracking', '/line-app/cart', '/line-app/search'];
+  const allowedMiniAppPrefixes = ['/tracking', '/cart', '/search'];
+
+  for (const prefix of allowedLineAppPrefixes) {
+    if (liffState === prefix || liffState.startsWith(`${prefix}/`) || liffState.startsWith(`${prefix}?`)) {
+      return liffState;
+    }
+  }
+
+  for (const prefix of allowedMiniAppPrefixes) {
+    if (liffState === prefix || liffState.startsWith(`${prefix}/`) || liffState.startsWith(`${prefix}?`)) {
+      return `/line-app${liffState}`;
+    }
+  }
+
+  return '';
+}
+
 function normalizeVehicleSearchValue(value: string | string[] | undefined) {
   return normalizeSearchValue(value).toLocaleUpperCase('en-US');
 }
@@ -406,13 +425,10 @@ export default async function LineAppPage({
 }) {
   const resolvedSearchParams = (await searchParams) ?? {};
   const liffState = normalizeLiffState(resolvedSearchParams['liff.state']);
+  const liffRedirectPath = getAllowedLiffRedirectPath(liffState);
 
-  if (liffState === '/tracking' || liffState.startsWith('/tracking/')) {
-    redirect(`/line-app${liffState}`);
-  }
-
-  if (liffState === '/line-app/tracking' || liffState.startsWith('/line-app/tracking/')) {
-    redirect(liffState);
+  if (liffRedirectPath) {
+    redirect(liffRedirectPath);
   }
 
   const sClass = normalizeSearchValue(resolvedSearchParams.sClass);

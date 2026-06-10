@@ -138,6 +138,8 @@ It also stores rating/search fields imported from insurer CSV rows:
 - Search Premium sum-insured options now respect the selected repair type so customers do not select a sum insured that only exists under a different repair group.
 - Search Premium no longer shows the blue explanatory filter-info box above the submit button.
 - Search Premium autosaves the selected vehicle/policy filters and Type 1 lead contact inputs to localStorage so customers can reopen the LINE Mini App on the same device and continue.
+- Search Premium clears the saved vehicle/policy filter draft after a successful package search, so a fresh visit to `/line-app/search` starts blank for customers searching another car. Search/result URLs with query parameters still prefill the current search when users navigate back from results.
+- LINE Mini App `liff.state` redirects now allow `/cart` as well as tracking/search paths, so a Rich Menu button can open the saved cart directly via the published Mini App URL.
 - Results page supports pagination.
 - Result cards encode uploaded logo URLs before rendering and fall back to company text if the image cannot be loaded.
 - Result cards and compare table display repair type from `GarageCd` as `ซ่อมห้าง` or `ซ่อมอู่`.

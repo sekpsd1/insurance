@@ -184,6 +184,27 @@ function setStoredSearchDraft(draft: SearchPremiumDraft) {
   }
 }
 
+function clearStoredSearchFilterDraft(draft: Pick<SearchPremiumDraft, 'leadCustomerName' | 'leadCustomerPhone' | 'leadLineId' | 'leadEmail'>) {
+  try {
+    const nextDraft: SearchPremiumDraft = {
+      leadCustomerName: draft.leadCustomerName,
+      leadCustomerPhone: draft.leadCustomerPhone,
+      leadLineId: draft.leadLineId,
+      leadEmail: draft.leadEmail
+    };
+    const hasLeadDraft = Object.values(nextDraft).some(Boolean);
+
+    if (hasLeadDraft) {
+      window.localStorage.setItem(SEARCH_DRAFT_STORAGE_KEY, JSON.stringify(nextDraft));
+      return;
+    }
+
+    window.localStorage.removeItem(SEARCH_DRAFT_STORAGE_KEY);
+  } catch {
+    // Ignore storage failures so search navigation still works in restricted browsers.
+  }
+}
+
 function rowMatchesRegistrationYear(row: SearchPremiumOptionRow, year: string) {
   const carAge = getCarAgeFromRegistrationYear(year);
 
@@ -790,6 +811,12 @@ export default function SearchPremiumForm({
     }
 
     setIsSearchSubmitting(true);
+    clearStoredSearchFilterDraft({
+      leadCustomerName,
+      leadCustomerPhone,
+      leadLineId,
+      leadEmail
+    });
     router.push(`/line-app?${params.toString()}`);
   }
 
