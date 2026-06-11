@@ -137,8 +137,8 @@ It also stores rating/search fields imported from insurer CSV rows:
 - Type 1 quote request email now reads the editable admin sales recipient first, then falls back to `SALES_LEAD_EMAIL`.
 - Search Premium sum-insured options now respect the selected repair type so customers do not select a sum insured that only exists under a different repair group.
 - Search Premium no longer shows the blue explanatory filter-info box above the submit button.
-- Search Premium autosaves the selected vehicle/policy filters and Type 1 lead contact inputs to localStorage so customers can reopen the LINE Mini App on the same device and continue.
-- Search Premium clears the saved vehicle/policy filter draft after a successful package search, so a fresh visit to `/line-app/search` starts blank for customers searching another car. Search/result URLs with query parameters still prefill the current search when users navigate back from results.
+- Search Premium no longer restores saved vehicle/policy filters from localStorage, so a fresh visit to `/line-app/search` starts blank for customers searching another car. Search/result URLs with query parameters still prefill the current search when users navigate back from results. Type 1 lead contact inputs can still be preserved separately.
+- Search Premium includes a `กลับเมนู LINE` action that closes the LIFF window when available, giving customers a clear way back to the LINE/Rich Menu context.
 - LINE Mini App `liff.state` redirects now allow `/cart` as well as tracking/search paths, so a Rich Menu button can open the saved cart directly via the published Mini App URL.
 - Results page supports pagination.
 - Result cards encode uploaded logo URLs before rendering and fall back to company text if the image cannot be loaded.
@@ -149,7 +149,7 @@ It also stores rating/search fields imported from insurer CSV rows:
 - Results page now hides the extra result-summary/count blocks above the plan list and shows the plan cards before the quick-filter card so customers reach the payable section sooner while keeping the remaining payable box in its original position inside each plan card.
 - Results page now uses a compact blue header without the unused menu button and tighter top/card spacing so customers can see the remaining payable section sooner in LINE Mini App.
 - Results plan cards now use tighter padding, smaller detail icons, compact full-width vehicle-title text, and append registration year to the vehicle title to preserve space so more of the selected plan card is visible in the first mobile viewport.
-- Cart plan cards now match the compact results-card layout more closely, including the full-width brand/model/year title, smaller icons, tighter spacing, compact cost summary, and compact remaining-payable section. The cart header only shows the number of saved plans and no longer shows a combined remaining-payable total.
+- Cart plan cards now match the compact results-card layout more closely, including the full-width brand/model/year title, smaller icons, tighter spacing, compact cost summary, and compact remaining-payable section. The cart header only shows the number of saved plans and no longer shows a combined remaining-payable total. Opening `/line-app/cart` without query IDs now reads saved cart IDs from localStorage and redirects to the populated cart URL, so Rich Menu cart links can show the customer's saved plans.
 - Customer-facing zero sum-insured display text now says `ไม่คุ้มครอง` instead of `ไม่มีทุนประกัน` across search, results, cart, and compare views.
 - Search Premium no longer shows or requires the sum-insured selector for policy type 3; customers can search type 3 packages after choosing vehicle, repair, year, and engine details.
 - Search Premium now opens the `ไม่มีแคมเปญสำหรับรุ่นนี้ สามารถเลือกแผนอื่นได้` popup when policy type 2+, 3+, or 3 has no premium/campaign for the selected vehicle details.

@@ -234,6 +234,7 @@ type LiffClient = {
   init: (config: { liffId: string }) => Promise<void>;
   isLoggedIn: () => boolean;
   getProfile: () => Promise<LiffProfile>;
+  closeWindow?: () => void;
 };
 
 const LIFF_SDK_URL = 'https://static.line-scdn.net/liff/edge/2/sdk.js';
@@ -342,14 +343,6 @@ export default function SearchPremiumForm({
     const draft = getStoredSearchDraft();
 
     if (draft) {
-      setSClass(draft.sClass ?? '');
-      setCoverage(normalizeCoverage(draft.coverage));
-      setRepairType(normalizeRepairType(draft.repairType));
-      setBrand(draft.brand ?? '');
-      setModel(draft.model ?? '');
-      setYear(draft.year ?? '');
-      setCubicCapacity(draft.cubicCapacity ?? '');
-      setSumInsured(draft.sumInsured ?? '');
       setLeadCustomerName(draft.leadCustomerName ?? '');
       setLeadCustomerPhone(draft.leadCustomerPhone ?? '');
       setLeadLineId(draft.leadLineId ?? '');
@@ -365,33 +358,17 @@ export default function SearchPremiumForm({
     }
 
     setStoredSearchDraft({
-      sClass,
-      coverage,
-      repairType,
-      brand,
-      model,
-      year,
-      cubicCapacity,
-      sumInsured,
       leadCustomerName,
       leadCustomerPhone,
       leadLineId,
       leadEmail
     });
   }, [
-    brand,
-    coverage,
-    cubicCapacity,
     draftLoaded,
     leadCustomerName,
     leadCustomerPhone,
     leadEmail,
-    leadLineId,
-    model,
-    repairType,
-    sClass,
-    sumInsured,
-    year
+    leadLineId
   ]);
 
   const vehicleSelectionRows = useMemo(() => {
@@ -820,9 +797,42 @@ export default function SearchPremiumForm({
     router.push(`/line-app?${params.toString()}`);
   }
 
+  function handleCloseToLineMenu() {
+    const liffId = process.env.NEXT_PUBLIC_LIFF_ID?.trim();
+
+    if (!liffId) {
+      window.history.back();
+      return;
+    }
+
+    loadLiffSdk()
+      .then(async (liff) => {
+        await liff.init({ liffId });
+
+        if (typeof liff.closeWindow === 'function') {
+          liff.closeWindow();
+          return;
+        }
+
+        window.history.back();
+      })
+      .catch(() => {
+        window.history.back();
+      });
+  }
+
   return (
     <>
     <form onSubmit={handleSubmit} className="mt-6 rounded-3xl bg-white p-5 shadow-[0_10px_30px_rgba(4,16,61,0.08)] ring-1 ring-white/70">
+      <div className="mb-5 flex justify-end">
+        <button
+          type="button"
+          onClick={handleCloseToLineMenu}
+          className="rounded-full border border-[#cfd8ff] bg-white px-4 py-2 text-sm font-semibold text-[#0052CC] shadow-sm transition hover:bg-[#eef3ff]"
+        >
+          กลับเมนู LINE
+        </button>
+      </div>
       <div className="space-y-5">
         <div>
           <label htmlFor="sClass" className="mb-2 block text-base font-semibold text-[#12131a]">

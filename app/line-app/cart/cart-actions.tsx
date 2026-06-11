@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 const CART_STORAGE_KEY = 'insurance.cartPackageIds';
 const CART_CTP_STORAGE_KEY = 'insurance.cartCtpPackageIds';
@@ -26,6 +27,54 @@ type CartPlanActionsProps = {
   formHref: string;
   coverageDetailRows: CoverageDetailRow[];
 };
+
+function getStoredStringList(key: string) {
+  try {
+    const rawValue = window.localStorage.getItem(key);
+    const parsed = rawValue ? JSON.parse(rawValue) : [];
+
+    return Array.isArray(parsed) ? parsed.filter((value): value is string => typeof value === 'string') : [];
+  } catch {
+    window.localStorage.removeItem(key);
+    return [];
+  }
+}
+
+export function CartStorageHydrator() {
+  const router = useRouter();
+  const [isChecking, setIsChecking] = useState(true);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+
+    if (params.has('ids')) {
+      setIsChecking(false);
+      return;
+    }
+
+    const storedIds = getStoredStringList(CART_STORAGE_KEY);
+    const storedCtpIds = getStoredStringList(CART_CTP_STORAGE_KEY).filter((id) => storedIds.includes(id));
+
+    if (storedIds.length > 0) {
+      storedIds.forEach((id) => params.append('ids', id));
+      storedCtpIds.forEach((id) => params.append('ctpIds', id));
+      router.replace(`/line-app/cart?${params.toString()}`);
+      return;
+    }
+
+    setIsChecking(false);
+  }, [router]);
+
+  if (!isChecking) {
+    return null;
+  }
+
+  return (
+    <section className="rounded-3xl bg-white p-5 text-center text-sm font-semibold text-[#0052CC] shadow-[0_10px_30px_rgba(4,16,61,0.08)] ring-1 ring-white/70">
+      กำลังเปิดตะกร้าที่บันทึกไว้...
+    </section>
+  );
+}
 
 export function RemoveCartPackageButton({
   href,

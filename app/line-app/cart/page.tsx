@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getCustomerCtpOptionsBySClass } from '@/lib/ctp-rates';
-import { CartPlanActions, ClearCartButton, RemoveCartPackageButton } from './cart-actions';
+import { CartPlanActions, CartStorageHydrator, ClearCartButton, RemoveCartPackageButton } from './cart-actions';
 
 type CartSearchParams = {
   sClass?: string;
@@ -460,6 +460,8 @@ export default async function CartPage({
       </header>
 
       <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 py-6">
+        {selectedIds.length === 0 ? <CartStorageHydrator /> : null}
+
         <section className="rounded-3xl bg-white p-5 shadow-[0_10px_30px_rgba(4,16,61,0.08)] ring-1 ring-white/70">
           <div>
             <div>
