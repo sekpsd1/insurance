@@ -1,8 +1,10 @@
 import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
 import {
+  addBusinessHoliday,
   deleteInsuranceCampaignLogo,
   deleteInsuranceCampaignPaymentQr,
+  deleteBusinessHoliday,
   deleteInsuranceCampaign,
   importInsuranceCampaign,
   updateCtpRate,
@@ -84,10 +86,15 @@ async function getInsuranceDashboardStats() {
 }
 
 export default async function InsuranceCampaignAdminPage() {
-  const [{ campaignSummaries, companySummaries, packageCount, companyCount, premiumAudit }, ctpRates, salesLeadEmail] = await Promise.all([
+  const [{ campaignSummaries, companySummaries, packageCount, companyCount, premiumAudit }, ctpRates, salesLeadEmail, businessHolidays] = await Promise.all([
     getInsuranceDashboardStats(),
     getAdminCtpRates(),
-    getSalesLeadEmailSetting()
+    getSalesLeadEmailSetting(),
+    prisma.businessHoliday.findMany({
+      orderBy: {
+        date: 'asc'
+      }
+    })
   ]);
 
   return (
@@ -316,6 +323,61 @@ export default async function InsuranceCampaignAdminPage() {
               </button>
             </form>
           ))}
+        </div>
+      </div>
+
+      <div className="mb-8 rounded-3xl border border-white/10 bg-white p-5 shadow-2xl shadow-black/10">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-700">CTP Holidays</p>
+            <h3 className="mt-1 text-lg font-semibold text-slate-950">วันหยุดที่ไม่ให้เลือกวันคุ้มครอง พ.ร.บ.</h3>
+            <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-500">
+              ใช้ล็อกวันที่ลูกค้าเลือก พ.ร.บ. เพิ่มเติม นอกเหนือจากวันเสาร์-อาทิตย์ และเงื่อนไขหลัง 16:00
+            </p>
+          </div>
+          <form action={addBusinessHoliday} className="grid w-full gap-3 lg:max-w-xl lg:grid-cols-[180px_1fr_auto]">
+            <input
+              name="holidayDate"
+              type="date"
+              required
+              className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
+            />
+            <input
+              name="holidayLabel"
+              type="text"
+              placeholder="ชื่อวันหยุด เช่น วันหยุดธนาคาร"
+              className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
+            />
+            <button
+              type="submit"
+              className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-700"
+            >
+              เพิ่มวันหยุด
+            </button>
+          </form>
+        </div>
+
+        <div className="mt-5 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+          {businessHolidays.length === 0 ? (
+            <p className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-500 md:col-span-2 lg:col-span-3">
+              ยังไม่มีวันหยุดเพิ่มเติม
+            </p>
+          ) : (
+            businessHolidays.map((holiday) => (
+              <div key={holiday.id} className="flex items-center justify-between gap-3 rounded-2xl bg-slate-50 p-4">
+                <div>
+                  <div className="text-sm font-bold text-slate-950">{holiday.date.toLocaleDateString('th-TH')}</div>
+                  <div className="mt-1 text-xs text-slate-500">{holiday.label || 'วันหยุด'}</div>
+                </div>
+                <form action={deleteBusinessHoliday}>
+                  <input type="hidden" name="holidayId" value={holiday.id} />
+                  <button type="submit" className="rounded-xl border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50">
+                    ลบ
+                  </button>
+                </form>
+              </div>
+            ))
+          )}
         </div>
       </div>
 

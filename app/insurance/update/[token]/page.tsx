@@ -26,6 +26,10 @@ function formatCurrency(value: number | null | undefined) {
   }).format(value ?? 0);
 }
 
+function formatDate(value: Date | null | undefined) {
+  return value ? value.toLocaleDateString('th-TH') : '-';
+}
+
 function getFullAddress(order: {
   customerAddress: string | null;
   subDistrict: string | null;
@@ -99,6 +103,10 @@ export default async function InsurerUpdatePage({ params, searchParams }: Insure
   const customerPhone = order.customerPhone ?? order.user.phone ?? '-';
   const vehicle = [order.carBrand, order.carModel, order.carYear].filter(Boolean).join(' / ') || '-';
   const plate = [order.plateNumber, order.plateProvince].filter(Boolean).join(' ') || '-';
+  const deliveryAddress =
+    order.deliveryAddressMode === 'other'
+      ? [order.deliveryRecipientName, order.deliveryRecipientPhone, order.deliveryAddress].filter(Boolean).join(' / ')
+      : getFullAddress(order);
   const providerName = order.pkg.providerName ?? order.pkg.company;
   const isFinalStatus = order.status === 'POLICY_ISSUED' || order.status === 'REJECTED';
   const isMagicLinkUsed = Boolean(magicToken.usedAt && isFinalStatus);
@@ -146,7 +154,7 @@ export default async function InsurerUpdatePage({ params, searchParams }: Insure
               <div className="mt-2 text-xs text-slate-500">เลขบัตรประชาชน: {order.idCardNumber ?? '-'}</div>
             </div>
             <div className="rounded-2xl bg-slate-50 p-4">
-              <div className="text-slate-500">ที่อยู่จัดส่งเอกสาร</div>
+              <div className="text-slate-500">ที่อยู่ผู้เอาประกัน</div>
               <div className="mt-1 leading-6 text-slate-700">{getFullAddress(order)}</div>
             </div>
 
@@ -154,15 +162,22 @@ export default async function InsurerUpdatePage({ params, searchParams }: Insure
               <div className="text-slate-500">ข้อมูลรถยนต์</div>
               <div className="mt-1 font-semibold text-slate-950">{vehicle}</div>
               <div className="mt-1 text-slate-600">ทะเบียน {plate}</div>
-              <div className="mt-1 text-slate-600">
-                วันที่เริ่มคุ้มครอง: {order.policyStartDate ? order.policyStartDate.toLocaleDateString('th-TH') : '-'}
-              </div>
+              <div className="mt-1 text-slate-600">เลขตัวถัง: {order.chassisNumber ?? '-'}</div>
+              <div className="mt-1 text-slate-600">วันที่เริ่มคุ้มครองภาคสมัครใจ: {formatDate(order.policyStartDate)}</div>
+              {order.ctpSelected ? (
+                <div className="mt-1 text-slate-600">วันที่เริ่มคุ้มครอง พ.ร.บ.: {formatDate(order.ctpPolicyStartDate)}</div>
+              ) : null}
             </div>
             <div className="rounded-2xl bg-slate-50 p-4">
               <div className="text-slate-500">บริษัทประกัน</div>
               <div className="mt-1 font-semibold text-slate-950">{providerName}</div>
               <div className="mt-1 text-slate-600">{order.pkg.providerContactName ?? '-'}</div>
               <div className="mt-1 text-slate-600">{order.pkg.providerPhone ?? '-'}</div>
+            </div>
+
+            <div className="rounded-2xl bg-slate-50 p-4 sm:col-span-2">
+              <div className="text-slate-500">ที่อยู่จัดส่งกรมธรรม์</div>
+              <div className="mt-1 leading-6 text-slate-700">{deliveryAddress || '-'}</div>
             </div>
 
             <div className="rounded-2xl bg-slate-50 p-4 sm:col-span-2">
@@ -235,6 +250,35 @@ export default async function InsurerUpdatePage({ params, searchParams }: Insure
                 ) : null}
               </div>
             </div>
+
+            <div className="rounded-2xl bg-slate-50 p-4 sm:col-span-2">
+              <div className="text-slate-500">เอกสารและกรมธรรม์</div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {order.vehicleDocumentUrl ? (
+                  <a
+                    href={order.vehicleDocumentUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex rounded-xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white"
+                  >
+                    เปิด{order.vehicleDocumentType ?? 'เอกสารรถ'}
+                  </a>
+                ) : (
+                  <span className="text-sm text-slate-500">ยังไม่มีเอกสารรถ</span>
+                )}
+                {order.policyPdfUrl ? (
+                  <a
+                    href={order.policyPdfUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white"
+                  >
+                    เปิด PDF กรมธรรม์
+                  </a>
+                ) : null}
+              </div>
+              {order.policyNumber ? <div className="mt-2 text-sm font-semibold text-slate-700">เลขกรมธรรม์: {order.policyNumber}</div> : null}
+            </div>
           </div>
         </section>
 
@@ -250,7 +294,7 @@ export default async function InsurerUpdatePage({ params, searchParams }: Insure
               {magicToken.usedAt ? <span className="mt-1 block">บันทึกเมื่อ {magicToken.usedAt.toLocaleString('th-TH')}</span> : null}
             </div>
           ) : (
-          <form action={updateOrderFromMagicLink} className="mt-5 space-y-4">
+          <form action={updateOrderFromMagicLink} encType="multipart/form-data" className="mt-5 space-y-4">
             <input type="hidden" name="token" value={decodedToken} />
 
             <div>
@@ -282,6 +326,36 @@ export default async function InsurerUpdatePage({ params, searchParams }: Insure
                 <option value="POLICY_ISSUED">ออกกรมธรรม์แล้ว</option>
                 <option value="REJECTED">ไม่อนุมัติ / ขอปฏิเสธ</option>
               </select>
+            </div>
+
+            <div>
+              <label htmlFor="policyNumber" className="mb-1 block text-sm font-semibold text-slate-700">
+                เลขกรมธรรม์
+              </label>
+              <input
+                id="policyNumber"
+                name="policyNumber"
+                type="text"
+                defaultValue={order.policyNumber ?? ''}
+                placeholder="กรอกเลขกรมธรรม์เมื่อทราบ"
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[16px] outline-none focus:border-[#0052CC] focus:bg-white focus:ring-4 focus:ring-blue-100"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="policyPdfFile" className="mb-1 block text-sm font-semibold text-slate-700">
+                แนบ PDF กรมธรรม์
+              </label>
+              <input
+                id="policyPdfFile"
+                name="policyPdfFile"
+                type="file"
+                accept="application/pdf"
+                className="w-full rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm outline-none file:mr-3 file:rounded-xl file:border-0 file:bg-[#0052CC] file:px-3 file:py-2 file:font-semibold file:text-white focus:border-[#0052CC] focus:bg-white focus:ring-4 focus:ring-blue-100"
+              />
+              <p className="mt-2 text-xs leading-5 text-slate-500">
+                ต้องแนบ PDF ก่อนบันทึกสถานะ “ออกกรมธรรม์แล้ว”
+              </p>
             </div>
 
             <div>

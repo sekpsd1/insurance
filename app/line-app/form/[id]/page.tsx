@@ -5,7 +5,7 @@ import type { Metadata } from 'next';
 import { createPolicyDraftOrder } from '@/lib/actions';
 import { isCtpSelected } from '@/lib/ctp';
 import { getCtpOptionForSClass } from '@/lib/ctp-rates';
-import { PolicyFormDraftAutosave } from './policy-form-draft-autosave';
+import { PolicyFormDraftAutosave, PolicyFormEnhancements } from './policy-form-draft-autosave';
 
 type FormPageProps = {
   params: Promise<{ id: string }>;
@@ -83,6 +83,35 @@ function Field({
   );
 }
 
+function FileField({
+  label,
+  name,
+  accept,
+  helper
+}: {
+  label: string;
+  name: string;
+  accept: string;
+  helper?: string;
+}) {
+  return (
+    <div>
+      <label htmlFor={name} className="mb-2 block text-[14px] font-bold text-[#2f3442]">
+        {label}
+      </label>
+      <input
+        id={name}
+        name={name}
+        type="file"
+        accept={accept}
+        required
+        className="w-full rounded-md border border-dashed border-slate-300 bg-white px-3.5 py-3 text-[13px] font-semibold text-slate-700 shadow-sm outline-none file:mr-3 file:rounded-md file:border-0 file:bg-[#0648ad] file:px-3 file:py-2 file:text-sm file:font-bold file:text-white focus:border-[#0b58c6] focus:ring-4 focus:ring-blue-100"
+      />
+      {helper ? <p className="mt-2 text-xs leading-5 text-slate-500">{helper}</p> : null}
+    </div>
+  );
+}
+
 function SectionCard({
   icon,
   title,
@@ -138,6 +167,10 @@ function buildResultsHref(searchParams: Awaited<NonNullable<FormPageProps['searc
   return query ? `/line-app?${query}` : '/line-app';
 }
 
+function toDateKey(value: Date) {
+  return value.toISOString().slice(0, 10);
+}
+
 export default async function PackageFormPage({ params, searchParams }: FormPageProps) {
   const { id: packageId } = await params;
   const resolvedSearchParams = (await searchParams) ?? {};
@@ -150,8 +183,20 @@ export default async function PackageFormPage({ params, searchParams }: FormPage
     notFound();
   }
 
-  const ctpOption = await getCtpOptionForSClass(packageItem.sClass);
+  const [ctpOption, businessHolidays] = await Promise.all([
+    getCtpOptionForSClass(packageItem.sClass),
+    prisma.businessHoliday.findMany({
+      orderBy: {
+        date: 'asc'
+      },
+      select: {
+        date: true
+      }
+    })
+  ]);
   const includeCtp = isCtpSelected(resolvedSearchParams.includeCtp) && Boolean(ctpOption);
+  const holidayDates = businessHolidays.map((holiday) => toDateKey(holiday.date));
+  const selectedCarYear = normalizeSearchValue(resolvedSearchParams.year) || packageItem.year || '';
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-[#f7f9ff] via-[#f3f6ff] to-white pb-6 text-[#101828]">
@@ -170,24 +215,62 @@ export default async function PackageFormPage({ params, searchParams }: FormPage
         </div>
       </header>
 
-      <form id="policy-info-form" action={createPolicyDraftOrder} className="mx-auto flex max-w-md flex-col gap-5 px-4 pb-28 pt-5 sm:px-6">
+      <form id="policy-info-form" action={createPolicyDraftOrder} encType="multipart/form-data" className="mx-auto flex max-w-md flex-col gap-5 px-4 pb-28 pt-5 sm:px-6">
         <PolicyFormDraftAutosave formId="policy-info-form" />
+        <PolicyFormEnhancements formId="policy-info-form" includeCtp={includeCtp} holidayDates={holidayDates} />
         <input type="hidden" name="packageId" value={packageItem.id} />
         <input type="hidden" name="carBrand" value={packageItem.brand ?? ''} />
         <input type="hidden" name="carModel" value={packageItem.model ?? ''} />
-        <input type="hidden" name="carYear" value={packageItem.year ?? ''} />
+        <input type="hidden" name="carYear" value={selectedCarYear} />
         {includeCtp ? <input type="hidden" name="includeCtp" value="1" /> : null}
 
         <SectionCard icon="person" title="ข้อมูลส่วนตัว">
           <Field label="ชื่อ - นามสกุล" name="customerName" placeholder="ระบุชื่อและนามสกุลตามบัตรประชาชน" />
           <Field label="เบอร์โทรศัพท์" name="customerPhone" placeholder="08X-XXX-XXXX" type="tel" inputMode="tel" />
           <Field label="อีเมล" name="customerEmail" placeholder="name@example.com" type="email" required={false} />
+          <Field label="เลขบัตรประชาชน" name="idCardNumber" placeholder="กรอกเลขบัตรประชาชน 13 หลัก" inputMode="numeric" />
           <Field
-            label="ที่อยู่สำหรับจัดส่งเอกสาร"
+            label="ที่อยู่ผู้เอาประกัน"
             name="customerAddress"
             placeholder="บ้านเลขที่, ซอย, ถนน, ตำบล, อำเภอ, จังหวัด, รหัสไปรษณีย์"
             multiline
           />
+        </SectionCard>
+
+        <SectionCard icon="person" title="วันที่คุ้มครอง">
+          <Field label="วันที่เริ่มคุ้มครองภาคสมัครใจ" name="policyStartDate" placeholder="" type="date" />
+          {includeCtp ? (
+            <>
+              <Field label="วันที่เริ่มคุ้มครอง พ.ร.บ." name="ctpPolicyStartDate" placeholder="" type="date" />
+              <p className="rounded-md bg-amber-50 px-3 py-2 text-[12px] font-semibold leading-5 text-amber-800 ring-1 ring-amber-100">
+                หากเริ่มคุ้มครองภายในวันที่สั่งซื้อ ระบบจะล็อกหลังเวลา 16:00 วันเสาร์-อาทิตย์ และวันหยุดสถาบันการเงิน แต่การเลือกวันล่วงหน้าสามารถทำได้
+              </p>
+            </>
+          ) : null}
+        </SectionCard>
+
+        <SectionCard icon="person" title="ที่อยู่จัดส่งกรมธรรม์">
+          <div className="grid grid-cols-1 gap-3 text-[14px] font-bold text-slate-800">
+            <label className="flex items-center gap-3 rounded-md border border-slate-200 bg-white px-3.5 py-3">
+              <input type="radio" name="deliveryAddressMode" value="same" defaultChecked className="h-4 w-4 accent-[#0648ad]" />
+              ที่อยู่เดียวกับผู้เอาประกัน
+            </label>
+            <label className="flex items-center gap-3 rounded-md border border-slate-200 bg-white px-3.5 py-3">
+              <input type="radio" name="deliveryAddressMode" value="other" className="h-4 w-4 accent-[#0648ad]" />
+              ใช้ที่อยู่อื่น
+            </label>
+          </div>
+          <div data-delivery-other-section className="space-y-4">
+            <Field label="ชื่อผู้รับเอกสาร" name="deliveryRecipientName" placeholder="ชื่อ - นามสกุลผู้รับเอกสาร" required={false} />
+            <Field label="เบอร์โทรผู้รับเอกสาร" name="deliveryRecipientPhone" placeholder="08X-XXX-XXXX" type="tel" inputMode="tel" required={false} />
+            <Field
+              label="ที่อยู่จัดส่งเอกสาร"
+              name="deliveryAddress"
+              placeholder="บ้านเลขที่, ซอย, ถนน, ตำบล, อำเภอ, จังหวัด, รหัสไปรษณีย์"
+              required={false}
+              multiline
+            />
+          </div>
         </SectionCard>
 
         <SectionCard icon="car" title="ข้อมูลรถยนต์">
@@ -234,6 +317,36 @@ export default async function PackageFormPage({ params, searchParams }: FormPage
               </svg>
             </div>
           </div>
+          <Field label="เลขตัวถัง" name="chassisNumber" placeholder="กรอกเลขตัวถังรถ" />
+          <div>
+            <label htmlFor="vehicleDocumentType" className="mb-2 block text-[14px] font-bold text-[#2f3442]">
+              เอกสารรถที่แนบ
+            </label>
+            <div className="relative">
+              <select
+                id="vehicleDocumentType"
+                name="vehicleDocumentType"
+                required
+                defaultValue=""
+                className="h-11 w-full appearance-none rounded-md border border-slate-200 bg-white px-3.5 pr-11 text-[14px] font-semibold text-slate-900 shadow-sm outline-none transition focus:border-[#0b58c6] focus:ring-4 focus:ring-blue-100"
+              >
+                <option value="" disabled>
+                  เลือกเอกสารที่แนบ
+                </option>
+                <option value="สำเนาทะเบียนรถ">สำเนาทะเบียนรถ</option>
+                <option value="กรมธรรม์เดิม">กรมธรรม์เดิม</option>
+              </select>
+              <svg viewBox="0 0 24 24" className="pointer-events-none absolute right-4 top-1/2 h-6 w-6 -translate-y-1/2 text-[#4f5564]" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m6 9 6 6 6-6" />
+              </svg>
+            </div>
+          </div>
+          <FileField
+            label="แนบไฟล์เอกสารรถ"
+            name="vehicleDocumentFile"
+            accept="image/png,image/jpeg,image/webp,image/gif,application/pdf"
+            helper="แนบสำเนาทะเบียนรถหรือกรมธรรม์เดิมอย่างใดอย่างหนึ่ง รองรับรูปภาพและ PDF"
+          />
         </SectionCard>
 
         <div className="fixed inset-x-0 bottom-0 z-10 border-t border-slate-200/80 bg-white/90 px-4 py-4 shadow-[0_-14px_30px_rgba(15,23,42,0.08)] backdrop-blur">

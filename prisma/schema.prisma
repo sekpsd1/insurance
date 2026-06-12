@@ -51,6 +51,14 @@ model SystemSetting {
   updatedAt DateTime @updatedAt
 }
 
+model BusinessHoliday {
+  id        String   @id @default(uuid())
+  date      DateTime @unique
+  label     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model InsurancePackage {
   id                   String   @id @default(uuid())
   name                 String
@@ -131,12 +139,20 @@ model Order {
   postalCode      String?
   idCardNumber    String?
 
-  carBrand        String?
-  carModel        String?
-  carYear         Int?
-  plateNumber     String?
-  plateProvince   String?
-  policyStartDate DateTime?
+  carBrand               String?
+  carModel               String?
+  carYear                Int?
+  plateNumber            String?
+  plateProvince          String?
+  chassisNumber          String?
+  policyStartDate        DateTime?
+  ctpPolicyStartDate     DateTime?
+  deliveryAddressMode    String?
+  deliveryRecipientName  String?
+  deliveryRecipientPhone String?
+  deliveryAddress        String?   @db.Text
+  vehicleDocumentUrl     String?
+  vehicleDocumentType    String?
 
   paymentMethod      String?
   paymentStatus      String    @default("UNPAID")
@@ -152,15 +168,18 @@ model Order {
   gatewayUrl         String?
   paidAt             DateTime?
 
-  trackingNumber   String?
-  insurerStatus    String?
-  insurerNote      String?              @db.Text
-  insurerUpdatedAt DateTime?
-  statusHistory    OrderStatusHistory[]
-  magicLinks       MagicLinkToken[]
-  emailOutbox      EmailOutbox[]
-  createdAt        DateTime             @default(now())
-  updatedAt        DateTime             @updatedAt
+  trackingNumber      String?
+  insurerStatus       String?
+  insurerNote         String?              @db.Text
+  insurerUpdatedAt    DateTime?
+  policyNumber        String?
+  policyPdfUrl        String?
+  policyPdfUploadedAt DateTime?
+  statusHistory       OrderStatusHistory[]
+  magicLinks          MagicLinkToken[]
+  emailOutbox         EmailOutbox[]
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
 
   @@index([status])
   @@index([paymentStatus])

@@ -1,6 +1,6 @@
 # Project State
 
-Last updated: 2026-06-08
+Last updated: 2026-06-12
 
 ## Current Architecture
 
@@ -105,6 +105,15 @@ It also stores rating/search fields imported from insurer CSV rows:
 
 ### Customer Flow
 
+- Policy Info page now follows the customer-supplied insurance notification Excel more closely:
+  - Requires ID card number, insured address, chassis number, voluntary policy start date, and one vehicle document attachment.
+  - Supports separate CTP/CMI policy start date when the customer selected CTP/CMI.
+  - Hides the CTP/CMI policy start date when no CTP/CMI was selected.
+  - Lets customers choose policy delivery address as same as insured address or another delivery address.
+  - Accepts vehicle document uploads as image or PDF.
+  - Autosaves the new draft fields where possible; file uploads still require reselecting the file after reopening the form.
+- CTP/CMI policy start date selection now blocks same-day coverage only when the purchase day is after 16:00, Saturday/Sunday, or a configured admin holiday; future coverage dates remain selectable.
+
 - Search Premium page loads real brand/model/year options from DB.
 - Opening `/line-app` without search query parameters now redirects to `/line-app/search` so customers start from the vehicle search form instead of seeing the unfiltered package list.
 - Search Premium now filters by insurer vehicle class (`SClass`) and selected sum insured (`MinSI`/`MaxSI`).
@@ -200,7 +209,10 @@ It also stores rating/search fields imported from insurer CSV rows:
 ### Admin/Broker Flow
 
 - Admin login exists with cookie-based auth. Admin access still works with `ADMIN_PASSWORD`; optional `SALES_USERNAME`/`SALES_PASSWORD` creates a limited sales role that sees only Orders navigation, while middleware blocks Type 1 Leads, campaign/package/readiness routes, and provider email-preview routes. Admin header includes a logout action that clears `admin_token` and `admin_role`.
+- Admin insurance dashboard now includes a CTP holiday manager so staff can add/remove extra bank holidays that should be blocked for CTP/CMI start-date selection.
 - Admin order page has been shifted toward monitor/report behavior. The order list now shows payment amounts with two decimal places and keeps the provider email/Magic Link preview out of the main list actions; admins can still access Magic Link tools from the order detail page.
+- Admin order detail now shows the new policy info fields: chassis number, policy start dates, delivery address, vehicle document link, policy number, and policy PDF link when available.
+- Admin order CSV export now includes policy report fields for ID card, insured address, chassis number, coverage dates, delivery address, vehicle document URL, policy number, and policy PDF URL.
 - Campaign dashboard supports CSV import.
 - Campaign-level logo upload exists.
 - Package management page exists for package search/edit.
@@ -214,6 +226,7 @@ It also stores rating/search fields imported from insurer CSV rows:
 - Magic Link token model exists.
 - Magic Link token generation exists.
 - Provider update page exists at `/insurance/update/[token]`.
+- Provider Magic Link can now collect policy number and PDF policy attachment; PDF is required before marking an order as `POLICY_ISSUED`.
 - Provider update page shows full order detail before status update:
   - customer contact and address
   - ID card number when present

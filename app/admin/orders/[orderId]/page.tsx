@@ -103,6 +103,13 @@ export default async function AdminOrderDetailPage({ params }: AdminOrderDetailP
   const customerPhone = order.customerPhone ?? order.user.phone ?? '-';
   const vehicle = [order.carBrand, order.carModel, order.carYear].filter(Boolean).join(' / ') || '-';
   const plate = [order.plateNumber, order.plateProvince].filter(Boolean).join(' ') || '-';
+  const customerAddress = [order.customerAddress, order.subDistrict, order.district, order.province, order.postalCode]
+    .filter(Boolean)
+    .join(' ') || '-';
+  const deliveryAddress =
+    order.deliveryAddressMode === 'other'
+      ? [order.deliveryRecipientName, order.deliveryRecipientPhone, order.deliveryAddress].filter(Boolean).join(' / ')
+      : customerAddress;
 
   return (
     <section className="mx-auto w-full max-w-[1800px] px-4 py-8 sm:px-6 lg:px-8">
@@ -172,13 +179,44 @@ export default async function AdminOrderDetailPage({ params }: AdminOrderDetailP
               <InfoItem label="เลขบัตรประชาชน" value={order.idCardNumber ?? '-'} />
               <InfoItem label="รถยนต์" value={vehicle} />
               <InfoItem label="ทะเบียน" value={plate} />
+              <InfoItem label="เลขตัวถัง" value={order.chassisNumber ?? '-'} />
+              <InfoItem label="เริ่มคุ้มครองภาคสมัครใจ" value={formatDateTime(order.policyStartDate)} />
+              {order.ctpSelected ? <InfoItem label="เริ่มคุ้มครอง พ.ร.บ." value={formatDateTime(order.ctpPolicyStartDate)} /> : null}
               <div className="rounded-2xl bg-slate-50 p-4 md:col-span-2 xl:col-span-3">
-                <div className="text-xs font-semibold text-slate-500">ที่อยู่จัดส่งเอกสาร</div>
-                <div className="mt-1 text-sm font-semibold text-slate-950">
-                  {[order.customerAddress, order.subDistrict, order.district, order.province, order.postalCode]
-                    .filter(Boolean)
-                    .join(' ') || '-'}
+                <div className="text-xs font-semibold text-slate-500">ที่อยู่ผู้เอาประกัน</div>
+                <div className="mt-1 text-sm font-semibold text-slate-950">{customerAddress}</div>
+              </div>
+              <div className="rounded-2xl bg-slate-50 p-4 md:col-span-2 xl:col-span-3">
+                <div className="text-xs font-semibold text-slate-500">ที่อยู่จัดส่งกรมธรรม์</div>
+                <div className="mt-1 text-sm font-semibold text-slate-950">{deliveryAddress || '-'}</div>
+              </div>
+              <div className="rounded-2xl bg-slate-50 p-4 md:col-span-2 xl:col-span-3">
+                <div className="text-xs font-semibold text-slate-500">เอกสารรถ / กรมธรรม์</div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {order.vehicleDocumentUrl ? (
+                    <a
+                      href={order.vehicleDocumentUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex rounded-xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white"
+                    >
+                      เปิด{order.vehicleDocumentType ?? 'เอกสารรถ'}
+                    </a>
+                  ) : (
+                    <span className="text-sm text-slate-500">ยังไม่มีเอกสารรถ</span>
+                  )}
+                  {order.policyPdfUrl ? (
+                    <a
+                      href={order.policyPdfUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white"
+                    >
+                      เปิด PDF กรมธรรม์
+                    </a>
+                  ) : null}
                 </div>
+                {order.policyNumber ? <div className="mt-2 text-sm font-semibold text-slate-700">เลขกรมธรรม์: {order.policyNumber}</div> : null}
               </div>
             </div>
           </section>

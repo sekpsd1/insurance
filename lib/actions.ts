@@ -35,9 +35,11 @@ export type PaymentMethod = 'BANK_TRANSFER' | 'CARD_GATEWAY';
 export type TypeOneLeadSalesStatus = 'NEW' | 'CONTACTED' | 'QUOTED' | 'CLOSED';
 
 const ALLOWED_IMAGE_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif']);
+const ALLOWED_DOCUMENT_MIME_TYPES = new Set([...ALLOWED_IMAGE_MIME_TYPES, 'application/pdf']);
 const LOGO_MAX_BYTES = 2 * 1024 * 1024;
 const PAYMENT_QR_MAX_BYTES = 3 * 1024 * 1024;
 const SLIP_MAX_BYTES = 8 * 1024 * 1024;
+const POLICY_DOCUMENT_MAX_BYTES = 10 * 1024 * 1024;
 const CSV_MAX_BYTES = 15 * 1024 * 1024;
 const ALL_ORDER_STATUSES: OrderStatus[] = [
   'DRAFT',
@@ -284,6 +286,68 @@ function parsePolicyStartDate(value: string | null) {
   return parsed;
 }
 
+function getDateKey(value: Date) {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, '0');
+  const day = String(value.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function parseRequiredPolicyStartDate(value: string | null, fieldName: string) {
+  const parsed = parsePolicyStartDate(value);
+
+  if (!parsed) {
+    throw new Error(`${fieldName} is required`);
+  }
+
+  return parsed;
+}
+
+async function assertCtpPolicyStartDateAllowed(date: Date) {
+  const dateKey = getDateKey(date);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayKey = getDateKey(today);
+
+  if (dateKey !== todayKey) {
+    return;
+  }
+
+  const day = date.getDay();
+
+  if (day === 0 || day === 6) {
+    throw new Error('Same-day CTP policy start date is not available on Saturday or Sunday');
+  }
+
+  if (new Date().getHours() >= 16) {
+    throw new Error('Same-day CTP policy start date is not available after 16:00');
+  }
+
+  const holiday = await prisma.businessHoliday.findUnique({
+    where: {
+      date: new Date(dateKey)
+    }
+  });
+
+  if (holiday) {
+    throw new Error('Same-day CTP policy start date is not available on a configured business holiday');
+  }
+}
+
+function normalizeChassisNumber(value: string | null) {
+  const normalized = normalizeWhitespace(value)?.toUpperCase() ?? null;
+
+  if (!normalized) {
+    throw new Error('Chassis number is required');
+  }
+
+  if (normalized.length > 40 || !/^[0-9A-Z\-\s]+$/.test(normalized)) {
+    throw new Error('Chassis number contains invalid characters');
+  }
+
+  return normalized;
+}
+
 function normalizeShortText(value: string | null, maxLength: number, fieldName: string) {
   const normalized = normalizeWhitespace(value);
   assertMaxLength(normalized, maxLength, fieldName);
@@ -363,6 +427,18 @@ function buildProviderEmail(input: {
     carYear: number | null;
     plateNumber: string | null;
     plateProvince: string | null;
+    chassisNumber: string | null;
+    idCardNumber: string | null;
+    customerEmail: string | null;
+    customerAddress: string | null;
+    policyStartDate: Date | null;
+    ctpPolicyStartDate: Date | null;
+    deliveryAddressMode: string | null;
+    deliveryRecipientName: string | null;
+    deliveryRecipientPhone: string | null;
+    deliveryAddress: string | null;
+    vehicleDocumentUrl: string | null;
+    vehicleDocumentType: string | null;
     paymentMethod: string | null;
     paymentStatus: string;
     slipUrl: string | null;
@@ -390,6 +466,7 @@ function buildProviderEmail(input: {
   const magicLinkUrl = getAbsoluteAppUrl(magicLinkPath);
   const slipUrl = getAbsoluteAppUrl(order.slipUrl);
   const gatewayUrl = getAbsoluteAppUrl(order.gatewayUrl);
+  const vehicleDocumentUrl = getAbsoluteAppUrl(order.vehicleDocumentUrl);
   const customerName = order.customerName ?? order.user.name ?? '-';
   const customerPhone = order.customerPhone ?? order.user.phone ?? '-';
   const car = [order.carBrand, order.carModel, order.carYear].filter(Boolean).join(' / ') || '-';
@@ -404,13 +481,21 @@ function buildProviderEmail(input: {
     `Order: ${order.orderNumber}`,
     `Customer: ${customerName}`,
     `Customer phone: ${customerPhone}`,
+    order.customerEmail ? `Customer email: ${order.customerEmail}` : null,
+    order.idCardNumber ? `ID card: ${order.idCardNumber}` : null,
+    order.customerAddress ? `Customer address: ${order.customerAddress}` : null,
     `Vehicle: ${car}`,
     `Plate: ${plate}`,
+    order.chassisNumber ? `Chassis number: ${order.chassisNumber}` : null,
+    order.policyStartDate ? `Voluntary policy start date: ${order.policyStartDate.toLocaleDateString('th-TH')}` : null,
+    order.ctpPolicyStartDate ? `CTP policy start date: ${order.ctpPolicyStartDate.toLocaleDateString('th-TH')}` : null,
+    order.deliveryAddress ? `Policy delivery: ${order.deliveryAddressMode === 'other' ? 'Other address' : 'Same address'} / ${order.deliveryRecipientName ?? '-'} / ${order.deliveryRecipientPhone ?? '-'} / ${order.deliveryAddress}` : null,
     `Package: ${order.pkg.name}`,
     order.ctpSelected ? `CTP/CMI: ${order.ctpRateCode ?? '-'} (${order.ctpTotal ?? 0} THB)` : null,
     `Payment method: ${getPaymentMethodLabel(order.paymentMethod)}`,
     `Payment status: ${getPaymentStatusLabel(order.paymentStatus)}`,
     slipUrl ? `Payment slip: ${slipUrl}` : null,
+    vehicleDocumentUrl ? `${order.vehicleDocumentType ?? 'Vehicle document'}: ${vehicleDocumentUrl}` : null,
     gatewayUrl ? `Gateway URL: ${gatewayUrl}` : null,
     '',
     `Update policy status here: ${magicLinkUrl}`,
@@ -774,11 +859,26 @@ function detectImageMime(buffer: Buffer) {
   return null;
 }
 
+function detectDocumentMime(buffer: Buffer) {
+  const imageMime = detectImageMime(buffer);
+
+  if (imageMime) {
+    return imageMime;
+  }
+
+  if (buffer.length >= 4 && buffer.subarray(0, 4).toString('ascii') === '%PDF') {
+    return 'application/pdf';
+  }
+
+  return null;
+}
+
 function getExtensionForMime(mimeType: string) {
   if (mimeType === 'image/png') return '.png';
   if (mimeType === 'image/jpeg') return '.jpg';
   if (mimeType === 'image/webp') return '.webp';
   if (mimeType === 'image/gif') return '.gif';
+  if (mimeType === 'application/pdf') return '.pdf';
   return '.bin';
 }
 
@@ -1041,6 +1141,61 @@ async function saveSlipFile(slipFile: File, prefix: string): Promise<string> {
   });
 }
 
+async function saveDocumentUploadFile(file: File, options: { directory: string; publicPath: string; prefix: string; maxBytes: number }) {
+  if (!ALLOWED_DOCUMENT_MIME_TYPES.has(file.type)) {
+    throw new Error('Document upload must be a PNG, JPG, WebP, GIF, or PDF file');
+  }
+
+  if (file.size > options.maxBytes) {
+    throw new Error(`Document upload is too large. Maximum size is ${Math.floor(options.maxBytes / 1024 / 1024)} MB.`);
+  }
+
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const detectedMime = detectDocumentMime(buffer);
+
+  if (!detectedMime || detectedMime !== file.type) {
+    throw new Error('Document upload content does not match the selected file type');
+  }
+
+  const fileName = `${sanitizeFilePrefix(options.prefix)}-${randomUUID()}${getExtensionForMime(detectedMime)}`;
+  const objectKey = `${options.publicPath}/${fileName}`;
+
+  if (getUploadStorageDriver() === 's3') {
+    return saveObjectUploadFile(objectKey, buffer, detectedMime);
+  }
+
+  assertLocalUploadsAllowed();
+
+  const uploadDirectory = path.join(process.cwd(), 'public', 'uploads', options.directory);
+  await mkdir(uploadDirectory, { recursive: true });
+  const filePath = path.join(uploadDirectory, fileName);
+
+  await writeFile(filePath, buffer);
+  return `/uploads/${options.publicPath}/${fileName}`;
+}
+
+async function saveVehicleDocumentFile(file: File, prefix: string): Promise<string> {
+  return saveDocumentUploadFile(file, {
+    directory: 'vehicle-documents',
+    publicPath: 'vehicle-documents',
+    prefix,
+    maxBytes: POLICY_DOCUMENT_MAX_BYTES
+  });
+}
+
+async function savePolicyPdfFile(file: File, prefix: string): Promise<string> {
+  if (file.type !== 'application/pdf') {
+    throw new Error('Policy document must be a PDF file');
+  }
+
+  return saveDocumentUploadFile(file, {
+    directory: 'policy-pdfs',
+    publicPath: 'policy-pdfs',
+    prefix,
+    maxBytes: POLICY_DOCUMENT_MAX_BYTES
+  });
+}
+
 export async function updateOrderStatus(formData: FormData): Promise<void> {
   const orderId = String(formData.get('orderId') ?? '').trim();
   const status = String(formData.get('status') ?? '').trim() as OrderStatus;
@@ -1141,16 +1296,32 @@ export async function createPolicyDraftOrder(formData: FormData): Promise<void> 
   const customerPhone = normalizePhone(getRequiredFormValue(formData, 'customerPhone'), 'Customer phone') ?? '';
   const plateNumber = normalizePlateNumber(getRequiredFormValue(formData, 'plateNumber'));
   const customerEmail = normalizeEmail(getOptionalFormValue(formData, 'customerEmail'), 'Customer email');
-  const customerAddress = normalizeShortText(getOptionalFormValue(formData, 'customerAddress'), 1000, 'Customer address');
+  const customerAddress = normalizeShortText(getRequiredFormValue(formData, 'customerAddress'), 1000, 'Customer address') ?? '';
   const province = normalizeShortText(getOptionalFormValue(formData, 'province'), 80, 'Province');
   const district = normalizeShortText(getOptionalFormValue(formData, 'district'), 80, 'District');
   const subDistrict = normalizeShortText(getOptionalFormValue(formData, 'subDistrict'), 80, 'Subdistrict');
   const postalCode = normalizeShortText(getOptionalFormValue(formData, 'postalCode'), 10, 'Postal code');
-  const idCardNumber = normalizeThaiIdCard(getOptionalFormValue(formData, 'idCardNumber'));
+  const idCardNumber = normalizeThaiIdCard(getRequiredFormValue(formData, 'idCardNumber'));
   const carBrand = normalizeShortText(getOptionalFormValue(formData, 'carBrand'), 80, 'Car brand');
   const carModel = normalizeShortText(getOptionalFormValue(formData, 'carModel'), 120, 'Car model');
   const plateProvince = normalizeShortText(getOptionalFormValue(formData, 'plateProvince'), 80, 'Plate province');
-  const policyStartDate = parsePolicyStartDate(getOptionalFormValue(formData, 'policyStartDate'));
+  const chassisNumber = normalizeChassisNumber(getRequiredFormValue(formData, 'chassisNumber'));
+  const policyStartDate = parseRequiredPolicyStartDate(getRequiredFormValue(formData, 'policyStartDate'), 'Voluntary policy start date');
+  const deliveryAddressMode = getOptionalFormValue(formData, 'deliveryAddressMode') === 'other' ? 'other' : 'same';
+  const deliveryRecipientName =
+    deliveryAddressMode === 'other'
+      ? normalizeShortText(getRequiredFormValue(formData, 'deliveryRecipientName'), 120, 'Delivery recipient name')
+      : customerName;
+  const deliveryRecipientPhone =
+    deliveryAddressMode === 'other'
+      ? normalizePhone(getRequiredFormValue(formData, 'deliveryRecipientPhone'), 'Delivery recipient phone')
+      : customerPhone;
+  const deliveryAddress =
+    deliveryAddressMode === 'other'
+      ? normalizeShortText(getRequiredFormValue(formData, 'deliveryAddress'), 1000, 'Delivery address')
+      : customerAddress;
+  const vehicleDocumentType = normalizeShortText(getRequiredFormValue(formData, 'vehicleDocumentType'), 80, 'Vehicle document type') ?? '';
+  const vehicleDocumentFile = formData.get('vehicleDocumentFile');
 
   const selectedPackage = await prisma.insurancePackage.findUnique({
     where: { id: packageId }
@@ -1167,8 +1338,22 @@ export async function createPolicyDraftOrder(formData: FormData): Promise<void> 
     throw new Error('CTP is available only for vehicle class 110 or 320');
   }
 
+  if (!(vehicleDocumentFile instanceof File) || vehicleDocumentFile.size === 0) {
+    throw new Error('Vehicle registration or previous policy document is required');
+  }
+
+  const ctpPolicyStartDate = includeCtp
+    ? parseRequiredPolicyStartDate(getRequiredFormValue(formData, 'ctpPolicyStartDate'), 'CTP policy start date')
+    : null;
+
+  if (ctpPolicyStartDate) {
+    await assertCtpPolicyStartDateAllowed(ctpPolicyStartDate);
+  }
+
   const ctpTotal = includeCtp && ctpOption ? ctpOption.total : 0;
   const paymentAmount = (selectedPackage.payablePrice ?? selectedPackage.netPrice) + ctpTotal;
+  const orderNumber = formatOrderNumber();
+  const vehicleDocumentUrl = await saveVehicleDocumentFile(vehicleDocumentFile, orderNumber);
 
   const user = await prisma.user.upsert({
     where: {
@@ -1195,7 +1380,7 @@ export async function createPolicyDraftOrder(formData: FormData): Promise<void> 
 
   const order = await prisma.order.create({
     data: {
-      orderNumber: formatOrderNumber(),
+      orderNumber,
       status: 'PENDING_PAYMENT',
       paymentStatus: 'UNPAID',
       paymentAmount,
@@ -1220,7 +1405,15 @@ export async function createPolicyDraftOrder(formData: FormData): Promise<void> 
       carYear: parseCarYear(getOptionalFormValue(formData, 'carYear'), selectedPackage.year),
       plateNumber,
       plateProvince,
+      chassisNumber,
       policyStartDate,
+      ctpPolicyStartDate,
+      deliveryAddressMode,
+      deliveryRecipientName,
+      deliveryRecipientPhone,
+      deliveryAddress,
+      vehicleDocumentUrl,
+      vehicleDocumentType,
       user: {
         connect: {
           id: user.id
@@ -1375,6 +1568,47 @@ export async function updateSalesLeadEmailSetting(formData: FormData): Promise<v
   revalidatePath('/admin/readiness');
 }
 
+export async function addBusinessHoliday(formData: FormData): Promise<void> {
+  const dateValue = getRequiredFormValue(formData, 'holidayDate');
+  const label = normalizeShortText(getOptionalFormValue(formData, 'holidayLabel'), 120, 'Holiday label');
+  const parsedDate = parseOptionalDate(dateValue);
+
+  if (!parsedDate) {
+    throw new Error('Holiday date is invalid');
+  }
+
+  const date = new Date(getDateKey(parsedDate));
+
+  await prisma.businessHoliday.upsert({
+    where: {
+      date
+    },
+    create: {
+      date,
+      label
+    },
+    update: {
+      label
+    }
+  });
+
+  revalidatePath('/admin/insurance');
+  revalidatePath('/line-app/form');
+}
+
+export async function deleteBusinessHoliday(formData: FormData): Promise<void> {
+  const holidayId = getRequiredFormValue(formData, 'holidayId');
+
+  await prisma.businessHoliday.delete({
+    where: {
+      id: holidayId
+    }
+  });
+
+  revalidatePath('/admin/insurance');
+  revalidatePath('/line-app/form');
+}
+
 export async function updateTypeOneQuoteLeadFollowUp(formData: FormData): Promise<void> {
   const leadId = getRequiredFormValue(formData, 'leadId');
   const salesStatus = normalizeShortText(
@@ -1481,6 +1715,8 @@ export async function updateOrderFromMagicLink(formData: FormData): Promise<void
   const status = getRequiredFormValue(formData, 'status') as OrderStatus;
   const insurerNote = normalizeShortText(getOptionalFormValue(formData, 'insurerNote'), 2000, 'Insurer note');
   const actorName = normalizeShortText(getOptionalFormValue(formData, 'actorName'), 120, 'Actor name') ?? 'Insurance provider';
+  const policyNumber = normalizeShortText(getOptionalFormValue(formData, 'policyNumber'), 80, 'Policy number');
+  const policyPdfFile = formData.get('policyPdfFile');
 
   const allowedStatuses: OrderStatus[] = [
     'INSURER_REVIEWING',
@@ -1516,6 +1752,13 @@ export async function updateOrderFromMagicLink(formData: FormData): Promise<void
   }
 
   const isTerminalStatus = status === 'POLICY_ISSUED' || status === 'REJECTED';
+  const hasNewPolicyPdf = policyPdfFile instanceof File && policyPdfFile.size > 0;
+
+  if (status === 'POLICY_ISSUED' && !hasNewPolicyPdf && !magicToken.order.policyPdfUrl) {
+    throw new Error('Policy PDF is required before marking the policy as issued');
+  }
+
+  const policyPdfUrl = hasNewPolicyPdf ? await savePolicyPdfFile(policyPdfFile, magicToken.order.orderNumber) : null;
 
   await prisma.$transaction(async (tx) => {
     await tx.order.update({
@@ -1526,7 +1769,14 @@ export async function updateOrderFromMagicLink(formData: FormData): Promise<void
         status,
         insurerStatus: status,
         insurerNote,
-        insurerUpdatedAt: new Date()
+        insurerUpdatedAt: new Date(),
+        ...(policyNumber ? { policyNumber } : {}),
+        ...(policyPdfUrl
+          ? {
+              policyPdfUrl,
+              policyPdfUploadedAt: new Date()
+            }
+          : {})
       }
     });
 

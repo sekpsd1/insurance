@@ -157,11 +157,22 @@ export async function GET(request: NextRequest) {
     'Customer Name',
     'Customer Phone',
     'Customer Email',
+    'ID Card Number',
+    'Customer Address',
     'Plate Number',
     'Plate Province',
+    'Chassis Number',
     'Vehicle Brand',
     'Vehicle Model',
     'Vehicle Year',
+    'Voluntary Policy Start Date',
+    'CTP Policy Start Date',
+    'Delivery Address Mode',
+    'Delivery Recipient Name',
+    'Delivery Recipient Phone',
+    'Delivery Address',
+    'Vehicle Document Type',
+    'Vehicle Document URL',
     'Insurance Company',
     'Campaign Code',
     'Package Name',
@@ -174,7 +185,10 @@ export async function GET(request: NextRequest) {
     'Provider Email',
     'Latest Email Status',
     'Insurer Note',
-    'Insurer Updated At'
+    'Insurer Updated At',
+    'Policy Number',
+    'Policy PDF URL',
+    'Policy PDF Uploaded At'
   ];
 
   const rows = orders.map((order) => [
@@ -183,11 +197,22 @@ export async function GET(request: NextRequest) {
     order.customerName ?? order.user.name,
     order.customerPhone ?? order.user.phone,
     order.customerEmail ?? order.user.email,
+    order.idCardNumber,
+    order.customerAddress,
     order.plateNumber,
     order.plateProvince,
+    order.chassisNumber,
     order.carBrand,
     order.carModel,
     formatNumber(order.carYear),
+    formatDate(order.policyStartDate),
+    formatDate(order.ctpPolicyStartDate),
+    order.deliveryAddressMode,
+    order.deliveryRecipientName,
+    order.deliveryRecipientPhone,
+    order.deliveryAddress,
+    order.vehicleDocumentType,
+    order.vehicleDocumentUrl,
     order.pkg.company,
     order.pkg.campaignCode,
     order.pkg.name,
@@ -200,7 +225,10 @@ export async function GET(request: NextRequest) {
     order.pkg.providerEmail,
     getEmailStatusLabel(order.emailOutbox[0]?.status),
     order.insurerNote,
-    formatDate(order.insurerUpdatedAt)
+    formatDate(order.insurerUpdatedAt),
+    order.policyNumber,
+    order.policyPdfUrl,
+    formatDate(order.policyPdfUploadedAt)
   ]);
 
   const csv = [headers.map(csvCell).join(','), ...rows.map((row) => row.map(csvCell).join(','))].join('\r\n');
