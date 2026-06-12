@@ -370,6 +370,15 @@ function buildCartHrefWithIds(baseParams: URLSearchParams, ids: string[], ctpIds
   return query ? `/line-app/cart?${query}` : '/line-app/cart';
 }
 
+function buildCompareHrefWithIds(baseParams: URLSearchParams, ids: string[], ctpIds: string[]) {
+  const params = new URLSearchParams(baseParams);
+  ids.slice(0, 2).forEach((id) => params.append('ids', id));
+  ctpIds.filter((id) => ids.slice(0, 2).includes(id)).forEach((id) => params.append('ctpIds', id));
+
+  const query = params.toString();
+  return query ? `/line-app/compare?${query}` : '/line-app/compare';
+}
+
 function buildFormHref(baseParams: URLSearchParams, id: string, includeCtp: boolean) {
   const params = new URLSearchParams(baseParams);
 
@@ -444,6 +453,8 @@ export default async function CartPage({
   const packages = selectedIds
     .map((id) => packageById.get(id))
     .filter((row): row is CartPackageRow => Boolean(row));
+  const compareIds = packages.slice(0, 2).map((pkg) => pkg.id);
+  const compareCtpIds = selectedCtpIds.filter((id) => compareIds.includes(id));
 
   return (
     <main className="min-h-screen bg-[#f4f5ff] text-[#12131a]">
@@ -613,6 +624,14 @@ export default async function CartPage({
           <Link href={resultsHref} className="rounded-2xl bg-[#0047BA] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#003c9d]">
             กลับไปเลือกแผน
           </Link>
+          {compareIds.length >= 2 ? (
+            <Link
+              href={buildCompareHrefWithIds(baseParams, compareIds, compareCtpIds)}
+              className="rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-[#0047BA] shadow-[0_8px_24px_rgba(0,0,0,0.04)] ring-1 ring-blue-100 transition hover:bg-[#eef3ff]"
+            >
+              ดูเปรียบเทียบ
+            </Link>
+          ) : null}
           {packages.length > 0 ? <ClearCartButton href={resultsHref} /> : null}
         </div>
       </div>
