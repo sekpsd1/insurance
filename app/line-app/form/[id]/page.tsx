@@ -24,14 +24,9 @@ type FormPageProps = {
   }>;
 };
 
-export async function generateMetadata({ params }: FormPageProps): Promise<Metadata> {
-  const { id } = await params;
-  const pkg = await prisma.insurancePackage.findUnique({
-    where: { id }
-  });
-
+export async function generateMetadata(): Promise<Metadata> {
   return {
-    title: pkg ? `${pkg.name} | Policy Info` : 'Policy Info'
+    title: 'รายละเอียดแจ้งทำประกันภัย'
   };
 }
 
@@ -80,6 +75,87 @@ function Field({
           className={`${baseClass} h-11 py-2`}
         />
       )}
+    </div>
+  );
+}
+
+const THAI_MONTHS = [
+  'มกราคม',
+  'กุมภาพันธ์',
+  'มีนาคม',
+  'เมษายน',
+  'พฤษภาคม',
+  'มิถุนายน',
+  'กรกฎาคม',
+  'สิงหาคม',
+  'กันยายน',
+  'ตุลาคม',
+  'พฤศจิกายน',
+  'ธันวาคม'
+];
+
+function DatePartsField({ label, name }: { label: string; name: string }) {
+  const currentYear = new Date().getFullYear();
+  const years = [currentYear - 1, currentYear, currentYear + 1];
+  const selectClass =
+    'h-11 min-w-0 appearance-none rounded-md border border-slate-200 bg-white px-2 text-center text-[13px] font-semibold text-slate-900 shadow-sm outline-none transition focus:border-[#0b58c6] focus:ring-4 focus:ring-blue-100';
+
+  return (
+    <div>
+      <label className="mb-2 block text-[14px] font-bold text-[#2f3442]">{label}</label>
+      <input type="hidden" name={name} data-date-composed={name} />
+      <div className="grid grid-cols-[0.9fr_1.35fr_1fr] gap-2">
+        <select data-date-part-for={name} data-date-part="day" required defaultValue="" aria-label={`${label} วัน`} className={selectClass}>
+          <option value="" disabled>
+            วัน
+          </option>
+          {Array.from({ length: 31 }, (_, index) => {
+            const day = String(index + 1).padStart(2, '0');
+            return (
+              <option key={day} value={day}>
+                {index + 1}
+              </option>
+            );
+          })}
+        </select>
+        <select data-date-part-for={name} data-date-part="month" required defaultValue="" aria-label={`${label} เดือน`} className={selectClass}>
+          <option value="" disabled>
+            เดือน
+          </option>
+          {THAI_MONTHS.map((month, index) => {
+            const value = String(index + 1).padStart(2, '0');
+            return (
+              <option key={value} value={value}>
+                {month}
+              </option>
+            );
+          })}
+        </select>
+        <select data-date-part-for={name} data-date-part="year" required defaultValue="" aria-label={`${label} ปี`} className={selectClass}>
+          <option value="" disabled>
+            ปี
+          </option>
+          {years.map((year) => (
+            <option key={year} value={year}>
+              {year + 543}
+            </option>
+          ))}
+        </select>
+      </div>
+    </div>
+  );
+}
+
+function PolicyEndDatePreview({ label, sourceName }: { label: string; sourceName: string }) {
+  return (
+    <div>
+      <div className="mb-2 block text-[14px] font-bold text-[#2f3442]">{label}</div>
+      <div
+        data-policy-end-date-for={sourceName}
+        className="flex h-11 items-center rounded-md border border-slate-200 bg-slate-50 px-3.5 text-[14px] font-semibold text-slate-500 shadow-sm"
+      >
+        ระบบคำนวณอัตโนมัติ
+      </div>
     </div>
   );
 }
@@ -152,6 +228,72 @@ function normalizeSearchValue(value: string | string[] | undefined) {
   return value?.trim() ?? '';
 }
 
+function formatNumber(value: string | number) {
+  const numericValue = typeof value === 'number' ? value : Number(value.replace(/,/g, ''));
+
+  if (!Number.isFinite(numericValue)) {
+    return String(value);
+  }
+
+  return new Intl.NumberFormat('th-TH', {
+    maximumFractionDigits: 0
+  }).format(numericValue);
+}
+
+function formatVehicleSizeLabel({
+  sClass,
+  selectedValue,
+  minValue,
+  maxValue
+}: {
+  sClass: string | null;
+  selectedValue: string;
+  minValue: number | null;
+  maxValue: number | null;
+}) {
+  const isSeatBased = sClass === '210';
+  const unit = isSeatBased ? 'ที่นั่ง' : 'ซีซี';
+
+  if (selectedValue) {
+    return isSeatBased ? `ไม่เกิน ${formatNumber(selectedValue)} ${unit}` : `${formatNumber(selectedValue)} ${unit}`;
+  }
+
+  if (minValue != null && maxValue != null) {
+    if (minValue <= 0) {
+      return `ไม่เกิน ${formatNumber(maxValue)} ${unit}`;
+    }
+
+    if (maxValue >= 9999) {
+      return `${formatNumber(minValue)} ${unit}ขึ้นไป`;
+    }
+
+    if (minValue === maxValue) {
+      return `${formatNumber(minValue)} ${unit}`;
+    }
+
+    return `${formatNumber(minValue)}-${formatNumber(maxValue)} ${unit}`;
+  }
+
+  if (minValue != null) {
+    return `${formatNumber(minValue)} ${unit}ขึ้นไป`;
+  }
+
+  if (maxValue != null) {
+    return `ไม่เกิน ${formatNumber(maxValue)} ${unit}`;
+  }
+
+  return '-';
+}
+
+function VehicleSummaryItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md bg-white px-3 py-2 shadow-sm ring-1 ring-blue-100">
+      <div className="text-[11px] font-bold text-slate-500">{label}</div>
+      <div className="mt-0.5 text-[14px] font-black text-slate-900">{value || '-'}</div>
+    </div>
+  );
+}
+
 function buildResultsHref(searchParams: Awaited<NonNullable<FormPageProps['searchParams']>>) {
   const params = new URLSearchParams();
   const filterKeys = ['sClass', 'coverage', 'repairType', 'brand', 'model', 'year', 'cubicCapacity', 'sumInsured'] as const;
@@ -197,7 +339,15 @@ export default async function PackageFormPage({ params, searchParams }: FormPage
   ]);
   const includeCtp = isCtpSelected(resolvedSearchParams.includeCtp) && Boolean(ctpOption);
   const holidayDates = businessHolidays.map((holiday) => toDateKey(holiday.date));
+  const selectedCarBrand = normalizeSearchValue(resolvedSearchParams.brand) || packageItem.brand || '';
+  const selectedCarModel = normalizeSearchValue(resolvedSearchParams.model) || packageItem.model || '';
   const selectedCarYear = normalizeSearchValue(resolvedSearchParams.year) || packageItem.year || '';
+  const selectedVehicleSize = formatVehicleSizeLabel({
+    sClass: packageItem.sClass,
+    selectedValue: normalizeSearchValue(resolvedSearchParams.cubicCapacity),
+    minValue: packageItem.minCubicCapacity,
+    maxValue: packageItem.maxCubicCapacity
+  });
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-[#f7f9ff] via-[#f3f6ff] to-white pb-6 text-[#101828]">
@@ -212,7 +362,7 @@ export default async function PackageFormPage({ params, searchParams }: FormPage
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19 8 12l7-7" />
             </svg>
           </Link>
-          <h1 className="px-10 text-center text-[18px] font-black leading-tight sm:text-[20px]">กรอกข้อมูลผู้เอาประกัน</h1>
+          <h1 className="px-10 text-center text-[18px] font-black leading-tight sm:text-[20px]">รายละเอียดแจ้งทำประกันภัย</h1>
         </div>
       </header>
 
@@ -220,12 +370,12 @@ export default async function PackageFormPage({ params, searchParams }: FormPage
         <PolicyFormDraftAutosave formId="policy-info-form" />
         <PolicyFormEnhancements formId="policy-info-form" includeCtp={includeCtp} holidayDates={holidayDates} />
         <input type="hidden" name="packageId" value={packageItem.id} />
-        <input type="hidden" name="carBrand" value={packageItem.brand ?? ''} />
-        <input type="hidden" name="carModel" value={packageItem.model ?? ''} />
+        <input type="hidden" name="carBrand" value={selectedCarBrand} />
+        <input type="hidden" name="carModel" value={selectedCarModel} />
         <input type="hidden" name="carYear" value={selectedCarYear} />
         {includeCtp ? <input type="hidden" name="includeCtp" value="1" /> : null}
 
-        <SectionCard icon="person" title="ข้อมูลส่วนตัว">
+        <SectionCard icon="person" title="ข้อมูลผู้เอาประกัน">
           <Field label="ชื่อ - นามสกุล" name="customerName" placeholder="ระบุชื่อและนามสกุลตามบัตรประชาชน" />
           <Field label="เบอร์โทรศัพท์" name="customerPhone" placeholder="08X-XXX-XXXX" type="tel" inputMode="tel" />
           <Field label="อีเมล" name="customerEmail" placeholder="name@example.com" type="email" required={false} />
@@ -234,10 +384,16 @@ export default async function PackageFormPage({ params, searchParams }: FormPage
         </SectionCard>
 
         <SectionCard icon="person" title="วันที่คุ้มครอง">
-          <Field label="วันที่เริ่มคุ้มครองภาคสมัครใจ" name="policyStartDate" placeholder="" type="date" />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <DatePartsField label="วันที่คุ้มครองภาคสมัครใจ" name="policyStartDate" />
+            <PolicyEndDatePreview label="สิ้นสุดภาคสมัครใจ" sourceName="policyStartDate" />
+          </div>
           {includeCtp ? (
             <>
-              <Field label="วันที่เริ่มคุ้มครอง พ.ร.บ." name="ctpPolicyStartDate" placeholder="" type="date" />
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <DatePartsField label="วันที่คุ้มครอง พ.ร.บ." name="ctpPolicyStartDate" />
+                <PolicyEndDatePreview label="สิ้นสุด พ.ร.บ." sourceName="ctpPolicyStartDate" />
+              </div>
               <p className="rounded-md bg-amber-50 px-3 py-2 text-[12px] font-semibold leading-5 text-amber-800 ring-1 ring-amber-100">
                 หากเริ่มคุ้มครองภายในวันที่สั่งซื้อ ระบบจะล็อกหลังเวลา 16:00 วันเสาร์-อาทิตย์ และวันหยุดสถาบันการเงิน แต่การเลือกวันล่วงหน้าสามารถทำได้
               </p>
@@ -245,31 +401,16 @@ export default async function PackageFormPage({ params, searchParams }: FormPage
           ) : null}
         </SectionCard>
 
-        <SectionCard icon="person" title="ที่อยู่จัดส่งกรมธรรม์">
-          <div className="grid grid-cols-1 gap-3 text-[14px] font-bold text-slate-800">
-            <label className="flex items-center gap-3 rounded-md border border-slate-200 bg-white px-3.5 py-3">
-              <input type="radio" name="deliveryAddressMode" value="same" defaultChecked className="h-4 w-4 accent-[#0648ad]" />
-              ที่อยู่เดียวกับผู้เอาประกัน
-            </label>
-            <label className="flex items-center gap-3 rounded-md border border-slate-200 bg-white px-3.5 py-3">
-              <input type="radio" name="deliveryAddressMode" value="other" className="h-4 w-4 accent-[#0648ad]" />
-              ใช้ที่อยู่อื่น
-            </label>
-          </div>
-          <div data-delivery-other-section className="space-y-4">
-            <Field label="ชื่อผู้รับเอกสาร" name="deliveryRecipientName" placeholder="ชื่อ - นามสกุลผู้รับเอกสาร" required={false} />
-            <Field label="เบอร์โทรผู้รับเอกสาร" name="deliveryRecipientPhone" placeholder="08X-XXX-XXXX" type="tel" inputMode="tel" required={false} />
-            <Field
-              label="ที่อยู่จัดส่งเอกสาร"
-              name="deliveryAddress"
-              placeholder="บ้านเลขที่, ซอย, ถนน, ตำบล, อำเภอ, จังหวัด, รหัสไปรษณีย์"
-              required={false}
-              multiline
-            />
-          </div>
-        </SectionCard>
-
         <SectionCard icon="car" title="ข้อมูลรถยนต์">
+          <div className="rounded-lg bg-blue-50/80 p-3.5 ring-1 ring-blue-100">
+            <div className="mb-2 text-[12px] font-black text-[#0648ad]">ข้อมูลรถที่เลือก</div>
+            <div className="grid grid-cols-2 gap-2">
+              <VehicleSummaryItem label="ยี่ห้อรถ" value={selectedCarBrand} />
+              <VehicleSummaryItem label="รุ่นรถ" value={selectedCarModel} />
+              <VehicleSummaryItem label="ขนาด" value={selectedVehicleSize} />
+              <VehicleSummaryItem label="ปีจดทะเบียน" value={String(selectedCarYear || '-')} />
+            </div>
+          </div>
           <Field label="ทะเบียนรถ" name="plateNumber" placeholder="เช่น กค 1234" />
           <div>
             <label htmlFor="plateProvince" className="mb-2 block text-[14px] font-bold text-[#2f3442]">
@@ -343,6 +484,30 @@ export default async function PackageFormPage({ params, searchParams }: FormPage
             accept="image/png,image/jpeg,image/webp,image/gif,application/pdf"
             helper="แนบสำเนาทะเบียนรถหรือกรมธรรม์เดิมอย่างใดอย่างหนึ่ง รองรับรูปภาพและ PDF"
           />
+        </SectionCard>
+
+        <SectionCard icon="person" title="ที่อยู่จัดส่งกรมธรรม์">
+          <div className="grid grid-cols-1 gap-3 text-[14px] font-bold text-slate-800">
+            <label className="flex items-center gap-3 rounded-md border border-slate-200 bg-white px-3.5 py-3">
+              <input type="radio" name="deliveryAddressMode" value="same" defaultChecked className="h-4 w-4 accent-[#0648ad]" />
+              ที่อยู่เดียวกับผู้เอาประกัน
+            </label>
+            <label className="flex items-center gap-3 rounded-md border border-slate-200 bg-white px-3.5 py-3">
+              <input type="radio" name="deliveryAddressMode" value="other" className="h-4 w-4 accent-[#0648ad]" />
+              ใช้ที่อยู่อื่น
+            </label>
+          </div>
+          <div data-delivery-other-section className="space-y-4">
+            <Field label="ชื่อผู้รับเอกสาร" name="deliveryRecipientName" placeholder="ชื่อ - นามสกุลผู้รับเอกสาร" required={false} />
+            <Field label="เบอร์โทรผู้รับเอกสาร" name="deliveryRecipientPhone" placeholder="08X-XXX-XXXX" type="tel" inputMode="tel" required={false} />
+            <Field
+              label="ที่อยู่จัดส่งเอกสาร"
+              name="deliveryAddress"
+              placeholder="บ้านเลขที่, ซอย, ถนน, ตำบล, อำเภอ, จังหวัด, รหัสไปรษณีย์"
+              required={false}
+              multiline
+            />
+          </div>
         </SectionCard>
 
         <div className="fixed inset-x-0 bottom-0 z-10 border-t border-slate-200/80 bg-white/90 px-4 py-4 shadow-[0_-14px_30px_rgba(15,23,42,0.08)] backdrop-blur">

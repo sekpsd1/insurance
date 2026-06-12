@@ -108,7 +108,8 @@ It also stores rating/search fields imported from insurer CSV rows:
 - Policy Info page now follows the customer-supplied insurance notification Excel more closely:
   - Requires ID card number, insured address, chassis number, voluntary policy start date, and one vehicle document attachment.
   - Insured address now uses cascading Thai address dropdowns for province, district/amphoe, subdistrict/tambon, and postal code, with server-side validation against the Thai address database.
-  - Supports separate CTP/CMI policy start date when the customer selected CTP/CMI.
+  - Supports separate CTP/CMI policy start date when the customer selected CTP/CMI, with date selection split into day/month/year fields for easier mobile entry.
+  - Shows an automatic one-year end date preview for voluntary coverage and, when selected, CTP/CMI coverage using the same day in the following year.
   - Hides the CTP/CMI policy start date when no CTP/CMI was selected.
   - Lets customers choose policy delivery address as same as insured address or another delivery address.
   - Accepts vehicle document uploads as image or PDF.
