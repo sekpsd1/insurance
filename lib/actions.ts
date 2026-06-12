@@ -18,6 +18,7 @@ import {
   deleteInsuranceCampaignByCode,
   importInsuranceCampaignFromCsv
 } from '@/lib/insurance-import';
+import { isValidThaiAddress } from '@/lib/thai-address';
 
 export type OrderStatus =
   | 'DRAFT'
@@ -1297,10 +1298,10 @@ export async function createPolicyDraftOrder(formData: FormData): Promise<void> 
   const plateNumber = normalizePlateNumber(getRequiredFormValue(formData, 'plateNumber'));
   const customerEmail = normalizeEmail(getOptionalFormValue(formData, 'customerEmail'), 'Customer email');
   const customerAddress = normalizeShortText(getRequiredFormValue(formData, 'customerAddress'), 1000, 'Customer address') ?? '';
-  const province = normalizeShortText(getOptionalFormValue(formData, 'province'), 80, 'Province');
-  const district = normalizeShortText(getOptionalFormValue(formData, 'district'), 80, 'District');
-  const subDistrict = normalizeShortText(getOptionalFormValue(formData, 'subDistrict'), 80, 'Subdistrict');
-  const postalCode = normalizeShortText(getOptionalFormValue(formData, 'postalCode'), 10, 'Postal code');
+  const province = normalizeShortText(getRequiredFormValue(formData, 'province'), 80, 'Province');
+  const district = normalizeShortText(getRequiredFormValue(formData, 'district'), 80, 'District');
+  const subDistrict = normalizeShortText(getRequiredFormValue(formData, 'subDistrict'), 80, 'Subdistrict');
+  const postalCode = normalizeShortText(getRequiredFormValue(formData, 'postalCode'), 10, 'Postal code');
   const idCardNumber = normalizeThaiIdCard(getRequiredFormValue(formData, 'idCardNumber'));
   const carBrand = normalizeShortText(getOptionalFormValue(formData, 'carBrand'), 80, 'Car brand');
   const carModel = normalizeShortText(getOptionalFormValue(formData, 'carModel'), 120, 'Car model');
@@ -1319,7 +1320,7 @@ export async function createPolicyDraftOrder(formData: FormData): Promise<void> 
   const deliveryAddress =
     deliveryAddressMode === 'other'
       ? normalizeShortText(getRequiredFormValue(formData, 'deliveryAddress'), 1000, 'Delivery address')
-      : customerAddress;
+      : [customerAddress, subDistrict, district, province, postalCode].filter(Boolean).join(' ');
   const vehicleDocumentType = normalizeShortText(getRequiredFormValue(formData, 'vehicleDocumentType'), 80, 'Vehicle document type') ?? '';
   const vehicleDocumentFile = formData.get('vehicleDocumentFile');
 
@@ -1340,6 +1341,17 @@ export async function createPolicyDraftOrder(formData: FormData): Promise<void> 
 
   if (!(vehicleDocumentFile instanceof File) || vehicleDocumentFile.size === 0) {
     throw new Error('Vehicle registration or previous policy document is required');
+  }
+
+  if (
+    !isValidThaiAddress({
+      province,
+      district,
+      subDistrict,
+      postalCode
+    })
+  ) {
+    throw new Error('Selected customer address is invalid');
   }
 
   const ctpPolicyStartDate = includeCtp

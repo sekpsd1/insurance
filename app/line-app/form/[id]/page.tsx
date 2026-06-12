@@ -6,6 +6,7 @@ import { createPolicyDraftOrder } from '@/lib/actions';
 import { isCtpSelected } from '@/lib/ctp';
 import { getCtpOptionForSClass } from '@/lib/ctp-rates';
 import { PolicyFormDraftAutosave, PolicyFormEnhancements } from './policy-form-draft-autosave';
+import { ThaiAddressFields } from './thai-address-fields';
 
 type FormPageProps = {
   params: Promise<{ id: string }>;
@@ -229,12 +230,7 @@ export default async function PackageFormPage({ params, searchParams }: FormPage
           <Field label="เบอร์โทรศัพท์" name="customerPhone" placeholder="08X-XXX-XXXX" type="tel" inputMode="tel" />
           <Field label="อีเมล" name="customerEmail" placeholder="name@example.com" type="email" required={false} />
           <Field label="เลขบัตรประชาชน" name="idCardNumber" placeholder="กรอกเลขบัตรประชาชน 13 หลัก" inputMode="numeric" />
-          <Field
-            label="ที่อยู่ผู้เอาประกัน"
-            name="customerAddress"
-            placeholder="บ้านเลขที่, ซอย, ถนน, ตำบล, อำเภอ, จังหวัด, รหัสไปรษณีย์"
-            multiline
-          />
+          <ThaiAddressFields />
         </SectionCard>
 
         <SectionCard icon="person" title="วันที่คุ้มครอง">

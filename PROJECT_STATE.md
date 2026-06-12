@@ -107,6 +107,7 @@ It also stores rating/search fields imported from insurer CSV rows:
 
 - Policy Info page now follows the customer-supplied insurance notification Excel more closely:
   - Requires ID card number, insured address, chassis number, voluntary policy start date, and one vehicle document attachment.
+  - Insured address now uses cascading Thai address dropdowns for province, district/amphoe, subdistrict/tambon, and postal code, with server-side validation against the Thai address database.
   - Supports separate CTP/CMI policy start date when the customer selected CTP/CMI.
   - Hides the CTP/CMI policy start date when no CTP/CMI was selected.
   - Lets customers choose policy delivery address as same as insured address or another delivery address.
@@ -144,6 +145,7 @@ It also stores rating/search fields imported from insurer CSV rows:
 - Search Premium now routes `ประเภท 1` to a quote request form instead of instant package search. It collects customer name, phone, LINE ID/LIFF profile when available, optional email, brand, model, registration year, and cubic capacity, stores a `TypeOneQuoteLead`, and queues an email to `SALES_LEAD_EMAIL` when configured. Because Type 1 packages are not sold from CSV results, the Type 1 form uses broader vehicle option data from the selected SClass so customers can still submit a lead, but its registration-year dropdown is capped to a maximum vehicle age of 30 years.
 - Type 1 quote request now hides the editable LINE ID input when LIFF profile data is available, while still submitting the LINE user ID internally.
 - Type 1 quote request email now reads the editable admin sales recipient first, then falls back to `SALES_LEAD_EMAIL`.
+- Customer provided the sales recipient email for Type 1 quote follow-up: `prakanpai2026@gmail.com`.
 - Search Premium sum-insured options now respect the selected repair type so customers do not select a sum insured that only exists under a different repair group.
 - Search Premium no longer shows the blue explanatory filter-info box above the submit button.
 - Search Premium no longer restores saved vehicle/policy filters from localStorage, so a fresh visit to `/line-app/search` starts blank for customers searching another car. Search/result URLs with query parameters still prefill the current search when users navigate back from results. Type 1 lead contact inputs can still be preserved separately.
