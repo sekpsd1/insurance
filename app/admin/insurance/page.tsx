@@ -11,6 +11,7 @@ import {
   updateInsuranceCampaignLogo,
   updateInsuranceCampaignPaymentSetup,
   updateInsuranceCampaignProviderContact,
+  updateOrderCopyEmailSetting,
   updateSalesLeadEmailSetting
 } from '@/lib/actions';
 import { CampaignImportModal } from './_components/campaign-import-modal';
@@ -21,7 +22,7 @@ import {
   getPremiumImportAuditSummary
 } from '@/lib/insurance-import';
 import { getAdminCtpRates } from '@/lib/ctp-rates';
-import { getSalesLeadEmailSetting } from '@/lib/app-settings';
+import { DEFAULT_ORDER_COPY_EMAIL, getOrderCopyEmailSetting, getSalesLeadEmailSetting } from '@/lib/app-settings';
 
 export const dynamic = 'force-dynamic';
 
@@ -86,10 +87,11 @@ async function getInsuranceDashboardStats() {
 }
 
 export default async function InsuranceCampaignAdminPage() {
-  const [{ campaignSummaries, companySummaries, packageCount, companyCount, premiumAudit }, ctpRates, salesLeadEmail, businessHolidays] = await Promise.all([
+  const [{ campaignSummaries, companySummaries, packageCount, companyCount, premiumAudit }, ctpRates, salesLeadEmail, orderCopyEmail, businessHolidays] = await Promise.all([
     getInsuranceDashboardStats(),
     getAdminCtpRates(),
     getSalesLeadEmailSetting(),
+    getOrderCopyEmailSetting(),
     prisma.businessHoliday.findMany({
       orderBy: {
         date: 'asc'
@@ -142,6 +144,37 @@ export default async function InsuranceCampaignAdminPage() {
           </Link>
           <CampaignImportModal action={importInsuranceCampaign} />
         </div>
+      </div>
+
+      <div className="mb-8 rounded-3xl border border-white/10 bg-white p-5 shadow-2xl shadow-black/10">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-700">Order Copy Email</p>
+            <h3 className="mt-1 text-lg font-semibold text-slate-950">อีเมลสำเนาแจ้งรายการสั่งซื้อสำเร็จ</h3>
+            <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-500">
+              ระบบจะส่งสำเนาอีเมลให้ผู้รับนี้หลังลูกค้ายืนยันการชำระเงินหรือส่งสลิปสำเร็จ เพื่อให้ทราบเลขออเดอร์ รถ แพ็กเกจ และยอดคงเหลือชำระ
+            </p>
+          </div>
+          <form action={updateOrderCopyEmailSetting} className="flex w-full flex-col gap-3 sm:flex-row lg:max-w-xl">
+            <input
+              name="orderCopyEmail"
+              type="email"
+              defaultValue={orderCopyEmail ?? process.env.ORDER_COPY_EMAIL ?? DEFAULT_ORDER_COPY_EMAIL}
+              required
+              placeholder="copy@example.com"
+              className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
+            />
+            <button
+              type="submit"
+              className="inline-flex items-center justify-center rounded-xl bg-cyan-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-cyan-700"
+            >
+              บันทึกอีเมลสำเนา
+            </button>
+          </form>
+        </div>
+        <p className="mt-3 text-xs text-slate-500">
+          ถ้ายังไม่บันทึก ระบบจะใช้ค่า fallback จาก ORDER_COPY_EMAIL หรือค่าเริ่มต้น {DEFAULT_ORDER_COPY_EMAIL}
+        </p>
       </div>
 
       <div className="mb-8 rounded-3xl border border-white/10 bg-white p-5 shadow-2xl shadow-black/10">

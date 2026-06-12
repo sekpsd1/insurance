@@ -359,6 +359,9 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     where: {
       orderId: {
         not: null
+      },
+      magicLinkPath: {
+        not: null
       }
     }
   });
@@ -394,6 +397,11 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           take: 1
         },
         emailOutbox: {
+          where: {
+            magicLinkPath: {
+              not: null
+            }
+          },
           orderBy: {
             createdAt: 'desc'
           },

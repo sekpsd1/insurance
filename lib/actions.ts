@@ -10,7 +10,10 @@ import { isCtpSelected } from '@/lib/ctp';
 import { getCtpOptionForSClass } from '@/lib/ctp-rates';
 import { getOrderStatusLabel, getPaymentMethodLabel, getPaymentStatusLabel } from '@/lib/status-labels';
 import {
+  DEFAULT_ORDER_COPY_EMAIL,
+  getOrderCopyEmailSetting,
   getSalesLeadEmailSetting,
+  ORDER_COPY_EMAIL_SETTING_KEY,
   SALES_LEAD_EMAIL_SETTING_KEY,
   upsertSystemSettingValue
 } from '@/lib/app-settings';
@@ -106,6 +109,15 @@ function getAbsoluteAppUrl(pathOrUrl: string | null | undefined) {
 
   const baseUrl = getPublicAppBaseUrl();
   return baseUrl ? `${baseUrl}${pathOrUrl.startsWith('/') ? pathOrUrl : `/${pathOrUrl}`}` : pathOrUrl;
+}
+
+function formatThaiBaht(value: number | null | undefined) {
+  return new Intl.NumberFormat('th-TH', {
+    style: 'currency',
+    currency: 'THB',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(value ?? 0);
 }
 
 function isLocalUrl(url: URL) {
@@ -513,6 +525,149 @@ function buildProviderEmail(input: {
   };
 }
 
+function buildOrderCopyEmail(input: {
+  order: {
+    orderNumber: string;
+    customerName: string | null;
+    customerPhone: string | null;
+    customerEmail: string | null;
+    carBrand: string | null;
+    carModel: string | null;
+    carYear: number | null;
+    plateNumber: string | null;
+    plateProvince: string | null;
+    paymentMethod: string | null;
+    paymentStatus: string;
+    paymentAmount: number | null;
+    ctpSelected: boolean;
+    ctpRateCode: string | null;
+    ctpTotal: number | null;
+    slipUrl: string | null;
+    gatewayUrl: string | null;
+    user: {
+      name: string | null;
+      phone: string | null;
+    };
+    pkg: {
+      name: string;
+      company: string;
+      netPrice: number;
+      payablePrice: number | null;
+    };
+  };
+  recipient: string;
+}) {
+  const { order, recipient } = input;
+  const customerName = order.customerName ?? order.user.name ?? '-';
+  const customerPhone = order.customerPhone ?? order.user.phone ?? '-';
+  const car = [order.carBrand, order.carModel, order.carYear].filter(Boolean).join(' / ') || '-';
+  const plate = [order.plateNumber, order.plateProvince].filter(Boolean).join(' ') || '-';
+  const slipUrl = getAbsoluteAppUrl(order.slipUrl);
+  const gatewayUrl = getAbsoluteAppUrl(order.gatewayUrl);
+  const payableAmount =
+    order.paymentAmount ??
+    (order.pkg.payablePrice ?? order.pkg.netPrice) + (order.ctpSelected ? order.ctpTotal ?? 0 : 0);
+  const subject = `[Order Copy] ${order.orderNumber} - ${customerName}`;
+  const body = [
+    'มีรายการสั่งซื้อสำเร็จจาก LINE Mini App',
+    '',
+    `เลขที่คำสั่งซื้อ: ${order.orderNumber}`,
+    `ลูกค้า: ${customerName}`,
+    `เบอร์โทร: ${customerPhone}`,
+    order.customerEmail ? `อีเมลลูกค้า: ${order.customerEmail}` : null,
+    `รถ: ${car}`,
+    `ทะเบียน: ${plate}`,
+    `บริษัทประกัน: ${order.pkg.company}`,
+    `แพ็กเกจ: ${order.pkg.name}`,
+    `วิธีชำระเงิน: ${getPaymentMethodLabel(order.paymentMethod)}`,
+    `สถานะชำระเงิน: ${getPaymentStatusLabel(order.paymentStatus)}`,
+    `ยอดคงเหลือชำระ: ${formatThaiBaht(payableAmount)}`,
+    order.ctpSelected ? `พ.ร.บ.: ${order.ctpRateCode ?? '-'} / ${formatThaiBaht(order.ctpTotal)}` : null,
+    slipUrl ? `สลิปชำระเงิน: ${slipUrl}` : null,
+    gatewayUrl ? `ลิงก์ชำระเงินบริษัทประกัน: ${gatewayUrl}` : null,
+    '',
+    'อีเมลนี้เป็นสำเนาแจ้งเตือนเพื่อให้ทราบว่ามีรายการสั่งซื้อสำเร็จ'
+  ]
+    .filter((line): line is string => line !== null)
+    .join('\n');
+
+  return {
+    recipient,
+    subject,
+    body
+  };
+}
+
+async function createOrderCopyEmailOutbox(orderId: string) {
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: {
+      user: true,
+      pkg: true
+    }
+  });
+
+  if (!order) {
+    throw new Error('Order was not found');
+  }
+
+  const configuredCopyEmail = await getOrderCopyEmailSetting();
+  const recipient = normalizeEmail(
+    configuredCopyEmail ?? process.env.ORDER_COPY_EMAIL ?? DEFAULT_ORDER_COPY_EMAIL,
+    'Order copy email'
+  );
+  const email = buildOrderCopyEmail({
+    order,
+    recipient: recipient ?? DEFAULT_ORDER_COPY_EMAIL
+  });
+  const status = email.recipient ? 'QUEUED' : 'MISSING_RECIPIENT';
+  const existingOutbox = await prisma.emailOutbox.findFirst({
+    where: {
+      orderId: null,
+      magicLinkPath: null,
+      subject: email.subject
+    },
+    orderBy: {
+      createdAt: 'desc'
+    }
+  });
+
+  if (existingOutbox?.status === 'SENT') {
+    return existingOutbox;
+  }
+
+  if (existingOutbox) {
+    return prisma.emailOutbox.update({
+      where: {
+        id: existingOutbox.id
+      },
+      data: {
+        recipient: email.recipient,
+        subject: email.subject,
+        body: email.body,
+        magicLinkPath: null,
+        status,
+        sentAt: null,
+        errorAt: status === 'MISSING_RECIPIENT' ? new Date() : null,
+        errorMessage: status === 'MISSING_RECIPIENT' ? 'Order copy email is missing.' : null
+      }
+    });
+  }
+
+  return prisma.emailOutbox.create({
+    data: {
+      orderId: null,
+      recipient: email.recipient,
+      subject: email.subject,
+      body: email.body,
+      magicLinkPath: null,
+      status,
+      errorAt: status === 'MISSING_RECIPIENT' ? new Date() : null,
+      errorMessage: status === 'MISSING_RECIPIENT' ? 'Order copy email is missing.' : null
+    }
+  });
+}
+
 function renderProviderEmailHtml(body: string, magicLinkPath: string | null) {
   const magicLinkUrl = getAbsoluteAppUrl(magicLinkPath);
   const content = body
@@ -578,7 +733,10 @@ async function createProviderEmailOutbox(input: {
   const status = email.recipient ? 'QUEUED' : 'MISSING_RECIPIENT';
   const existingOutbox = await prisma.emailOutbox.findFirst({
     where: {
-      orderId: order.id
+      orderId: order.id,
+      magicLinkPath: {
+        not: null
+      }
     },
     orderBy: {
       createdAt: 'desc'
@@ -1580,6 +1738,19 @@ export async function updateSalesLeadEmailSetting(formData: FormData): Promise<v
   revalidatePath('/admin/readiness');
 }
 
+export async function updateOrderCopyEmailSetting(formData: FormData): Promise<void> {
+  const orderCopyEmail = normalizeEmail(getRequiredFormValue(formData, 'orderCopyEmail'), 'Order copy email');
+
+  if (!orderCopyEmail) {
+    throw new Error('Order copy email is required');
+  }
+
+  await upsertSystemSettingValue(ORDER_COPY_EMAIL_SETTING_KEY, orderCopyEmail);
+
+  revalidatePath('/admin/insurance');
+  revalidatePath('/admin/readiness');
+}
+
 export async function addBusinessHoliday(formData: FormData): Promise<void> {
   const dateValue = getRequiredFormValue(formData, 'holidayDate');
   const label = normalizeShortText(getOptionalFormValue(formData, 'holidayLabel'), 120, 'Holiday label');
@@ -1709,6 +1880,9 @@ export async function submitCheckout(formData: FormData): Promise<void> {
     actorType: 'CUSTOMER',
     actorName: order.customerName ?? order.userId
   });
+
+  const orderCopyEmailOutbox = await createOrderCopyEmailOutbox(orderId);
+  await deliverEmailOutboxItem(orderCopyEmailOutbox.id);
 
   const insurerToken = await createMagicLinkTokenForOrder(orderId);
   const providerEmailOutbox = await createProviderEmailOutbox({
