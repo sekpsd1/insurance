@@ -162,12 +162,12 @@ export function CartCompareSelector({
 
   return (
     <section className="rounded-3xl bg-white p-5 shadow-[0_10px_30px_rgba(4,16,61,0.08)] ring-1 ring-white/70">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="font-[Kanit,sans-serif] text-lg font-bold text-[#0047BA]">เลือกแผนเพื่อเปรียบเทียบ</p>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <p className="whitespace-nowrap font-[Kanit,sans-serif] text-[15px] font-bold leading-6 text-[#0047BA] sm:text-base">เลือกแผนเพื่อเปรียบเทียบ</p>
           <p className="mt-1 text-sm leading-6 text-[#4b5265]">เลือกได้ 2 แผนจากรายการในตะกร้า</p>
         </div>
-        <span className="rounded-full bg-[#eef3ff] px-3 py-1 text-xs font-semibold text-[#0052CC]">
+        <span className="min-w-[44px] whitespace-nowrap rounded-full bg-[#eef3ff] px-2 py-1 text-center text-xs font-semibold text-[#0052CC]">
           {selectedIds.length} / 2
         </span>
       </div>
