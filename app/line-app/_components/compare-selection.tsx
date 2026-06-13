@@ -418,9 +418,9 @@ export default function CompareSelection({
               key={pkg.id}
               className="overflow-hidden rounded-xl bg-white shadow-[0_8px_24px_rgba(0,0,0,0.06)] transition hover:shadow-[0_12px_32px_rgba(0,0,0,0.08)]"
             >
-              <div className="relative p-2.5">
-                <div className="relative mb-2.5 flex items-start gap-2">
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[rgba(195,198,214,0.35)] bg-[#eef3ff] shadow-sm">
+              <div className="relative p-2">
+                <div className="relative mb-1.5 flex items-start gap-2">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[rgba(195,198,214,0.35)] bg-[#eef3ff] shadow-sm">
                     {pkg.logoUrl && !failedLogoIdSet.has(pkg.id) ? (
                       <img
                         src={encodeLogoUrl(pkg.logoUrl)}
@@ -436,17 +436,17 @@ export default function CompareSelection({
                   </div>
 
                   <div className="min-w-0 flex-1">
-                    <p className="break-words text-[13px] leading-4 text-[#434654]">{pkg.company}</p>
+                    <p className="break-words text-[12px] leading-4 text-[#434654]">{pkg.company}</p>
                   </div>
 
                 </div>
 
-                <p className="mb-2.5 break-words font-[Kanit,sans-serif] text-[15px] font-bold leading-tight text-[#0052CC]">
+                <p className="mb-1.5 break-words font-[Kanit,sans-serif] text-[13px] font-bold leading-tight text-[#0052CC]">
                   {[pkg.brand, pkg.model, registrationYear].filter(Boolean).join(' · ') || '-'}
                 </p>
 
-                <div className="mb-2.5 overflow-hidden rounded-xl border border-[#dfe4ef] bg-white shadow-[0_6px_18px_rgba(15,32,67,0.06)]">
-                  <div className="space-y-2 p-3 text-[13px] text-[#2f3545]">
+                <div className="mb-2 overflow-hidden rounded-xl border border-[#dfe4ef] bg-white shadow-[0_6px_18px_rgba(15,32,67,0.06)]">
+                  <div className="space-y-1.5 p-2.5 text-[12px] text-[#2f3545]">
                     <div className="flex items-start gap-2">
                       <DetailIcon icon="car" tone="blue" />
                       <div className="min-w-0 flex-1">
@@ -491,12 +491,12 @@ export default function CompareSelection({
                   </div>
                 </div>
 
-                <div className="mb-2.5 overflow-hidden rounded-xl bg-[#eef1f4] shadow-[0_8px_22px_rgba(15,32,67,0.08)]">
-                  <div className="border-b border-[#d8dde7] px-3 py-2">
+                <div className="mb-2 overflow-hidden rounded-xl bg-[#eef1f4] shadow-[0_8px_22px_rgba(15,32,67,0.08)]">
+                  <div className="border-b border-[#d8dde7] px-3 py-1.5">
                     <div className="flex items-center justify-between gap-3">
-                      <h3 className="font-[Kanit,sans-serif] text-base font-bold text-[#1f2a44]">สรุปค่าใช้จ่าย</h3>
+                      <h3 className="font-[Kanit,sans-serif] text-sm font-bold text-[#1f2a44]">สรุปค่าใช้จ่าย</h3>
                       {ctpOption ? (
-                        <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold text-[#1f2a44]">
+                        <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-[#1f2a44]">
                           <span>เพิ่ม พ.ร.บ.</span>
                           <input
                             type="checkbox"
@@ -509,7 +509,7 @@ export default function CompareSelection({
                     </div>
                   </div>
 
-                  <div className="space-y-2 px-3 py-3 text-[13px] text-[#2f3545]">
+                  <div className="space-y-1.5 px-3 py-2 text-[12px] text-[#2f3545]">
                     <div className="flex items-center gap-2">
                       <DetailIcon icon="tag" tone="orange" />
                       <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
@@ -529,15 +529,15 @@ export default function CompareSelection({
                     ) : null}
                   </div>
 
-                  <div className="flex items-center justify-between gap-3 border-t border-[#d8dde7] px-3 py-2 text-base font-bold text-[#1f2a44]">
+                  <div className="flex items-center justify-between gap-3 border-t border-[#d8dde7] px-3 py-1.5 text-sm font-bold text-[#1f2a44]">
                     <span>รวม</span>
                     <span>{formatMoney(totalPrice)} บาท</span>
                   </div>
                 </div>
 
-                <div className="mb-2.5 rounded-xl border border-[#d6c27a] bg-[#fffdf4] px-3 py-2.5 shadow-[0_8px_20px_rgba(154,118,20,0.10)]">
+                <div className="mb-2 rounded-xl border border-[#d6c27a] bg-[#fffdf4] px-3 py-2 shadow-[0_8px_20px_rgba(154,118,20,0.10)]">
                   <p className="text-sm font-semibold text-[#4b3a0b]">คงเหลือชำระ</p>
-                  <p className="mt-0.5 font-[Kanit,sans-serif] text-2xl font-bold leading-tight text-[#111827]">{formatMoney(payableTotal)} บาท</p>
+                  <p className="mt-0.5 font-[Kanit,sans-serif] text-xl font-bold leading-tight text-[#111827]">{formatMoney(payableTotal)} บาท</p>
                 </div>
 
                 <button

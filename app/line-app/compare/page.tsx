@@ -410,6 +410,16 @@ function getOwnDamageValue(pkg: ComparePackage) {
   return formatSumInsuredRange(pkg.minSumInsured, pkg.maxSumInsured);
 }
 
+function getOwnDamageLabel(pkg: ComparePackage) {
+  const coverageGroup = getCoverageGroup(pkg);
+
+  if (coverageGroup === '3') {
+    return '3.1 ความคุ้มครองความเสียหายต่อรถยนต์';
+  }
+
+  return '3.1 ความคุ้มครองความเสียหายต่อรถยนต์ เนื่องจากการชนกับพาหนะทางบก(ร.ย.ภ.10)';
+}
+
 function getLostFireValue(pkg: ComparePackage) {
   const coverageGroup = getCoverageGroup(pkg);
 
@@ -708,7 +718,10 @@ export default async function ComparePage({
     { kind: 'section', icon: 'shield', label: 'ความเสียหายต่อตัวรถยนต์', values: packages.map(() => '') },
     {
       kind: 'row',
-      label: '3.1 ความคุ้มครองความเสียหายต่อตัวรถยนต์',
+      label: packages.every((pkg) => getCoverageGroup(pkg) === '3')
+        ? '3.1 ความคุ้มครองความเสียหายต่อรถยนต์'
+        : '3.1 ความคุ้มครองความเสียหายต่อรถยนต์ เนื่องจากการชนกับพาหนะทางบก(ร.ย.ภ.10)',
+      labels: packages.map((pkg) => getOwnDamageLabel(pkg)),
       values: packages.map((pkg) => getOwnDamageValue(pkg))
     },
     {
@@ -795,7 +808,7 @@ export default async function ComparePage({
           <section className="space-y-1 px-1">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
-                <p className="font-[Kanit,sans-serif] text-2xl font-bold text-[#081833]">เปรียบเทียบความคุ้มครอง</p>
+                <p className="whitespace-nowrap font-[Kanit,sans-serif] text-[24px] font-bold leading-tight text-[#081833] sm:text-2xl">เปรียบเทียบความคุ้มครอง</p>
                 {searchSummary ? (
                   <p className="mt-1 text-sm font-medium leading-6 text-[#4b5265]">{searchSummary}</p>
                 ) : null}
@@ -920,7 +933,7 @@ export default async function ComparePage({
                               remainingCtpIds={activeCtpIds.filter((id) => id !== pkg.id)}
                             />
                           </div>
-                          <p className="mt-1 break-words font-[Kanit,sans-serif] text-sm font-bold leading-5 text-[#00407f]">{pkg.company}</p>
+                          <p className="mt-1 overflow-hidden break-words font-[Kanit,sans-serif] text-[11px] font-bold leading-4 text-[#00407f] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">{pkg.company}</p>
                           <p className="mt-0.5 text-xs font-semibold leading-4 text-[#4b5265]">{getCoverageLabel(pkg.coverageType || coverage || '')}</p>
                           <p className="mt-1 inline-flex rounded-full bg-[#eef3ff] px-2 py-0.5 text-[11px] font-semibold text-[#0047BA]">{pkg.repairType || '-'}</p>
                         </div>
@@ -973,7 +986,7 @@ export default async function ComparePage({
                                 : 'text-sm font-semibold leading-6 text-[#30384a]'
                             }`}
                           >
-                            {row.label}
+                            {'labels' in row && Array.isArray(row.labels) ? row.labels[index] : row.label}
                           </p>
                           <p
                             className={`mt-2 break-words ${
