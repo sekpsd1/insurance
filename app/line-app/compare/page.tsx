@@ -892,7 +892,109 @@ export default async function ComparePage({
           </section>
         ) : (
           <section className="overflow-hidden rounded-3xl bg-white shadow-[0_10px_30px_rgba(4,16,61,0.08)] ring-1 ring-white/70">
-            <div className="overflow-x-auto">
+            <div className="md:hidden">
+              <div className="grid grid-cols-2 divide-x divide-slate-200 border-b border-slate-200">
+                {packages.map((pkg) => {
+                  const ctpOption = ctpOptionByPackageId.get(pkg.id);
+                  const payableAmount = (pkg.payablePrice ?? pkg.netPrice) + (ctpOption?.total ?? 0);
+
+                  return (
+                    <div key={pkg.id} className="min-w-0 p-3">
+                      <div className="flex items-start gap-2">
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#eef3ff] ring-1 ring-[#d9e3ff]">
+                          {pkg.logoUrl ? (
+                            <img src={encodeLogoUrl(pkg.logoUrl)} alt={pkg.company} className="h-full w-full object-contain" />
+                          ) : (
+                            <span className="px-1 text-center text-[10px] font-bold leading-3 text-[#0047BA]">{pkg.company}</span>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex justify-end">
+                            <RemoveComparePackageButton
+                              href={buildCompareHrefWithIds(
+                                compareFilters,
+                                packages.filter((item) => item.id !== pkg.id).map((item) => item.id),
+                                activeCtpIds.filter((id) => id !== pkg.id)
+                              )}
+                              remainingIds={packages.filter((item) => item.id !== pkg.id).map((item) => item.id)}
+                              remainingCtpIds={activeCtpIds.filter((id) => id !== pkg.id)}
+                            />
+                          </div>
+                          <p className="mt-1 break-words font-[Kanit,sans-serif] text-sm font-bold leading-5 text-[#00407f]">{pkg.company}</p>
+                          <p className="mt-0.5 text-xs font-semibold leading-4 text-[#4b5265]">{getCoverageLabel(pkg.coverageType || coverage || '')}</p>
+                          <p className="mt-1 inline-flex rounded-full bg-[#eef3ff] px-2 py-0.5 text-[11px] font-semibold text-[#0047BA]">{pkg.repairType || '-'}</p>
+                        </div>
+                      </div>
+                      <div className="mt-3 rounded-2xl bg-[#004f9f] px-2 py-3 text-center text-white shadow-sm">
+                        <p className="font-[Kanit,sans-serif] text-sm font-bold leading-5">คงเหลือชำระ</p>
+                        <p className="mt-1 font-[Kanit,sans-serif] text-xl font-semibold leading-none">{formatMoney(payableAmount)} บาท</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div>
+                {comparisonRows.map((row) => {
+                  if (row.kind === 'section') {
+                    return (
+                      <div key={`${row.kind}-${row.label}`} className="border-t border-slate-200 bg-[#f0f8ff] px-4 py-4 text-center">
+                        <div className="mx-auto flex max-w-[280px] items-center justify-center gap-2 font-[Kanit,sans-serif] text-lg font-bold leading-6 text-[#004b8f]">
+                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0076cf] text-white">
+                            {getSectionIcon(row.icon)}
+                          </span>
+                          <span className="break-words">{row.label}</span>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  if (row.kind === 'subsection') {
+                    return (
+                      <div key={`${row.kind}-${row.label}`} className="border-t border-slate-200 bg-white px-4 py-3 text-sm font-semibold leading-6 text-[#30384a]">
+                        {row.label}
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div key={`${row.kind}-${row.label}`} className="grid grid-cols-2 divide-x divide-slate-200 border-t border-slate-200">
+                      {row.values.map((value, index) => (
+                        <div
+                          key={`${row.label}-${index}`}
+                          className={`min-w-0 px-4 ${
+                            row.kind === 'payable' ? 'py-4' : row.kind === 'total' ? 'py-3' : 'py-4'
+                          } ${getComparisonCellClass(row.kind, index, String(value))}`}
+                        >
+                          <p
+                            className={`break-words text-left ${
+                              row.kind === 'total' || row.kind === 'payable'
+                                ? 'font-[Kanit,sans-serif] text-base font-bold text-current'
+                                : 'text-sm font-semibold leading-6 text-[#30384a]'
+                            }`}
+                          >
+                            {row.label}
+                          </p>
+                          <p
+                            className={`mt-2 break-words ${
+                              row.kind === 'payable'
+                                ? 'font-[Kanit,sans-serif] text-2xl font-semibold leading-tight'
+                                : row.kind === 'total'
+                                  ? 'font-[Kanit,sans-serif] text-lg font-semibold leading-tight'
+                                  : 'text-xl font-medium leading-tight'
+                            }`}
+                          >
+                            {value}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="hidden overflow-x-auto md:block">
               <table className="min-w-full border-separate border-spacing-0">
                 <thead>
                   <tr>

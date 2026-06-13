@@ -1,6 +1,6 @@
 # Project State
 
-Last updated: 2026-06-12
+Last updated: 2026-06-13
 
 ## Current Architecture
 
@@ -156,7 +156,7 @@ It also stores rating/search fields imported from insurer CSV rows:
 - Result cards encode uploaded logo URLs before rendering and fall back to company text if the image cannot be loaded.
 - Result cards and compare table display repair type from `GarageCd` as `ซ่อมห้าง` or `ซ่อมอู่`.
 - Compare selection flow exists.
-- Compare page displays two selected packages side by side as a detailed coverage-comparison table, including third-party liability, own-damage/lost-fire coverage, attached-document benefits, premium, CTP, total, and remaining payable rows; the ready table uses section icons, colored plan columns, highlighted totals, and a more prominent remaining-payable row while keeping remove/cart actions in the plan headers. The coverage-label column scrolls normally on mobile instead of staying sticky.
+- Compare page displays two selected packages side by side as a detailed coverage-comparison table, including third-party liability, own-damage/lost-fire coverage, attached-document benefits, premium, CTP, total, and remaining payable rows; the desktop table uses section icons, colored plan columns, highlighted totals, and a more prominent remaining-payable row while keeping remove/cart actions in the plan headers. The mobile view now uses a two-column vertical layout so customers scroll up/down to read all coverage items instead of swiping horizontally.
 - Results and compare preserve query parameters.
 - Results page now hides the extra result-summary/count blocks above the plan list and shows the plan cards before the quick-filter card so customers reach the payable section sooner while keeping the remaining payable box in its original position inside each plan card.
 - Results page now uses a compact blue header without the unused menu button and tighter top/card spacing so customers can see the remaining payable section sooner in LINE Mini App.
