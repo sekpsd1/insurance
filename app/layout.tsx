@@ -3,8 +3,8 @@ import type { ReactNode } from 'react';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'LINE Mini App Insurance',
-  description: 'Car insurance mini app for customers and admins.'
+  title: 'ประกันภัยไร้คอม',
+  description: 'ระบบเสนอเบี้ยประกันภัยรถยนต์สำหรับลูกค้าและแอดมิน'
 };
 
 export default function RootLayout({
