@@ -28,6 +28,16 @@ type CartPlanActionsProps = {
   coverageDetailRows: CoverageDetailRow[];
 };
 
+type CartCompareSelectorProps = {
+  baseQueryString: string;
+  selectedCtpIds: string[];
+  packages: Array<{
+    id: string;
+    title: string;
+    subtitle: string;
+  }>;
+};
+
 function getStoredStringList(key: string) {
   try {
     const rawValue = window.localStorage.getItem(key);
@@ -111,6 +121,99 @@ export function ClearCartButton({ href }: ClearCartButtonProps) {
     >
       ล้างตะกร้า
     </Link>
+  );
+}
+
+export function CartCompareSelector({
+  baseQueryString,
+  selectedCtpIds,
+  packages
+}: CartCompareSelectorProps) {
+  const router = useRouter();
+  const [selectedIds, setSelectedIds] = useState<string[]>(() => (packages.length === 2 ? packages.map((pkg) => pkg.id) : []));
+  const [error, setError] = useState('');
+
+  function togglePackage(id: string) {
+    setError('');
+    setSelectedIds((current) => {
+      if (current.includes(id)) {
+        return current.filter((item) => item !== id);
+      }
+
+      if (current.length >= 2) {
+        return current;
+      }
+
+      return [...current, id];
+    });
+  }
+
+  function openCompare() {
+    if (selectedIds.length !== 2) {
+      setError('กรุณาเลือก 2 แผนเพื่อเปรียบเทียบ');
+      return;
+    }
+
+    const params = new URLSearchParams(baseQueryString);
+    selectedIds.forEach((id) => params.append('ids', id));
+    selectedCtpIds.filter((id) => selectedIds.includes(id)).forEach((id) => params.append('ctpIds', id));
+    router.push(`/line-app/compare?${params.toString()}`);
+  }
+
+  return (
+    <section className="rounded-3xl bg-white p-5 shadow-[0_10px_30px_rgba(4,16,61,0.08)] ring-1 ring-white/70">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="font-[Kanit,sans-serif] text-lg font-bold text-[#0047BA]">เลือกแผนเพื่อเปรียบเทียบ</p>
+          <p className="mt-1 text-sm leading-6 text-[#4b5265]">เลือกได้ 2 แผนจากรายการในตะกร้า</p>
+        </div>
+        <span className="rounded-full bg-[#eef3ff] px-3 py-1 text-xs font-semibold text-[#0052CC]">
+          {selectedIds.length} / 2
+        </span>
+      </div>
+
+      <div className="mt-4 space-y-2">
+        {packages.map((pkg) => {
+          const isSelected = selectedIds.includes(pkg.id);
+          const isDisabled = !isSelected && selectedIds.length >= 2;
+
+          return (
+            <label
+              key={pkg.id}
+              className={`flex cursor-pointer items-start gap-3 rounded-2xl border px-3 py-3 transition ${
+                isSelected
+                  ? 'border-[#0052CC] bg-[#eef3ff]'
+                  : isDisabled
+                    ? 'border-[#e5e7eb] bg-[#f8fafc] opacity-60'
+                    : 'border-[#dfe4ef] bg-white hover:bg-[#f8faff]'
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={isSelected}
+                disabled={isDisabled}
+                onChange={() => togglePackage(pkg.id)}
+                className="mt-1 h-5 w-5 rounded border-slate-300 text-[#0052CC] focus:ring-[#0052CC]"
+              />
+              <span className="min-w-0">
+                <span className="block font-[Kanit,sans-serif] text-sm font-semibold leading-5 text-[#1f2a44]">{pkg.title}</span>
+                <span className="mt-0.5 block text-xs leading-5 text-[#4b5265]">{pkg.subtitle}</span>
+              </span>
+            </label>
+          );
+        })}
+      </div>
+
+      {error ? <p className="mt-3 text-sm font-semibold text-red-600">{error}</p> : null}
+
+      <button
+        type="button"
+        onClick={openCompare}
+        className="mt-4 w-full rounded-2xl bg-[#0047BA] px-4 py-4 font-[Kanit,sans-serif] text-base font-semibold text-white transition hover:bg-[#003c9d] disabled:cursor-not-allowed disabled:bg-[#b8c6e6]"
+      >
+        เปรียบเทียบ 2 แผน
+      </button>
+    </section>
   );
 }
 

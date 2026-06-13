@@ -707,7 +707,7 @@ export default async function LineAppPage({
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
             </svg>
           </Link>
-          <h1 className="truncate text-center font-[Kanit,sans-serif] text-sm font-semibold tracking-wide">เลือกแผนประกันราคาทุน</h1>
+          <h1 className="truncate text-center font-[Kanit,sans-serif] text-sm font-semibold tracking-wide">เสนอเบี้ยประกันภัย</h1>
           <div className="h-8 w-8" />
         </div>
       </header>

@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getCustomerCtpOptionsBySClass } from '@/lib/ctp-rates';
-import { CartPlanActions, CartStorageHydrator, ClearCartButton, RemoveCartPackageButton } from './cart-actions';
+import { CartCompareSelector, CartPlanActions, CartStorageHydrator, ClearCartButton, RemoveCartPackageButton } from './cart-actions';
 
 type CartSearchParams = {
   sClass?: string;
@@ -453,8 +453,8 @@ export default async function CartPage({
   const packages = selectedIds
     .map((id) => packageById.get(id))
     .filter((row): row is CartPackageRow => Boolean(row));
-  const compareIds = packages.slice(0, 2).map((pkg) => pkg.id);
-  const compareCtpIds = selectedCtpIds.filter((id) => compareIds.includes(id));
+  const compareIds: string[] = [];
+  const compareCtpIds: string[] = [];
 
   return (
     <main className="min-h-screen bg-[#f4f5ff] text-[#12131a]">
@@ -482,6 +482,20 @@ export default async function CartPage({
           </div>
           <p className="mt-3 text-sm leading-6 text-[#4b5265]">รายการนี้เป็นแผนที่เก็บไว้ดูภายหลัง ยังไม่สร้างคำสั่งซื้อจนกว่าจะกดเลือกแผน</p>
         </section>
+
+        {packages.length >= 2 ? (
+          <CartCompareSelector
+            baseQueryString={baseParams.toString()}
+            selectedCtpIds={selectedCtpIds}
+            packages={packages.map((pkg) => ({
+              id: pkg.id,
+              title: [pkg.brand, pkg.model, normalizeSearchValue(resolvedSearchParams.year)].filter(Boolean).join(' · ') || pkg.company,
+              subtitle: [getCoverageLabel(pkg.coverageType), getText(pkg.repairType, 'อู่ประกัน'), formatSumInsuredRange(pkg.minSumInsured, pkg.maxSumInsured)]
+                .filter(Boolean)
+                .join(' · ')
+            }))}
+          />
+        ) : null}
 
         {packages.length === 0 ? (
           <section className="rounded-3xl bg-white p-6 text-center shadow-[0_10px_30px_rgba(4,16,61,0.08)] ring-1 ring-white/70">

@@ -162,7 +162,7 @@ It also stores rating/search fields imported from insurer CSV rows:
 - Results page now uses a compact blue header without the unused menu button and tighter top/card spacing so customers can see the remaining payable section sooner in LINE Mini App.
 - Results plan cards now use tighter padding, smaller detail icons, compact full-width vehicle-title text, and append registration year to the vehicle title to preserve space so more of the selected plan card is visible in the first mobile viewport.
 - Cart plan cards now match the compact results-card layout more closely, including the full-width brand/model/year title, smaller icons, tighter spacing, compact cost summary, and compact remaining-payable section. The cart header only shows the number of saved plans and no longer shows a combined remaining-payable total. Opening `/line-app/cart` without query IDs now reads saved cart IDs from localStorage and redirects to the populated cart URL, so Rich Menu cart links can show the customer's saved plans.
-- Cart page now shows a `ดูเปรียบเทียบ` action when at least two saved plans are available, opening the compare table directly from the cart without forcing customers to recalculate premiums.
+- Cart page now lets customers choose exactly 2 saved plans to compare from the cart. The results page no longer exposes a separate compare-selection button; customers save plans to the cart first, then choose the 2 plans for comparison there.
 - Customer-facing zero sum-insured display text now says `ไม่คุ้มครอง` instead of `ไม่มีทุนประกัน` across search, results, cart, and compare views.
 - Search Premium no longer shows or requires the sum-insured selector for policy type 3; customers can search type 3 packages after choosing vehicle, repair, year, and engine details.
 - Search Premium now opens the `ไม่มีแคมเปญสำหรับรุ่นนี้ สามารถเลือกแผนอื่นได้` popup when policy type 2+, 3+, or 3 has no premium/campaign for the selected vehicle details.
@@ -413,11 +413,9 @@ Last verified on 2026-05-21 using localhost dev server after the customer search
 - Results package cards were reorganized into a customer-facing proposal layout with a plan detail box and cost summary box, including deductible wording derived from `covcod` (`2.2`/`3.2` show no first deductible; `2.1`/`3.1` show first deductible applies).
 - Results now include `เปลี่ยนประเภท / ทุนประกัน / ซ่อมห้าง ซ่อมอู่`, returning to search with current filters prefilled.
 - Results now include an in-page quick filter panel for policy type, repair coverage, and sum insured so customers can adjust those choices without returning to the full vehicle search form.
-- Results separate compare selection from cart selection:
-  - `เลือกเทียบ` stores compare selections.
-  - `เก็บใส่ตะกร้า` stores cart selections separately.
-- Results now show a separate sticky cart bar after customers save packages, with a `ดูรายการในตะกร้า` action that opens `/line-app/cart`.
-- `/line-app/cart` now displays saved packages, total premium, remove-per-plan, clear-cart, back-to-results, and choose-plan actions.
+- Results no longer show a direct `เลือกเทียบ` action. Customers save plans with `เก็บใส่ตะกร้า`, then choose exactly 2 saved plans to compare from `/line-app/cart`.
+- Results now show a separate sticky cart bar after customers save packages, with a `ดูตะกร้า / เปรียบเทียบ` action that opens `/line-app/cart`.
+- `/line-app/cart` now displays saved packages, remove-per-plan, clear-cart, back-to-results, choose-plan actions, and a two-plan comparison selector.
 - Home page Customer CTA now links directly to `/line-app/search`.
 - Compare page title is now Thai: `ตารางเปรียบเทียบแผน`.
 - Compare page supports removing individual compared plans and has a separate `เก็บใส่ตะกร้า` button per plan.

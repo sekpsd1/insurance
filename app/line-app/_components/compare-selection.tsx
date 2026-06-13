@@ -45,11 +45,9 @@ type CompareSelectionProps = {
   initialCtpPackageIds?: string[];
 };
 
-const MAX_COMPARE_PACKAGES = 2;
-const COMPARE_STORAGE_KEY = 'insurance.comparePackageIds';
-const COMPARE_CTP_STORAGE_KEY = 'insurance.compareCtpPackageIds';
 const CART_STORAGE_KEY = 'insurance.cartPackageIds';
 const CART_CTP_STORAGE_KEY = 'insurance.cartCtpPackageIds';
+const MAX_COMPARE_PACKAGES = 2;
 
 function formatMoney(value: number) {
   return value.toLocaleString('th-TH');
@@ -300,50 +298,22 @@ export default function CompareSelection({
   initialCtpPackageIds = []
 }: CompareSelectionProps) {
   const router = useRouter();
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [cartIds, setCartIds] = useState<string[]>([]);
-  const [ctpPackageIds, setCtpPackageIds] = useState<string[]>([]);
+  const [ctpPackageIds, setCtpPackageIds] = useState<string[]>(() => initialCtpPackageIds);
   const [failedLogoIds, setFailedLogoIds] = useState<string[]>([]);
   const [expandedDetailIds, setExpandedDetailIds] = useState<string[]>([]);
-  const [error, setError] = useState('');
-  const [isCompareStorageLoaded, setIsCompareStorageLoaded] = useState(false);
   const [isCartStorageLoaded, setIsCartStorageLoaded] = useState(false);
+  const selectedCount: number = 0;
+  const error = '';
 
-  const selectedCount = selectedIds.length;
-
-  const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
   const cartIdSet = useMemo(() => new Set(cartIds), [cartIds]);
   const ctpPackageIdSet = useMemo(() => new Set(ctpPackageIds), [ctpPackageIds]);
   const failedLogoIdSet = useMemo(() => new Set(failedLogoIds), [failedLogoIds]);
   const expandedDetailIdSet = useMemo(() => new Set(expandedDetailIds), [expandedDetailIds]);
 
   useEffect(() => {
-    try {
-      const rawValue = window.localStorage.getItem(COMPARE_STORAGE_KEY);
-      const parsed = rawValue ? JSON.parse(rawValue) : [];
-      if (Array.isArray(parsed)) {
-        setSelectedIds(parsed.filter((value): value is string => typeof value === 'string').slice(0, MAX_COMPARE_PACKAGES));
-      }
-
-      const rawCtpValue = window.localStorage.getItem(COMPARE_CTP_STORAGE_KEY);
-      const parsedCtp = rawCtpValue ? JSON.parse(rawCtpValue) : [];
-      const storedCtpIds = Array.isArray(parsedCtp) ? parsedCtp.filter((value): value is string => typeof value === 'string') : [];
-      setCtpPackageIds(Array.from(new Set([...storedCtpIds, ...initialCtpPackageIds])));
-    } catch {
-      window.localStorage.removeItem(COMPARE_STORAGE_KEY);
-      window.localStorage.removeItem(COMPARE_CTP_STORAGE_KEY);
-    }
-    setIsCompareStorageLoaded(true);
+    setCtpPackageIds((current) => Array.from(new Set([...current, ...initialCtpPackageIds])));
   }, [initialCtpPackageIds]);
-
-  useEffect(() => {
-    if (!isCompareStorageLoaded) {
-      return;
-    }
-
-    window.localStorage.setItem(COMPARE_STORAGE_KEY, JSON.stringify(selectedIds));
-    window.localStorage.setItem(COMPARE_CTP_STORAGE_KEY, JSON.stringify(ctpPackageIds));
-  }, [ctpPackageIds, isCompareStorageLoaded, selectedIds]);
 
   useEffect(() => {
     try {
@@ -379,30 +349,13 @@ export default function CompareSelection({
     setFailedLogoIds((current) => (current.includes(id) ? current : [...current, id]));
   }
 
-  function togglePackage(id: string) {
-    setError('');
-    setSelectedIds((current) => {
-      if (current.includes(id)) {
-        return current.filter((item) => item !== id);
-      }
-
-      if (current.length >= MAX_COMPARE_PACKAGES) {
-        setError(`เลือกได้สูงสุด ${MAX_COMPARE_PACKAGES} แผน`);
-        return current;
-      }
-
-      return [...current, id];
-    });
-  }
-
-  function clearCompareSelection() {
-    setError('');
-    setSelectedIds([]);
-  }
-
   function clearCartSelection() {
     setCartIds([]);
     setCtpPackageIds([]);
+  }
+
+  function clearCompareSelection() {
+    return undefined;
   }
 
   function toggleCart(id: string) {
@@ -431,15 +384,7 @@ export default function CompareSelection({
   }
 
   function handleCompare() {
-    if (selectedIds.length < 2) {
-      setError('กรุณาเก็บอย่างน้อย 2 แผนเพื่อเปรียบเทียบ');
-      return;
-    }
-
-    const params = new URLSearchParams(baseQueryString);
-    selectedIds.forEach((id) => params.append('ids', id));
-    ctpPackageIds.filter((id) => selectedIds.includes(id)).forEach((id) => params.append('ctpIds', id));
-    router.push(`/line-app/compare?${params.toString()}`);
+    return undefined;
   }
 
   function handleCart() {
@@ -453,7 +398,6 @@ export default function CompareSelection({
     <>
       <div className="space-y-3">
         {packages.map((pkg) => {
-          const isSelected = selectedIdSet.has(pkg.id);
           const isInCart = cartIdSet.has(pkg.id);
           const ctpOption = pkg.sClass ? ctpOptionsBySClass[pkg.sClass] ?? null : null;
           const isCtpSelected = ctpPackageIdSet.has(pkg.id);
@@ -472,9 +416,7 @@ export default function CompareSelection({
           return (
             <div
               key={pkg.id}
-              className={`overflow-hidden rounded-xl bg-white shadow-[0_8px_24px_rgba(0,0,0,0.06)] transition hover:shadow-[0_12px_32px_rgba(0,0,0,0.08)] ${
-                isSelected ? 'ring-2 ring-[#0052CC]' : ''
-              }`}
+              className="overflow-hidden rounded-xl bg-white shadow-[0_8px_24px_rgba(0,0,0,0.06)] transition hover:shadow-[0_12px_32px_rgba(0,0,0,0.08)]"
             >
               <div className="relative p-2.5">
                 <div className="relative mb-2.5 flex items-start gap-2">
@@ -494,22 +436,9 @@ export default function CompareSelection({
                   </div>
 
                   <div className="min-w-0 flex-1">
-                    <p className="break-words pr-32 text-[13px] leading-4 text-[#434654]">{pkg.company}</p>
+                    <p className="break-words text-[13px] leading-4 text-[#434654]">{pkg.company}</p>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => togglePackage(pkg.id)}
-                    aria-pressed={isSelected}
-                    className={`absolute right-0 top-0 inline-flex w-[7.25rem] items-center justify-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition ${
-                      isSelected
-                        ? 'bg-[#0052CC] text-white shadow-[0_2px_8px_rgba(0,82,204,0.25)]'
-                        : 'bg-[#eef3ff] text-[#0052CC] hover:bg-[#dde7ff]'
-                    }`}
-                  >
-                    <span aria-hidden="true">{isSelected ? '✓' : '+'}</span>
-                    {isSelected ? 'เลือกเทียบแล้ว' : 'เลือกเทียบ'}
-                  </button>
                 </div>
 
                 <p className="mb-2.5 break-words font-[Kanit,sans-serif] text-[15px] font-bold leading-tight text-[#0052CC]">
@@ -720,14 +649,18 @@ export default function CompareSelection({
       {cartIds.length > 0 || selectedCount > 0 ? (
       <div className="sticky bottom-0 z-20 -mx-4 border-t border-[#d8dcec] bg-white/95 px-4 py-3 shadow-[0_-8px_24px_rgba(4,16,61,0.10)] backdrop-blur">
         {error ? <p className="mb-2 text-center text-xs font-medium text-red-600">{error}</p> : null}
+        <p className="mb-2 text-center text-[11px] font-medium text-[#4b5265]">
+          ถ้าต้องการเปรียบเทียบ ให้เลือกแผนใส่ตะกร้า
+        </p>
         <div className={`grid gap-2 ${cartIds.length > 0 && selectedCount > 0 ? 'grid-cols-2' : 'grid-cols-1'}`}>
           {cartIds.length > 0 ? (
             <div className="min-w-0">
               <button
                 type="button"
                 onClick={handleCart}
-                className="flex h-14 w-full flex-col items-center justify-center rounded-2xl bg-[#0047BA] px-2 text-center font-[Kanit,sans-serif] text-sm font-semibold leading-tight text-white transition hover:bg-[#003c9d]"
+                className="relative flex h-14 w-full flex-col items-center justify-center rounded-2xl bg-[#0047BA] px-2 text-center font-[Kanit,sans-serif] text-sm font-semibold leading-tight text-white transition hover:bg-[#003c9d] [&>span:not(:first-child)]:hidden"
               >
+                <span>ดูตะกร้า / เปรียบเทียบ ({cartIds.length} แผน)</span>
                 <span>ดูตะกร้า</span>
                 <span className="text-xs font-medium opacity-90">{cartIds.length} แผน</span>
               </button>
