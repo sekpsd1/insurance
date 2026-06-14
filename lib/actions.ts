@@ -438,6 +438,7 @@ function buildProviderEmail(input: {
     carBrand: string | null;
     carModel: string | null;
     carYear: number | null;
+    carCubicCapacity: string | null;
     plateNumber: string | null;
     plateProvince: string | null;
     chassisNumber: string | null;
@@ -482,7 +483,7 @@ function buildProviderEmail(input: {
   const vehicleDocumentUrl = getAbsoluteAppUrl(order.vehicleDocumentUrl);
   const customerName = order.customerName ?? order.user.name ?? '-';
   const customerPhone = order.customerPhone ?? order.user.phone ?? '-';
-  const car = [order.carBrand, order.carModel, order.carYear].filter(Boolean).join(' / ') || '-';
+  const car = [order.carBrand, order.carModel, order.carCubicCapacity, order.carYear].filter(Boolean).join(' / ') || '-';
   const plate = [order.plateNumber, order.plateProvince].filter(Boolean).join(' ') || '-';
   const providerName = order.pkg.providerName ?? order.pkg.company;
   const subject = `New policy request ${order.orderNumber}`;
@@ -534,6 +535,7 @@ function buildOrderCopyEmail(input: {
     carBrand: string | null;
     carModel: string | null;
     carYear: number | null;
+    carCubicCapacity: string | null;
     plateNumber: string | null;
     plateProvince: string | null;
     paymentMethod: string | null;
@@ -560,7 +562,7 @@ function buildOrderCopyEmail(input: {
   const { order, recipient } = input;
   const customerName = order.customerName ?? order.user.name ?? '-';
   const customerPhone = order.customerPhone ?? order.user.phone ?? '-';
-  const car = [order.carBrand, order.carModel, order.carYear].filter(Boolean).join(' / ') || '-';
+  const car = [order.carBrand, order.carModel, order.carCubicCapacity, order.carYear].filter(Boolean).join(' / ') || '-';
   const plate = [order.plateNumber, order.plateProvince].filter(Boolean).join(' ') || '-';
   const slipUrl = getAbsoluteAppUrl(order.slipUrl);
   const gatewayUrl = getAbsoluteAppUrl(order.gatewayUrl);
@@ -1461,8 +1463,10 @@ export async function createPolicyDraftOrder(formData: FormData): Promise<void> 
   const subDistrict = normalizeShortText(getRequiredFormValue(formData, 'subDistrict'), 80, 'Subdistrict');
   const postalCode = normalizeShortText(getRequiredFormValue(formData, 'postalCode'), 10, 'Postal code');
   const idCardNumber = normalizeThaiIdCard(getRequiredFormValue(formData, 'idCardNumber'));
-  const carBrand = normalizeShortText(getOptionalFormValue(formData, 'carBrand'), 80, 'Car brand');
-  const carModel = normalizeShortText(getOptionalFormValue(formData, 'carModel'), 120, 'Car model');
+  const carBrand = normalizeShortText(getRequiredFormValue(formData, 'carBrand'), 80, 'Car brand') ?? '';
+  const carModel = normalizeShortText(getRequiredFormValue(formData, 'carModel'), 120, 'Car model') ?? '';
+  const carCubicCapacity = normalizeShortText(getRequiredFormValue(formData, 'carCubicCapacity'), 80, 'Car cubic capacity') ?? '';
+  const carYear = parseCarYear(getRequiredFormValue(formData, 'carYear'), null);
   const plateProvince = normalizeShortText(getOptionalFormValue(formData, 'plateProvince'), 80, 'Plate province');
   const chassisNumber = normalizeChassisNumber(getRequiredFormValue(formData, 'chassisNumber'));
   const policyStartDate = parseRequiredPolicyStartDate(getRequiredFormValue(formData, 'policyStartDate'), 'Voluntary policy start date');
@@ -1570,9 +1574,10 @@ export async function createPolicyDraftOrder(formData: FormData): Promise<void> 
       subDistrict,
       postalCode,
       idCardNumber,
-      carBrand: carBrand ?? selectedPackage.brand,
-      carModel: carModel ?? selectedPackage.model,
-      carYear: parseCarYear(getOptionalFormValue(formData, 'carYear'), selectedPackage.year),
+      carBrand,
+      carModel,
+      carYear,
+      carCubicCapacity,
       plateNumber,
       plateProvince,
       chassisNumber,

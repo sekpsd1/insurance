@@ -228,72 +228,6 @@ function normalizeSearchValue(value: string | string[] | undefined) {
   return value?.trim() ?? '';
 }
 
-function formatNumber(value: string | number) {
-  const numericValue = typeof value === 'number' ? value : Number(value.replace(/,/g, ''));
-
-  if (!Number.isFinite(numericValue)) {
-    return String(value);
-  }
-
-  return new Intl.NumberFormat('th-TH', {
-    maximumFractionDigits: 0
-  }).format(numericValue);
-}
-
-function formatVehicleSizeLabel({
-  sClass,
-  selectedValue,
-  minValue,
-  maxValue
-}: {
-  sClass: string | null;
-  selectedValue: string;
-  minValue: number | null;
-  maxValue: number | null;
-}) {
-  const isSeatBased = sClass === '210';
-  const unit = isSeatBased ? 'ที่นั่ง' : 'ซีซี';
-
-  if (selectedValue) {
-    return isSeatBased ? `ไม่เกิน ${formatNumber(selectedValue)} ${unit}` : `${formatNumber(selectedValue)} ${unit}`;
-  }
-
-  if (minValue != null && maxValue != null) {
-    if (minValue <= 0) {
-      return `ไม่เกิน ${formatNumber(maxValue)} ${unit}`;
-    }
-
-    if (maxValue >= 9999) {
-      return `${formatNumber(minValue)} ${unit}ขึ้นไป`;
-    }
-
-    if (minValue === maxValue) {
-      return `${formatNumber(minValue)} ${unit}`;
-    }
-
-    return `${formatNumber(minValue)}-${formatNumber(maxValue)} ${unit}`;
-  }
-
-  if (minValue != null) {
-    return `${formatNumber(minValue)} ${unit}ขึ้นไป`;
-  }
-
-  if (maxValue != null) {
-    return `ไม่เกิน ${formatNumber(maxValue)} ${unit}`;
-  }
-
-  return '-';
-}
-
-function VehicleSummaryItem({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-md bg-white px-3 py-2 shadow-sm ring-1 ring-blue-100">
-      <div className="text-[11px] font-bold text-slate-500">{label}</div>
-      <div className="mt-0.5 text-[14px] font-black text-slate-900">{value || '-'}</div>
-    </div>
-  );
-}
-
 function buildResultsHref(searchParams: Awaited<NonNullable<FormPageProps['searchParams']>>) {
   const params = new URLSearchParams();
   const filterKeys = ['sClass', 'coverage', 'repairType', 'brand', 'model', 'year', 'cubicCapacity', 'sumInsured'] as const;
@@ -339,16 +273,6 @@ export default async function PackageFormPage({ params, searchParams }: FormPage
   ]);
   const includeCtp = isCtpSelected(resolvedSearchParams.includeCtp) && Boolean(ctpOption);
   const holidayDates = businessHolidays.map((holiday) => toDateKey(holiday.date));
-  const selectedCarBrand = normalizeSearchValue(resolvedSearchParams.brand) || packageItem.brand || '';
-  const selectedCarModel = normalizeSearchValue(resolvedSearchParams.model) || packageItem.model || '';
-  const selectedCarYear = normalizeSearchValue(resolvedSearchParams.year) || packageItem.year || '';
-  const selectedVehicleSize = formatVehicleSizeLabel({
-    sClass: packageItem.sClass,
-    selectedValue: normalizeSearchValue(resolvedSearchParams.cubicCapacity),
-    minValue: packageItem.minCubicCapacity,
-    maxValue: packageItem.maxCubicCapacity
-  });
-
   return (
     <main className="min-h-screen bg-gradient-to-b from-[#f7f9ff] via-[#f3f6ff] to-white pb-6 text-[#101828]">
       <header className="sticky top-0 z-10 bg-[#0648ad] text-white shadow-[0_10px_30px_rgba(6,72,173,0.18)]">
@@ -370,9 +294,6 @@ export default async function PackageFormPage({ params, searchParams }: FormPage
         <PolicyFormDraftAutosave formId="policy-info-form" />
         <PolicyFormEnhancements formId="policy-info-form" includeCtp={includeCtp} holidayDates={holidayDates} />
         <input type="hidden" name="packageId" value={packageItem.id} />
-        <input type="hidden" name="carBrand" value={selectedCarBrand} />
-        <input type="hidden" name="carModel" value={selectedCarModel} />
-        <input type="hidden" name="carYear" value={selectedCarYear} />
         {includeCtp ? <input type="hidden" name="includeCtp" value="1" /> : null}
 
         <SectionCard icon="person" title="ข้อมูลผู้เอาประกัน">
@@ -403,12 +324,12 @@ export default async function PackageFormPage({ params, searchParams }: FormPage
 
         <SectionCard icon="car" title="ข้อมูลรถยนต์">
           <div className="rounded-lg bg-blue-50/80 p-3.5 ring-1 ring-blue-100">
-            <div className="mb-2 text-[12px] font-black text-[#0648ad]">ข้อมูลรถที่เลือก</div>
-            <div className="grid grid-cols-2 gap-2">
-              <VehicleSummaryItem label="ยี่ห้อรถ" value={selectedCarBrand} />
-              <VehicleSummaryItem label="รุ่นรถ" value={selectedCarModel} />
-              <VehicleSummaryItem label="ขนาด" value={selectedVehicleSize} />
-              <VehicleSummaryItem label="ปีจดทะเบียน" value={String(selectedCarYear || '-')} />
+            <div className="mb-3 text-[13px] font-black text-[#0648ad]">รายละเอียดรถยนต์</div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="ยี่ห้อรถ" name="carBrand" placeholder="เช่น TOYOTA" />
+              <Field label="รุ่นรถ" name="carModel" placeholder="เช่น HILUX REVO" />
+              <Field label="ขนาด" name="carCubicCapacity" placeholder="เช่น 2,001 ซีซี" />
+              <Field label="ปีจดทะเบียน" name="carYear" placeholder="เช่น 2022" inputMode="numeric" />
             </div>
           </div>
           <Field label="ทะเบียนรถ" name="plateNumber" placeholder="เช่น กค 1234" />

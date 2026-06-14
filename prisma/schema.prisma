@@ -142,6 +142,7 @@ model Order {
   carBrand               String?
   carModel               String?
   carYear                Int?
+  carCubicCapacity       String?
   plateNumber            String?
   plateProvince          String?
   chassisNumber          String?

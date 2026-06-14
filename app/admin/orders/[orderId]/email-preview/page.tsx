@@ -71,7 +71,7 @@ export default async function InsurerEmailPreviewPage({ params, searchParams }: 
             </div>
             <div className="rounded-2xl bg-slate-50 p-4">
               <dt className="text-slate-500">รถยนต์</dt>
-              <dd className="mt-1 font-semibold">{[order.carBrand, order.carModel, order.carYear].filter(Boolean).join(' / ') || '-'}</dd>
+              <dd className="mt-1 font-semibold">{[order.carBrand, order.carModel, order.carCubicCapacity, order.carYear].filter(Boolean).join(' / ') || '-'}</dd>
               <dd className="mt-1 text-slate-600">{order.plateNumber ?? '-'} {order.plateProvince ? `(${order.plateProvince})` : ''}</dd>
             </div>
             <div className="rounded-2xl bg-slate-50 p-4 sm:col-span-2">

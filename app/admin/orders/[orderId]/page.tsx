@@ -101,7 +101,7 @@ export default async function AdminOrderDetailPage({ params }: AdminOrderDetailP
   const activeIndex = getOrderProgressIndex(order.status);
   const customerName = order.customerName ?? order.user.name ?? '-';
   const customerPhone = order.customerPhone ?? order.user.phone ?? '-';
-  const vehicle = [order.carBrand, order.carModel, order.carYear].filter(Boolean).join(' / ') || '-';
+  const vehicle = [order.carBrand, order.carModel, order.carCubicCapacity, order.carYear].filter(Boolean).join(' / ') || '-';
   const plate = [order.plateNumber, order.plateProvince].filter(Boolean).join(' ') || '-';
   const customerAddress = [order.customerAddress, order.subDistrict, order.district, order.province, order.postalCode]
     .filter(Boolean)

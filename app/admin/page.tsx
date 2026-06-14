@@ -174,6 +174,7 @@ function buildOrderWhere(filters: Awaited<NonNullable<AdminPageProps['searchPara
       { plateProvince: { contains: q } },
       { carBrand: { contains: q } },
       { carModel: { contains: q } },
+      { carCubicCapacity: { contains: q } },
       {
         user: {
           OR: [
@@ -666,7 +667,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                         {order.plateNumber ?? '-'} {order.plateProvince ? `(${order.plateProvince})` : ''}
                       </div>
                       <div className="mt-1 text-xs text-slate-500">
-                        {[order.carBrand, order.carModel, order.carYear].filter(Boolean).join(' / ') || '-'}
+                        {[order.carBrand, order.carModel, order.carCubicCapacity, order.carYear].filter(Boolean).join(' / ') || '-'}
                       </div>
                     </td>
 

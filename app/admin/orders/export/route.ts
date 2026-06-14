@@ -63,6 +63,7 @@ function buildOrderWhere(searchParams: URLSearchParams) {
       { plateProvince: { contains: q } },
       { carBrand: { contains: q } },
       { carModel: { contains: q } },
+      { carCubicCapacity: { contains: q } },
       {
         user: {
           OR: [
@@ -164,6 +165,7 @@ export async function GET(request: NextRequest) {
     'Chassis Number',
     'Vehicle Brand',
     'Vehicle Model',
+    'Vehicle Cubic Capacity',
     'Vehicle Year',
     'Voluntary Policy Start Date',
     'CTP Policy Start Date',
@@ -204,6 +206,7 @@ export async function GET(request: NextRequest) {
     order.chassisNumber,
     order.carBrand,
     order.carModel,
+    order.carCubicCapacity,
     formatNumber(order.carYear),
     formatDate(order.policyStartDate),
     formatDate(order.ctpPolicyStartDate),

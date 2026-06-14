@@ -69,7 +69,7 @@ export async function GET(request: Request) {
       status: order.status,
       paymentStatus: order.paymentStatus,
       packageName: order.pkg.name,
-      vehicleLabel: [order.carBrand, order.carModel, order.carYear].filter(Boolean).join(' / '),
+      vehicleLabel: [order.carBrand, order.carModel, order.carCubicCapacity, order.carYear].filter(Boolean).join(' / '),
       paymentAmount: toPaymentAmount(order),
       createdAt: order.createdAt.toISOString()
     }))
