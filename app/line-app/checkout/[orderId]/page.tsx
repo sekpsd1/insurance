@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { submitCheckout } from '@/lib/actions';
 import { RememberTrackingOrder } from '@/app/line-app/_components/tracking-order-memory';
+import { ClearPolicyFormDraft } from '@/app/line-app/form/[id]/policy-form-draft-autosave';
 
 type CheckoutPageProps = {
   params: Promise<{ orderId: string }>;
@@ -41,6 +42,7 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
   return (
     <main className="min-h-screen bg-[#f4f7ff] px-4 py-5 text-[#101828]">
       <RememberTrackingOrder orderNumber={order.orderNumber} />
+      <ClearPolicyFormDraft />
       <div className="mx-auto flex max-w-md flex-col gap-4">
         <section className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#0052CC]">Checkout</p>

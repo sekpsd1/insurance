@@ -74,6 +74,14 @@ function clearDraft() {
   }
 }
 
+export function ClearPolicyFormDraft() {
+  useEffect(() => {
+    clearDraft();
+  }, []);
+
+  return null;
+}
+
 export function PolicyFormDraftAutosave({ formId }: { formId: string }) {
   useEffect(() => {
     const form = document.getElementById(formId);
@@ -96,11 +104,7 @@ export function PolicyFormDraftAutosave({ formId }: { formId: string }) {
     }
 
     const handleChange = () => writeDraft(form);
-    const handleSubmit = () => {
-      if (form.checkValidity()) {
-        clearDraft();
-      }
-    };
+    const handleSubmit = () => writeDraft(form);
 
     form.addEventListener('input', handleChange);
     form.addEventListener('change', handleChange);
