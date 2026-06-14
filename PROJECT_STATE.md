@@ -433,6 +433,7 @@ Last verified on 2026-05-21 using localhost dev server after the customer search
 - Cart and results card sum-insured display now normalizes min/max values before comparison so equal imported values such as `50000` and `50000` render as one amount instead of a duplicated range.
 - Customer Policy Info vehicle section now uses customer-entered vehicle details instead of prefilled package/search data. The old selected-vehicle summary was replaced with editable brand, model, size, and registration-year fields labeled `รายละเอียดรถยนต์`; orders now store `carCubicCapacity` and show it in admin, provider Magic Link, tracking, email preview, and CSV export.
 - Policy Info submission now accepts customer-entered registration years in either Buddhist Era or Gregorian year format, converting Buddhist years to Gregorian before saving. Vehicle document uploads also tolerate generic mobile MIME values when the actual file content is a supported image or PDF.
+- Policy Info submission now redirects back to the policy form with a clear Thai validation message instead of showing a generic LINE App error for known customer data or vehicle-document upload failures. Server Action upload body limit was increased above the app's 10MB document validation limit so oversized files can surface a friendly form error.
 
 Last verified on 2026-05-17 using localhost production start.
 

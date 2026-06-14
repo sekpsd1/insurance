@@ -6,7 +6,7 @@ const nextConfig = {
   poweredByHeader: false,
   experimental: {
     serverActions: {
-      bodySizeLimit: '10mb'
+      bodySizeLimit: '25mb'
     }
   },
   ...(isProduction ? { output: 'standalone' } : {})

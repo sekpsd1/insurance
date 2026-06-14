@@ -293,6 +293,48 @@ function normalizeUploadedMimeType(value: string | null | undefined) {
   return normalized;
 }
 
+function getPolicyDraftOrderErrorMessage(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+
+  if (message.includes('Document upload is too large')) {
+    return 'ไฟล์เอกสารรถมีขนาดใหญ่เกินไป กรุณาแนบไฟล์ไม่เกิน 10MB';
+  }
+
+  if (message.includes('Document upload must be') || message.includes('Document upload content does not match')) {
+    return 'ไฟล์เอกสารรถไม่ถูกต้อง กรุณาแนบรูปภาพหรือ PDF ที่เปิดได้';
+  }
+
+  if (message.includes('Vehicle registration or previous policy document is required')) {
+    return 'กรุณาแนบสำเนาทะเบียนรถหรือกรมธรรม์เดิมอย่างใดอย่างหนึ่ง';
+  }
+
+  if (message.includes('Selected customer address is invalid')) {
+    return 'กรุณาเลือกจังหวัด อำเภอ ตำบล และรหัสไปรษณีย์ของผู้เอาประกันให้ถูกต้อง';
+  }
+
+  if (message.includes('ID card number checksum is invalid')) {
+    return 'เลขบัตรประชาชนไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง';
+  }
+
+  if (message.includes('ID card number must contain')) {
+    return 'กรุณากรอกเลขบัตรประชาชน 13 หลัก';
+  }
+
+  if (message.includes('Car year must be between')) {
+    return 'กรุณากรอกปีจดทะเบียนรถให้ถูกต้อง เช่น 2022 หรือ 2565';
+  }
+
+  if (message.includes('Policy start date')) {
+    return 'กรุณาเลือกวันที่คุ้มครองให้ถูกต้อง';
+  }
+
+  if (message.includes('Same-day CTP policy start date')) {
+    return 'วันที่คุ้มครอง พ.ร.บ. วันนี้ไม่สามารถเลือกได้ กรุณาเลือกวันล่วงหน้า';
+  }
+
+  return 'ส่งข้อมูลไม่สำเร็จ กรุณาตรวจสอบข้อมูลและไฟล์แนบอีกครั้ง';
+}
+
 function parsePolicyStartDate(value: string | null) {
   const parsed = parseOptionalDate(value);
 
@@ -1466,7 +1508,7 @@ export async function createInsurerMagicLinkPreview(formData: FormData): Promise
   redirect(`/admin/orders/${orderId}/email-preview?token=${encodeURIComponent(token)}`);
 }
 
-export async function createPolicyDraftOrder(formData: FormData): Promise<void> {
+async function createPolicyDraftOrderData(formData: FormData): Promise<string> {
   const packageId = getRequiredFormValue(formData, 'packageId');
   const lineId = normalizeShortText(getOptionalFormValue(formData, 'lineId'), 120, 'LINE ID') ?? `guest:${randomUUID()}`;
   const lineDisplayName = normalizeShortText(getOptionalFormValue(formData, 'lineDisplayName'), 120, 'LINE display name');
@@ -1628,8 +1670,36 @@ export async function createPolicyDraftOrder(formData: FormData): Promise<void> 
     actorName: customerName
   });
 
+  return order.id;
+}
+
+export async function createPolicyDraftOrder(formData: FormData): Promise<void> {
+  const packageId = String(formData.get('packageId') ?? '').trim();
+  const includeCtp = isCtpSelected(formData.get('includeCtp'));
+  let orderId = '';
+
+  try {
+    orderId = await createPolicyDraftOrderData(formData);
+  } catch (error) {
+    console.error('[Policy Draft Order Failed]', {
+      packageId,
+      includeCtp,
+      error: error instanceof Error ? error.message : String(error)
+    });
+
+    const params = new URLSearchParams({
+      formError: getPolicyDraftOrderErrorMessage(error)
+    });
+
+    if (includeCtp) {
+      params.set('includeCtp', '1');
+    }
+
+    redirect(packageId ? `/line-app/form/${packageId}?${params.toString()}` : `/line-app/search?${params.toString()}`);
+  }
+
   revalidatePath('/admin');
-  redirect(`/line-app/checkout/${order.id}`);
+  redirect(`/line-app/checkout/${orderId}`);
 }
 
 export async function createTypeOneQuoteLead(input: {

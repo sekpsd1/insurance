@@ -21,6 +21,7 @@ type FormPageProps = {
     cubicCapacity?: string;
     sumInsured?: string;
     includeCtp?: string;
+    formError?: string;
   }>;
 };
 
@@ -252,6 +253,7 @@ export default async function PackageFormPage({ params, searchParams }: FormPage
   const { id: packageId } = await params;
   const resolvedSearchParams = (await searchParams) ?? {};
   const resultsHref = buildResultsHref(resolvedSearchParams);
+  const formError = normalizeSearchValue(resolvedSearchParams.formError);
   const packageItem = await prisma.insurancePackage.findUnique({
     where: { id: packageId }
   });
@@ -295,6 +297,11 @@ export default async function PackageFormPage({ params, searchParams }: FormPage
         <PolicyFormEnhancements formId="policy-info-form" includeCtp={includeCtp} holidayDates={holidayDates} />
         <input type="hidden" name="packageId" value={packageItem.id} />
         {includeCtp ? <input type="hidden" name="includeCtp" value="1" /> : null}
+        {formError ? (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[14px] font-bold leading-6 text-red-700">
+            {formError}
+          </div>
+        ) : null}
 
         <SectionCard icon="person" title="ข้อมูลผู้เอาประกัน">
           <Field label="ชื่อ - นามสกุล" name="customerName" placeholder="ระบุชื่อและนามสกุลตามบัตรประชาชน" />
