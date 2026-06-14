@@ -798,27 +798,14 @@ export default function SearchPremiumForm({
   }
 
   function handleCloseToLineMenu() {
-    const liffId = process.env.NEXT_PUBLIC_LIFF_ID?.trim();
+    const currentWindow = window as Window & { liff?: LiffClient };
 
-    if (!liffId) {
-      window.history.back();
+    if (typeof currentWindow.liff?.closeWindow === 'function') {
+      currentWindow.liff.closeWindow();
       return;
     }
 
-    loadLiffSdk()
-      .then(async (liff) => {
-        await liff.init({ liffId });
-
-        if (typeof liff.closeWindow === 'function') {
-          liff.closeWindow();
-          return;
-        }
-
-        window.history.back();
-      })
-      .catch(() => {
-        window.history.back();
-      });
+    window.close();
   }
 
   return (
