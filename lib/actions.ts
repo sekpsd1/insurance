@@ -263,7 +263,8 @@ function normalizePlateNumber(value: string) {
 }
 
 function parseCarYear(value: string | null, fallback: number | null | undefined) {
-  const parsed = parseOptionalInt(value) ?? fallback ?? null;
+  const parsedInput = parseOptionalInt(value);
+  const parsed = parsedInput && parsedInput >= 2400 ? parsedInput - 543 : parsedInput ?? fallback ?? null;
 
   if (parsed === null) {
     return null;
@@ -276,6 +277,20 @@ function parseCarYear(value: string | null, fallback: number | null | undefined)
   }
 
   return parsed;
+}
+
+function normalizeUploadedMimeType(value: string | null | undefined) {
+  const normalized = value?.split(';')[0]?.trim().toLowerCase() ?? '';
+
+  if (normalized === 'image/jpg' || normalized === 'image/pjpeg') {
+    return 'image/jpeg';
+  }
+
+  if (normalized === 'application/x-pdf') {
+    return 'application/pdf';
+  }
+
+  return normalized;
 }
 
 function parsePolicyStartDate(value: string | null) {
@@ -1303,7 +1318,10 @@ async function saveSlipFile(slipFile: File, prefix: string): Promise<string> {
 }
 
 async function saveDocumentUploadFile(file: File, options: { directory: string; publicPath: string; prefix: string; maxBytes: number }) {
-  if (!ALLOWED_DOCUMENT_MIME_TYPES.has(file.type)) {
+  const declaredMime = normalizeUploadedMimeType(file.type);
+  const hasGenericMime = !declaredMime || declaredMime === 'application/octet-stream' || declaredMime === 'binary/octet-stream';
+
+  if (!hasGenericMime && !ALLOWED_DOCUMENT_MIME_TYPES.has(declaredMime)) {
     throw new Error('Document upload must be a PNG, JPG, WebP, GIF, or PDF file');
   }
 
@@ -1314,7 +1332,7 @@ async function saveDocumentUploadFile(file: File, options: { directory: string; 
   const buffer = Buffer.from(await file.arrayBuffer());
   const detectedMime = detectDocumentMime(buffer);
 
-  if (!detectedMime || detectedMime !== file.type) {
+  if (!detectedMime || (!hasGenericMime && detectedMime !== declaredMime)) {
     throw new Error('Document upload content does not match the selected file type');
   }
 

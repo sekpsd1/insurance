@@ -432,6 +432,7 @@ Last verified on 2026-05-21 using localhost dev server after the customer search
 - Customer `/line-app` layout no longer shows the internal `Customer Area / LINE Mini App Insurance Quote` header so production customer pages start directly with the app screen header.
 - Cart and results card sum-insured display now normalizes min/max values before comparison so equal imported values such as `50000` and `50000` render as one amount instead of a duplicated range.
 - Customer Policy Info vehicle section now uses customer-entered vehicle details instead of prefilled package/search data. The old selected-vehicle summary was replaced with editable brand, model, size, and registration-year fields labeled `รายละเอียดรถยนต์`; orders now store `carCubicCapacity` and show it in admin, provider Magic Link, tracking, email preview, and CSV export.
+- Policy Info submission now accepts customer-entered registration years in either Buddhist Era or Gregorian year format, converting Buddhist years to Gregorian before saving. Vehicle document uploads also tolerate generic mobile MIME values when the actual file content is a supported image or PDF.
 
 Last verified on 2026-05-17 using localhost production start.
 
