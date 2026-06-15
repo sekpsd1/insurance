@@ -2,20 +2,12 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { createInsurerMagicLinkPreview } from '@/lib/actions';
-import { getPaymentMethodLabel, getPaymentStatusLabel } from '@/lib/status-labels';
+import { buildProviderEmail } from '@/lib/provider-email';
 
 type EmailPreviewPageProps = {
   params: Promise<{ orderId: string }>;
   searchParams?: Promise<{ token?: string }>;
 };
-
-function formatCurrency(value: number | null | undefined) {
-  return new Intl.NumberFormat('th-TH', {
-    style: 'currency',
-    currency: 'THB',
-    maximumFractionDigits: 2
-  }).format(value ?? 0);
-}
 
 export default async function InsurerEmailPreviewPage({ params, searchParams }: EmailPreviewPageProps) {
   const { orderId } = await params;
@@ -34,14 +26,19 @@ export default async function InsurerEmailPreviewPage({ params, searchParams }: 
   }
 
   const magicLinkPath = token ? `/insurance/update/${encodeURIComponent(token)}` : '';
+  const email = buildProviderEmail({
+    order,
+    magicLinkPath
+  });
 
   return (
     <section className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-6">
         <p className="text-sm font-semibold uppercase tracking-[0.24em] text-cyan-300">Provider Email</p>
-        <h2 className="mt-2 text-3xl font-bold tracking-tight text-white">ตัวอย่างอีเมลถึงบริษัทประกัน</h2>
+        <h2 className="mt-2 text-3xl font-bold tracking-tight text-white">ตัวอย่างอีเมลแจ้งงานถึงบริษัทประกัน</h2>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">
-          ใน production ระบบจะส่งอีเมลนี้อัตโนมัติหลังลูกค้ายืนยันออเดอร์ พร้อม Magic Link สำหรับอัปเดตสถานะ
+          หน้านี้แสดง subject และข้อความเดียวกับอีเมลที่ระบบส่งให้บริษัทประกันหลังลูกค้ายืนยันออเดอร์
+          พร้อม Magic Link สำหรับอัปเดตสถานะกรมธรรม์
         </p>
       </div>
 
@@ -49,47 +46,20 @@ export default async function InsurerEmailPreviewPage({ params, searchParams }: 
         <article className="rounded-3xl bg-white p-6 text-slate-950 shadow-2xl shadow-black/10">
           <div className="border-b border-slate-200 pb-5">
             <div className="text-sm text-slate-500">
-              ถึง: {order.pkg.providerEmail || 'ยังไม่ได้กำหนดอีเมลบริษัทประกัน'}
+              ถึง: {email.recipient || 'ยังไม่ได้กำหนดอีเมลบริษัทประกัน'}
             </div>
-            <h3 className="mt-2 text-2xl font-bold">คำขอออกกรมธรรม์ใหม่ #{order.orderNumber}</h3>
-            <p className="mt-2 text-sm leading-6 text-slate-600">
-              กรุณาตรวจสอบรายละเอียดคำสั่งซื้อและกด Magic Link เพื่ออัปเดตสถานะกลับมายังระบบ
-            </p>
+            <div className="mt-3 rounded-2xl bg-slate-50 p-4">
+              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Subject</div>
+              <h3 className="mt-1 text-xl font-bold leading-snug">{email.subject}</h3>
+            </div>
           </div>
 
-          <dl className="mt-5 grid gap-4 text-sm sm:grid-cols-2">
-            <div className="rounded-2xl bg-slate-50 p-4">
-              <dt className="text-slate-500">บริษัทประกัน</dt>
-              <dd className="mt-1 font-semibold">{order.pkg.providerName || order.pkg.company}</dd>
-              <dd className="mt-1 text-slate-600">{order.pkg.providerContactName || '-'}</dd>
-              <dd className="mt-1 text-slate-600">{order.pkg.providerPhone || '-'}</dd>
-            </div>
-            <div className="rounded-2xl bg-slate-50 p-4">
-              <dt className="text-slate-500">ผู้เอาประกัน</dt>
-              <dd className="mt-1 font-semibold">{order.customerName ?? order.user.name ?? '-'}</dd>
-              <dd className="mt-1 text-slate-600">{order.customerPhone ?? order.user.phone ?? '-'}</dd>
-            </div>
-            <div className="rounded-2xl bg-slate-50 p-4">
-              <dt className="text-slate-500">รถยนต์</dt>
-              <dd className="mt-1 font-semibold">{[order.carBrand, order.carModel, order.carCubicCapacity, order.carYear].filter(Boolean).join(' / ') || '-'}</dd>
-              <dd className="mt-1 text-slate-600">{order.plateNumber ?? '-'} {order.plateProvince ? `(${order.plateProvince})` : ''}</dd>
-            </div>
-            <div className="rounded-2xl bg-slate-50 p-4 sm:col-span-2">
-              <dt className="text-slate-500">แพ็กเกจ</dt>
-              <dd className="mt-1 font-semibold">{order.pkg.name}</dd>
-              <dd className="mt-1 text-slate-600">{formatCurrency(order.paymentAmount ?? order.pkg.netPrice)}</dd>
-              {order.ctpSelected ? (
-                <dd className="mt-1 text-slate-600">พ.ร.บ. {order.ctpRateCode ?? '-'}: {formatCurrency(order.ctpTotal)}</dd>
-              ) : null}
-            </div>
-            <div className="rounded-2xl bg-slate-50 p-4 sm:col-span-2">
-              <dt className="text-slate-500">การชำระเงิน</dt>
-              <dd className="mt-1 font-semibold">{getPaymentMethodLabel(order.paymentMethod)}</dd>
-              <dd className="mt-1 text-slate-600">{getPaymentStatusLabel(order.paymentStatus)}</dd>
-            </div>
-          </dl>
+          <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-5">
+            <div className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Email Body</div>
+            <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-7 text-slate-800">{email.body}</pre>
+          </div>
 
-          {!order.pkg.providerEmail ? (
+          {!email.recipient ? (
             <div className="mt-5 rounded-2xl bg-amber-50 p-4 text-sm text-amber-800 ring-1 ring-amber-100">
               ยังไม่ได้ตั้งค่า provider email สำหรับ campaign/package นี้ ให้ไปกรอกที่หน้า Insurance Campaigns ก่อนส่งจริง
             </div>
@@ -99,7 +69,7 @@ export default async function InsurerEmailPreviewPage({ params, searchParams }: 
             <div className="font-semibold text-blue-950">Magic Link สำหรับบริษัทประกัน</div>
             {token ? (
               <>
-                <p className="mt-2 break-all text-sm text-blue-800">http://localhost:3000{magicLinkPath}</p>
+                <p className="mt-2 break-all text-sm text-blue-800">{magicLinkPath}</p>
                 <Link
                   href={magicLinkPath}
                   target="_blank"

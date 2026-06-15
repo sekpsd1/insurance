@@ -22,6 +22,10 @@ import {
   importInsuranceCampaignFromCsv
 } from '@/lib/insurance-import';
 import { isValidThaiAddress } from '@/lib/thai-address';
+import {
+  buildProviderEmail as buildProviderEmailTemplate,
+  renderProviderEmailHtml as renderProviderEmailHtmlTemplate
+} from '@/lib/provider-email';
 
 export type OrderStatus =
   | 'DRAFT'
@@ -73,15 +77,6 @@ function formatLeadNumber(date = new Date()) {
 
 function hashMagicToken(token: string) {
   return createHash('sha256').update(token).digest('hex');
-}
-
-function escapeHtml(value: string) {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
 }
 
 function createRawMagicToken() {
@@ -487,102 +482,6 @@ async function createMagicLinkTokenForOrder(orderId: string) {
   return token;
 }
 
-function buildProviderEmail(input: {
-  order: {
-    orderNumber: string;
-    customerName: string | null;
-    customerPhone: string | null;
-    carBrand: string | null;
-    carModel: string | null;
-    carYear: number | null;
-    carCubicCapacity: string | null;
-    plateNumber: string | null;
-    plateProvince: string | null;
-    chassisNumber: string | null;
-    idCardNumber: string | null;
-    customerEmail: string | null;
-    customerAddress: string | null;
-    policyStartDate: Date | null;
-    ctpPolicyStartDate: Date | null;
-    deliveryAddressMode: string | null;
-    deliveryRecipientName: string | null;
-    deliveryRecipientPhone: string | null;
-    deliveryAddress: string | null;
-    vehicleDocumentUrl: string | null;
-    vehicleDocumentType: string | null;
-    paymentMethod: string | null;
-    paymentStatus: string;
-    slipUrl: string | null;
-    gatewayUrl: string | null;
-    ctpSelected: boolean;
-    ctpRateCode: string | null;
-    ctpTotal: number | null;
-    user: {
-      name: string | null;
-      phone: string | null;
-    };
-    pkg: {
-      name: string;
-      company: string;
-      providerName: string | null;
-      providerContactName: string | null;
-      providerPhone: string | null;
-      providerEmail: string | null;
-      netPrice: number;
-    };
-  };
-  magicLinkPath: string;
-}) {
-  const { order, magicLinkPath } = input;
-  const magicLinkUrl = getAbsoluteAppUrl(magicLinkPath);
-  const slipUrl = getAbsoluteAppUrl(order.slipUrl);
-  const gatewayUrl = getAbsoluteAppUrl(order.gatewayUrl);
-  const vehicleDocumentUrl = getAbsoluteAppUrl(order.vehicleDocumentUrl);
-  const customerName = order.customerName ?? order.user.name ?? '-';
-  const customerPhone = order.customerPhone ?? order.user.phone ?? '-';
-  const car = [order.carBrand, order.carModel, order.carCubicCapacity, order.carYear].filter(Boolean).join(' / ') || '-';
-  const plate = [order.plateNumber, order.plateProvince].filter(Boolean).join(' ') || '-';
-  const providerName = order.pkg.providerName ?? order.pkg.company;
-  const subject = `New policy request ${order.orderNumber}`;
-  const body = [
-    `Hello ${order.pkg.providerContactName ?? providerName},`,
-    '',
-    `A new policy request is ready for review.`,
-    '',
-    `Order: ${order.orderNumber}`,
-    `Customer: ${customerName}`,
-    `Customer phone: ${customerPhone}`,
-    order.customerEmail ? `Customer email: ${order.customerEmail}` : null,
-    order.idCardNumber ? `ID card: ${order.idCardNumber}` : null,
-    order.customerAddress ? `Customer address: ${order.customerAddress}` : null,
-    `Vehicle: ${car}`,
-    `Plate: ${plate}`,
-    order.chassisNumber ? `Chassis number: ${order.chassisNumber}` : null,
-    order.policyStartDate ? `Voluntary policy start date: ${order.policyStartDate.toLocaleDateString('th-TH')}` : null,
-    order.ctpPolicyStartDate ? `CTP policy start date: ${order.ctpPolicyStartDate.toLocaleDateString('th-TH')}` : null,
-    order.deliveryAddress ? `Policy delivery: ${order.deliveryAddressMode === 'other' ? 'Other address' : 'Same address'} / ${order.deliveryRecipientName ?? '-'} / ${order.deliveryRecipientPhone ?? '-'} / ${order.deliveryAddress}` : null,
-    `Package: ${order.pkg.name}`,
-    order.ctpSelected ? `CTP/CMI: ${order.ctpRateCode ?? '-'} (${order.ctpTotal ?? 0} THB)` : null,
-    `Payment method: ${getPaymentMethodLabel(order.paymentMethod)}`,
-    `Payment status: ${getPaymentStatusLabel(order.paymentStatus)}`,
-    slipUrl ? `Payment slip: ${slipUrl}` : null,
-    vehicleDocumentUrl ? `${order.vehicleDocumentType ?? 'Vehicle document'}: ${vehicleDocumentUrl}` : null,
-    gatewayUrl ? `Gateway URL: ${gatewayUrl}` : null,
-    '',
-    `Update policy status here: ${magicLinkUrl}`,
-    '',
-    'This is an automated broker system message.'
-  ]
-    .filter((line): line is string => line !== null)
-    .join('\n');
-
-  return {
-    recipient: order.pkg.providerEmail,
-    subject,
-    body
-  };
-}
-
 function buildOrderCopyEmail(input: {
   order: {
     orderNumber: string;
@@ -727,46 +626,6 @@ async function createOrderCopyEmailOutbox(orderId: string) {
   });
 }
 
-function renderProviderEmailHtml(body: string, magicLinkPath: string | null) {
-  const magicLinkUrl = getAbsoluteAppUrl(magicLinkPath);
-  const content = body
-    .split('\n')
-    .filter((line) => !line.startsWith('Update policy status here:'))
-    .map((line) => {
-      if (!line.trim()) {
-        return '<div style="height:12px;line-height:12px">&nbsp;</div>';
-      }
-
-      return `<p style="margin:0 0 8px 0;color:#111827;font-size:14px;line-height:1.6">${escapeHtml(line)}</p>`;
-    })
-    .join('');
-
-  const actionButton = magicLinkUrl
-    ? `
-      <div style="margin:24px 0">
-        <a href="${escapeHtml(magicLinkUrl)}" style="display:inline-block;background:#0052cc;color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;line-height:1;padding:14px 22px;border-radius:10px">
-          Update policy status
-        </a>
-        <p style="margin:12px 0 0 0;color:#6b7280;font-size:12px;line-height:1.5">
-          If the button does not work, open this link:<br>
-          <a href="${escapeHtml(magicLinkUrl)}" style="color:#0052cc;word-break:break-all">${escapeHtml(magicLinkUrl)}</a>
-        </p>
-      </div>
-    `
-    : '';
-
-  return `
-    <div style="margin:0;padding:0;background:#f8fafc">
-      <div style="max-width:640px;margin:0 auto;padding:24px">
-        <div style="background:#ffffff;border:1px solid #e5e7eb;border-radius:16px;padding:24px;font-family:Arial,Helvetica,sans-serif">
-          ${content}
-          ${actionButton}
-        </div>
-      </div>
-    </div>
-  `;
-}
-
 async function createProviderEmailOutbox(input: {
   orderId: string;
   token: string;
@@ -785,7 +644,7 @@ async function createProviderEmailOutbox(input: {
   }
 
   const magicLinkPath = `/insurance/update/${input.token}`;
-  const email = buildProviderEmail({
+  const email = buildProviderEmailTemplate({
     order,
     magicLinkPath
   });
@@ -922,7 +781,7 @@ async function sendProviderEmail(input: {
         to: input.recipient,
         subject: input.subject,
         text: input.body,
-        html: renderProviderEmailHtml(input.body, input.magicLinkPath)
+        html: renderProviderEmailHtmlTemplate(input.body, input.magicLinkPath)
       })
     });
 

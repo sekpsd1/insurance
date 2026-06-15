@@ -1,6 +1,6 @@
 # Project State
 
-Last updated: 2026-06-13
+Last updated: 2026-06-15
 
 ## Current Architecture
 
@@ -266,6 +266,7 @@ It also stores rating/search fields imported from insurer CSV rows:
 - `MISSING_RECIPIENT` rows are blocked until provider email is added to the campaign/provider contact.
 - Admin-facing order, payment, and email statuses now display Thai labels while keeping internal enum/status values unchanged.
 - Provider email preview and generated email body now display Thai payment method/status labels.
+- Provider email subject/body now follows the customer-requested Thai notification format: subject uses customer name and plate number without the order number, and the body lists insured person, Thai ID, address, customer-entered vehicle details, coverage start dates, selected plan, sum insured, premium, downloadable document/slip links, policy delivery detail, and the provider Magic Link.
 - Timeline/status history messages now render Thai labels for older English audit messages.
 - New order/status/email history messages are recorded in Thai.
 - Provider email outbox creation now reuses or refreshes the latest outbox row for an order instead of creating duplicate visible queue rows.
