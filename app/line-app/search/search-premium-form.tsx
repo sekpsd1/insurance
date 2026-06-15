@@ -231,7 +231,7 @@ type LiffProfile = {
 };
 
 type LiffClient = {
-  init: (config: { liffId: string }) => Promise<void>;
+  init: (config: { liffId: string; withLoginOnExternalBrowser?: boolean }) => Promise<void>;
   isLoggedIn: () => boolean;
   getProfile: () => Promise<LiffProfile>;
   closeWindow?: () => void;
@@ -297,6 +297,7 @@ export default function SearchPremiumForm({
   const isSeatBasedSelection = isSeatBasedVehicleType(sClass);
   const [leadError, setLeadError] = useState('');
   const [isSearchSubmitting, setIsSearchSubmitting] = useState(false);
+  const [isClosingLineMenu, setIsClosingLineMenu] = useState(false);
   const [isLeadPending, startLeadTransition] = useTransition();
   const isSubmitting = isSearchSubmitting || isLeadPending;
   const loadingTitle = coverage === '1' ? 'กำลังส่งคำขอใบเสนอราคา' : 'กำลังค้นหาแผนประกัน';
@@ -797,15 +798,38 @@ export default function SearchPremiumForm({
     router.push(`/line-app?${params.toString()}`);
   }
 
-  function handleCloseToLineMenu() {
-    const currentWindow = window as Window & { liff?: LiffClient };
-
-    if (typeof currentWindow.liff?.closeWindow === 'function') {
-      currentWindow.liff.closeWindow();
+  async function handleCloseToLineMenu() {
+    if (isClosingLineMenu) {
       return;
     }
 
+    setIsClosingLineMenu(true);
+    const currentWindow = window as Window & { liff?: LiffClient };
+
+    try {
+      let liff = currentWindow.liff;
+      const liffId = process.env.NEXT_PUBLIC_LIFF_ID?.trim();
+
+      if (!liff && liffId) {
+        liff = await loadLiffSdk();
+        await liff.init({ liffId, withLoginOnExternalBrowser: false });
+      }
+
+      if (typeof liff?.closeWindow === 'function') {
+        liff.closeWindow();
+        window.setTimeout(() => {
+          setIsClosingLineMenu(false);
+        }, 1000);
+        return;
+      }
+    } catch (error) {
+      console.warn('[LIFF] close menu failed', error);
+    }
+
     window.close();
+    window.setTimeout(() => {
+      setIsClosingLineMenu(false);
+    }, 500);
   }
 
   return (
@@ -815,7 +839,8 @@ export default function SearchPremiumForm({
         <button
           type="button"
           onClick={handleCloseToLineMenu}
-          className="rounded-full border border-[#cfd8ff] bg-white px-4 py-2 text-sm font-semibold text-[#0052CC] shadow-sm transition hover:bg-[#eef3ff]"
+          disabled={isClosingLineMenu}
+          className="rounded-full border border-[#cfd8ff] bg-white px-4 py-2 text-sm font-semibold text-[#0052CC] shadow-sm transition hover:bg-[#eef3ff] disabled:cursor-wait disabled:opacity-70"
         >
           กลับเมนู LINE
         </button>
