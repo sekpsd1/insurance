@@ -250,10 +250,10 @@ export default async function SearchInsurancePage({
       </header>
 
       <div className="mx-auto flex min-h-[calc(100vh-64px)] max-w-md flex-col px-4 pb-6 pt-5">
-        <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-white via-[#f4f9ff] to-[#dfeeff] p-4 shadow-[0_10px_30px_rgba(4,16,61,0.08)] ring-1 ring-white/70">
-          <div className="grid min-h-[132px] grid-cols-[1fr_46%] items-center gap-2">
+        <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-white via-[#f4f9ff] to-[#dfeeff] px-4 py-3 shadow-[0_10px_30px_rgba(4,16,61,0.08)] ring-1 ring-white/70">
+          <div className="grid min-h-[112px] grid-cols-[58%_42%] items-center gap-1">
             <div className="min-w-0">
-              <h2 className="font-[Kanit,sans-serif] text-[clamp(22px,6vw,28px)] font-bold leading-tight text-[#0052CC]">
+              <h2 className="font-[Kanit,sans-serif] text-[clamp(18px,5vw,22px)] font-bold leading-tight text-[#0052CC]">
                 กรุณากรอกรายละเอียดรถยนต์
                 <span className="block">เพื่อใช้เสนอราคา</span>
               </h2>

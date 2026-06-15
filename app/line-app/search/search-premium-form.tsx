@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, useTransition, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, useTransition, type FormEvent, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { createTypeOneQuoteLead } from '@/lib/actions';
 
@@ -220,6 +220,58 @@ function SelectChevron() {
     <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-[#4b5265]">
       <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
         <path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
+      </svg>
+    </span>
+  );
+}
+
+type SelectIconType = 'car' | 'shield' | 'clipboard' | 'brand' | 'calendar' | 'gauge' | 'cash';
+
+function SelectIcon({ type }: { type: SelectIconType }) {
+  const pathByType: Record<SelectIconType, ReactNode> = {
+    car: (
+      <>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3.5 13 5 8.5A2 2 0 0 1 6.9 7h10.2A2 2 0 0 1 19 8.5l1.5 4.5" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13h14a2 2 0 0 1 2 2v2H3v-2a2 2 0 0 1 2-2Z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 17.5h.01M16.5 17.5h.01" />
+      </>
+    ),
+    shield: <path strokeLinecap="round" strokeLinejoin="round" d="M12 3 5 6v5c0 4.7 3 8.4 7 10 4-1.6 7-5.3 7-10V6l-7-3Z" />,
+    clipboard: (
+      <>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 4h6l1 2h3v15H5V6h3l1-2Z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 11h6M9 15h4" />
+      </>
+    ),
+    brand: (
+      <>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 7h16M6 7v13h12V7" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 7V5a3 3 0 0 1 6 0v2" />
+      </>
+    ),
+    calendar: (
+      <>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M7 3v4M17 3v4M4 9h16M5 5h14v16H5z" />
+      </>
+    ),
+    gauge: (
+      <>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M5 17a7 7 0 1 1 14 0" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="m12 17 4-5" />
+      </>
+    ),
+    cash: (
+      <>
+        <rect x="4" y="7" width="16" height="10" rx="2" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M16 12h.01M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" />
+      </>
+    )
+  };
+
+  return (
+    <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-[#0052CC]">
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+        {pathByType[type]}
       </svg>
     </span>
   );
@@ -820,13 +872,14 @@ export default function SearchPremiumForm({
             ประเภทรถ
           </label>
           <div className="relative">
+            <SelectIcon type="car" />
             <select
               id="sClass"
               name="sClass"
               value={sClass}
               onChange={(event) => resetAfterSClass(event.target.value)}
               required
-              className="w-full appearance-none rounded-2xl border border-[#d8dcec] bg-[#eaecf7] px-4 py-4 pr-12 text-[16px] text-[#12131a] outline-none transition focus:border-[#0047BA] focus:bg-white focus:ring-4 focus:ring-[#0047BA]/10"
+              className="w-full appearance-none rounded-2xl border border-[#d8dcec] bg-[#eaecf7] py-4 pl-12 pr-12 text-[16px] text-[#12131a] outline-none transition focus:border-[#0047BA] focus:bg-white focus:ring-4 focus:ring-[#0047BA]/10"
             >
               <option value="">-- เลือกประเภทรถ --</option>
               {SCLASS_OPTIONS.map((item) => (
@@ -844,6 +897,7 @@ export default function SearchPremiumForm({
             ประเภทกรมธรรม์
           </label>
           <div className="relative">
+            <SelectIcon type="shield" />
             <select
               id="coverage"
               name="coverage"
@@ -851,7 +905,7 @@ export default function SearchPremiumForm({
               onChange={(event) => resetAfterCoverage(event.target.value)}
               required
               disabled={!sClass}
-              className="w-full appearance-none rounded-2xl border border-[#d8dcec] bg-[#eaecf7] px-4 py-4 pr-12 text-[16px] text-[#12131a] outline-none transition disabled:cursor-not-allowed disabled:opacity-60 focus:border-[#0047BA] focus:bg-white focus:ring-4 focus:ring-[#0047BA]/10"
+              className="w-full appearance-none rounded-2xl border border-[#d8dcec] bg-[#eaecf7] py-4 pl-12 pr-12 text-[16px] text-[#12131a] outline-none transition disabled:cursor-not-allowed disabled:opacity-60 focus:border-[#0047BA] focus:bg-white focus:ring-4 focus:ring-[#0047BA]/10"
             >
               <option value="">{sClass ? '-- เลือกประเภทกรมธรรม์ --' : 'กรุณาเลือกประเภทรถก่อน'}</option>
               {COVERAGE_OPTIONS.map((item) => (
@@ -870,6 +924,7 @@ export default function SearchPremiumForm({
             ความคุ้มครอง
           </label>
           <div className="relative">
+            <SelectIcon type="clipboard" />
             <select
               id="repairType"
               name="repairType"
@@ -877,7 +932,7 @@ export default function SearchPremiumForm({
               onChange={(event) => resetAfterRepairType(event.target.value)}
               required
               disabled={!coverage}
-              className="w-full appearance-none rounded-2xl border border-[#d8dcec] bg-[#eaecf7] px-4 py-4 pr-12 text-[16px] text-[#12131a] outline-none transition disabled:cursor-not-allowed disabled:opacity-60 focus:border-[#0047BA] focus:bg-white focus:ring-4 focus:ring-[#0047BA]/10"
+              className="w-full appearance-none rounded-2xl border border-[#d8dcec] bg-[#eaecf7] py-4 pl-12 pr-12 text-[16px] text-[#12131a] outline-none transition disabled:cursor-not-allowed disabled:opacity-60 focus:border-[#0047BA] focus:bg-white focus:ring-4 focus:ring-[#0047BA]/10"
             >
               <option value="">{coverage ? '-- เลือกความคุ้มครอง --' : 'กรุณาเลือกประเภทกรมธรรม์ก่อน'}</option>
               {REPAIR_TYPE_OPTIONS.filter((item) => availableRepairTypes.includes(item.value)).map((item) => (
@@ -896,6 +951,7 @@ export default function SearchPremiumForm({
             ยี่ห้อรถ
           </label>
           <div className="relative">
+            <SelectIcon type="brand" />
             <select
               id="brand"
               name="brand"
@@ -903,7 +959,7 @@ export default function SearchPremiumForm({
               onChange={(event) => resetAfterBrand(event.target.value)}
               required
               disabled={coverage === '1' ? !coverage : !repairType}
-              className="w-full appearance-none rounded-2xl border border-[#d8dcec] bg-[#eaecf7] px-4 py-4 pr-12 text-[16px] text-[#12131a] outline-none transition disabled:cursor-not-allowed disabled:opacity-60 focus:border-[#0047BA] focus:bg-white focus:ring-4 focus:ring-[#0047BA]/10"
+              className="w-full appearance-none rounded-2xl border border-[#d8dcec] bg-[#eaecf7] py-4 pl-12 pr-12 text-[16px] text-[#12131a] outline-none transition disabled:cursor-not-allowed disabled:opacity-60 focus:border-[#0047BA] focus:bg-white focus:ring-4 focus:ring-[#0047BA]/10"
             >
               <option value="">{(coverage === '1' || repairType) ? '-- เลือกยี่ห้อรถ --' : 'กรุณาเลือกความคุ้มครองก่อน'}</option>
               {brands.map((item) => (
@@ -921,6 +977,7 @@ export default function SearchPremiumForm({
             รุ่นรถ
           </label>
           <div className="relative">
+            <SelectIcon type="car" />
             <select
               id="model"
               name="model"
@@ -928,7 +985,7 @@ export default function SearchPremiumForm({
               onChange={(event) => resetAfterModel(event.target.value)}
               required
               disabled={!brand}
-              className="w-full appearance-none rounded-2xl border border-[#d8dcec] bg-[#eaecf7] px-4 py-4 pr-12 text-[16px] text-[#12131a] outline-none transition disabled:cursor-not-allowed disabled:opacity-60 focus:border-[#0047BA] focus:bg-white focus:ring-4 focus:ring-[#0047BA]/10"
+              className="w-full appearance-none rounded-2xl border border-[#d8dcec] bg-[#eaecf7] py-4 pl-12 pr-12 text-[16px] text-[#12131a] outline-none transition disabled:cursor-not-allowed disabled:opacity-60 focus:border-[#0047BA] focus:bg-white focus:ring-4 focus:ring-[#0047BA]/10"
             >
               <option value="">{brand ? '-- เลือกรุ่นรถ --' : 'กรุณาเลือกยี่ห้อก่อน'}</option>
               {models.map((item) => (
@@ -946,6 +1003,7 @@ export default function SearchPremiumForm({
             ปีจดทะเบียน
           </label>
           <div className="relative">
+            <SelectIcon type="calendar" />
             <select
               id="year"
               name="year"
@@ -953,7 +1011,7 @@ export default function SearchPremiumForm({
               onChange={(event) => resetAfterYear(event.target.value)}
               required
               disabled={!model}
-              className="w-full appearance-none rounded-2xl border border-[#d8dcec] bg-[#eaecf7] px-4 py-4 pr-12 text-[16px] text-[#12131a] outline-none transition disabled:cursor-not-allowed disabled:opacity-60 focus:border-[#0047BA] focus:bg-white focus:ring-4 focus:ring-[#0047BA]/10"
+              className="w-full appearance-none rounded-2xl border border-[#d8dcec] bg-[#eaecf7] py-4 pl-12 pr-12 text-[16px] text-[#12131a] outline-none transition disabled:cursor-not-allowed disabled:opacity-60 focus:border-[#0047BA] focus:bg-white focus:ring-4 focus:ring-[#0047BA]/10"
             >
               <option value="">{model ? '-- เลือกปีจดทะเบียน --' : 'กรุณาเลือกรุ่นรถก่อน'}</option>
               {years.map((item) => (
@@ -971,6 +1029,7 @@ export default function SearchPremiumForm({
             {isSeatBasedSelection ? 'จำนวนที่นั่ง' : 'ขนาดเครื่องยนต์'}
           </label>
           <div className="relative">
+            <SelectIcon type="gauge" />
             <select
               id="cubicCapacity"
               name="cubicCapacity"
@@ -978,7 +1037,7 @@ export default function SearchPremiumForm({
               onChange={(event) => resetAfterCubicCapacity(event.target.value)}
               required
               disabled={!year}
-              className="w-full appearance-none rounded-2xl border border-[#d8dcec] bg-[#eaecf7] px-4 py-4 pr-12 text-[16px] text-[#12131a] outline-none transition disabled:cursor-not-allowed disabled:opacity-60 focus:border-[#0047BA] focus:bg-white focus:ring-4 focus:ring-[#0047BA]/10"
+              className="w-full appearance-none rounded-2xl border border-[#d8dcec] bg-[#eaecf7] py-4 pl-12 pr-12 text-[16px] text-[#12131a] outline-none transition disabled:cursor-not-allowed disabled:opacity-60 focus:border-[#0047BA] focus:bg-white focus:ring-4 focus:ring-[#0047BA]/10"
             >
               <option value="">{year ? (isSeatBasedSelection ? '-- เลือกจำนวนที่นั่ง --' : '-- เลือกขนาดเครื่องยนต์ --') : 'กรุณาเลือกปีจดทะเบียนก่อน'}</option>
               {cubicCapacityOptions.map((item) => (
@@ -997,6 +1056,7 @@ export default function SearchPremiumForm({
             เลือกทุนประกัน
           </label>
           <div className="relative">
+            <SelectIcon type="cash" />
             <select
               id="sumInsured"
               name="sumInsured"
@@ -1004,7 +1064,7 @@ export default function SearchPremiumForm({
               onChange={(event) => setSumInsured(event.target.value)}
               required
               disabled={!cubicCapacity}
-              className="w-full appearance-none rounded-2xl border border-[#d8dcec] bg-[#eaecf7] px-4 py-4 pr-12 text-[16px] text-[#12131a] outline-none transition disabled:cursor-not-allowed disabled:opacity-60 focus:border-[#0047BA] focus:bg-white focus:ring-4 focus:ring-[#0047BA]/10"
+              className="w-full appearance-none rounded-2xl border border-[#d8dcec] bg-[#eaecf7] py-4 pl-12 pr-12 text-[16px] text-[#12131a] outline-none transition disabled:cursor-not-allowed disabled:opacity-60 focus:border-[#0047BA] focus:bg-white focus:ring-4 focus:ring-[#0047BA]/10"
             >
               <option value="">{cubicCapacity ? '-- ทุนประกัน --' : isSeatBasedSelection ? 'กรุณาเลือกจำนวนที่นั่งก่อน' : 'กรุณาเลือกขนาดเครื่องยนต์ก่อน'}</option>
               {sumInsuredOptions.map((item) => (

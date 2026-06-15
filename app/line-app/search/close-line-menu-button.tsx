@@ -73,9 +73,9 @@ export default function CloseLineMenuButton() {
       type="button"
       onClick={handleClose}
       disabled={isClosing}
-      className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-xl border border-[#ffdc45] bg-[#fff257] px-2.5 text-sm font-bold text-[#06408f] shadow-[0_2px_0_rgba(2,53,132,0.25)] transition hover:bg-[#fff78c] disabled:cursor-wait disabled:opacity-70"
+      className="inline-flex h-8 shrink-0 items-center gap-1 rounded-lg border border-[#ffdc45] bg-[#fff257] px-2 text-xs font-bold text-[#06408f] shadow-[0_2px_0_rgba(2,53,132,0.25)] transition hover:bg-[#fff78c] disabled:cursor-wait disabled:opacity-70"
     >
-      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden="true">
+      <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden="true">
         <path strokeLinecap="round" strokeLinejoin="round" d="M3 11.5 12 4l9 7.5" />
         <path strokeLinecap="round" strokeLinejoin="round" d="M5.5 10.5V20h13v-9.5" />
         <path strokeLinecap="round" strokeLinejoin="round" d="M9.5 20v-5h5v5" />
