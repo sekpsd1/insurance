@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import SearchPremiumForm from './search-premium-form';
+import CloseLineMenuButton from './close-line-menu-button';
 
 type SearchPremiumSearchParams = {
   sClass?: string;
@@ -84,6 +85,35 @@ function toNumberOrNull(value: number | string | null | undefined) {
 
   const parsed = typeof value === 'number' ? value : Number(value);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function SearchCarBannerIllustration() {
+  return (
+    <svg viewBox="0 0 220 130" className="h-full w-full" role="img" aria-label="รูปรถ">
+      <defs>
+        <linearGradient id="search-car-body" x1="36" x2="178" y1="69" y2="69" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#ffffff" />
+          <stop offset="1" stopColor="#e9f3ff" />
+        </linearGradient>
+        <linearGradient id="search-car-shield" x1="163" x2="199" y1="5" y2="54" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#35b8ff" />
+          <stop offset="1" stopColor="#0052cc" />
+        </linearGradient>
+      </defs>
+      <path d="M16 106c29-22 53-26 83-22 44 6 70-10 104-44v66H16Z" fill="#dff0ff" opacity="0.75" />
+      <path d="M178 9 202 18v20c0 16-10 30-24 36-14-6-24-20-24-36V18l24-9Z" fill="url(#search-car-shield)" />
+      <path d="m167 39 8 8 17-21" fill="none" stroke="#fff" strokeLinecap="round" strokeLinejoin="round" strokeWidth="6" />
+      <path d="M40 75c5-16 16-27 34-30h48c17 0 30 12 38 30l14 3c9 2 16 10 16 19v5H27v-8c0-10 5-17 13-19Z" fill="url(#search-car-body)" stroke="#b7d2ef" strokeWidth="2" />
+      <path d="M70 48h49c11 0 21 8 28 23H54c4-12 9-20 16-23Z" fill="#0f477f" opacity="0.18" />
+      <path d="M58 72h93" stroke="#c4d9ef" strokeLinecap="round" strokeWidth="3" />
+      <path d="M49 86h16M153 86h16" stroke="#0052cc" strokeLinecap="round" strokeWidth="4" />
+      <circle cx="64" cy="103" r="14" fill="#102236" />
+      <circle cx="64" cy="103" r="6" fill="#cfe2f8" />
+      <circle cx="154" cy="103" r="14" fill="#102236" />
+      <circle cx="154" cy="103" r="6" fill="#cfe2f8" />
+      <path d="M20 114h182" stroke="#c2d9f2" strokeLinecap="round" strokeWidth="3" />
+    </svg>
+  );
 }
 
 function buildResultsHref(filters: {
@@ -206,34 +236,30 @@ export default async function SearchInsurancePage({
   return (
     <main className="min-h-screen bg-[#f4f5ff] text-[#12131a]">
       <header className="sticky top-0 z-10 bg-[#0047BA] text-white shadow-[0_4px_16px_rgba(0,0,0,0.12)]">
-        <div className="mx-auto flex max-w-md items-center justify-between px-4 py-4">
+        <div className="mx-auto grid max-w-md grid-cols-[auto_auto_1fr] items-center gap-2 px-3 py-3">
           <Link href={resultsHref} aria-label="ย้อนกลับ" className="rounded-full p-1.5 transition-colors hover:bg-white/10">
             <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
             </svg>
           </Link>
 
-          <h1 className="font-[Kanit,sans-serif] text-xl font-bold tracking-wide">ค้นหาเบี้ยประกัน</h1>
-          <div className="h-9 w-9" />
+          <CloseLineMenuButton />
+
+          <h1 className="min-w-0 text-right font-[Kanit,sans-serif] text-lg font-bold leading-tight tracking-wide max-[360px]:text-base">ค้นหาเบี้ยประกัน</h1>
         </div>
       </header>
 
-      <div className="mx-auto flex min-h-[calc(100vh-72px)] max-w-md flex-col px-4 pb-6 pt-6">
-        <section className="overflow-hidden rounded-3xl bg-white/80 p-4 shadow-[0_10px_30px_rgba(4,16,61,0.08)] ring-1 ring-white/70 backdrop-blur-md">
-          <div className="flex items-start gap-3 max-[360px]:gap-2">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#e9efff] text-[#0047BA] shadow-inner max-[360px]:h-10 max-[360px]:w-10 max-[360px]:rounded-xl">
-              <svg viewBox="0 0 24 24" className="h-7 w-7 max-[360px]:h-6 max-[360px]:w-6" fill="none" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3 13l1.5-4.5A2 2 0 0 1 6.4 7h11.2a2 2 0 0 1 1.9 1.5L21 13" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13h14a2 2 0 0 1 2 2v2H3v-2a2 2 0 0 1 2-2Z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 17.5h.01M16.5 17.5h.01" />
-              </svg>
+      <div className="mx-auto flex min-h-[calc(100vh-64px)] max-w-md flex-col px-4 pb-6 pt-5">
+        <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-white via-[#f4f9ff] to-[#dfeeff] p-4 shadow-[0_10px_30px_rgba(4,16,61,0.08)] ring-1 ring-white/70">
+          <div className="grid min-h-[132px] grid-cols-[1fr_46%] items-center gap-2">
+            <div className="min-w-0">
+              <h2 className="font-[Kanit,sans-serif] text-[clamp(22px,6vw,28px)] font-bold leading-tight text-[#0052CC]">
+                กรุณากรอกรายละเอียดรถยนต์
+                <span className="block">เพื่อใช้เสนอราคา</span>
+              </h2>
             </div>
-
-            <div className="min-w-0 flex-1">
-              <h2 className="max-w-full font-[Kanit,sans-serif] text-[clamp(18px,5.2vw,22px)] font-bold leading-tight text-[#0047BA] [overflow-wrap:anywhere]">ข้อมูลรถยนต์ของคุณ</h2>
-              <p className="mt-1 text-sm leading-6 text-[#4b5265]">
-                กรุณาระบุรายละเอียดเพื่อดูแผนประกันและราคาทุนจากข้อมูลจริง
-              </p>
+            <div className="min-w-0 self-end">
+              <SearchCarBannerIllustration />
             </div>
           </div>
         </section>

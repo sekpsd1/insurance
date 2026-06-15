@@ -153,6 +153,7 @@ It also stores rating/search fields imported from insurer CSV rows:
 - Search Premium includes a `กลับเมนู LINE` action that closes the LIFF window when available, giving customers a clear way back to the LINE/Rich Menu context.
 - Search Premium `กลับเมนู LINE` now pre-initializes LIFF with external-browser login disabled and calls `closeWindow`, so the button can close the Mini App after returning from results/cart while avoiding unwanted LINE auth redirects to `access.line.me`.
 - Search Premium intro card now uses responsive heading sizing and wrapping so long Thai headings do not overflow on small mobile screens.
+- Search Premium header now includes a top `กลับสู่เมนู` LIFF close button, and the intro area uses a car/shield illustration banner with revised quote-request wording.
 - LINE Mini App `liff.state` redirects now allow `/cart` as well as tracking/search paths, so a Rich Menu button can open the saved cart directly via the published Mini App URL.
 - Results page supports pagination.
 - Result cards encode uploaded logo URLs before rendering and fall back to company text if the image cannot be loaded.
