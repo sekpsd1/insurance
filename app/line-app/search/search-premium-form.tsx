@@ -524,6 +524,20 @@ export default function SearchPremiumForm({
   }, [availableRepairTypes, coverage, repairType]);
 
   useEffect(() => {
+    const liffId = process.env.NEXT_PUBLIC_LIFF_ID?.trim();
+
+    if (!liffId) {
+      return;
+    }
+
+    loadLiffSdk()
+      .then((liff) => liff.init({ liffId, withLoginOnExternalBrowser: false }))
+      .catch((error) => {
+        console.warn('[LIFF] close menu pre-initialization failed', error);
+      });
+  }, []);
+
+  useEffect(() => {
     if (coverage !== '1') {
       setHasLiffProfile(false);
       return;
