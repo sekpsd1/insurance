@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, useTransition, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, useTransition, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { createTypeOneQuoteLead } from '@/lib/actions';
 
@@ -228,50 +228,26 @@ function SelectChevron() {
 type SelectIconType = 'car' | 'shield' | 'clipboard' | 'brand' | 'calendar' | 'gauge' | 'cash';
 
 function SelectIcon({ type }: { type: SelectIconType }) {
-  const pathByType: Record<SelectIconType, ReactNode> = {
-    car: (
-      <>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3.5 13 5 8.5A2 2 0 0 1 6.9 7h10.2A2 2 0 0 1 19 8.5l1.5 4.5" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13h14a2 2 0 0 1 2 2v2H3v-2a2 2 0 0 1 2-2Z" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 17.5h.01M16.5 17.5h.01" />
-      </>
-    ),
-    shield: <path strokeLinecap="round" strokeLinejoin="round" d="M12 3 5 6v5c0 4.7 3 8.4 7 10 4-1.6 7-5.3 7-10V6l-7-3Z" />,
-    clipboard: (
-      <>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 4h6l1 2h3v15H5V6h3l1-2Z" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 11h6M9 15h4" />
-      </>
-    ),
-    brand: (
-      <>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M4 7h16M6 7v13h12V7" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 7V5a3 3 0 0 1 6 0v2" />
-      </>
-    ),
-    calendar: (
-      <>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M7 3v4M17 3v4M4 9h16M5 5h14v16H5z" />
-      </>
-    ),
-    gauge: (
-      <>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M5 17a7 7 0 1 1 14 0" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="m12 17 4-5" />
-      </>
-    ),
-    cash: (
-      <>
-        <rect x="4" y="7" width="16" height="10" rx="2" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M16 12h.01M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" />
-      </>
-    )
+  const pathByType: Record<SelectIconType, string> = {
+    car: 'M7.1 7.25A3 3 0 0 1 9.92 5.2h4.16a3 3 0 0 1 2.82 2.05l.5 1.5h.85A2.75 2.75 0 0 1 21 11.5v4.75a.75.75 0 0 1-.75.75H19a2.25 2.25 0 0 1-4.5 0h-5A2.25 2.25 0 0 1 5 17H3.75a.75.75 0 0 1-.75-.75V11.5a2.75 2.75 0 0 1 2.75-2.75h.85l.5-1.5Zm1.8.47-.34 1.03h6.88l-.34-1.03a1.1 1.1 0 0 0-1.02-.72H9.92a1.1 1.1 0 0 0-1.02.72ZM6 16a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm12 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z',
+    shield:
+      'M12 2.25c.16 0 .32.03.47.1l7 3A.75.75 0 0 1 20 6.04v5.35c0 4.65-2.8 8.74-7.1 10.35a2.45 2.45 0 0 1-1.8 0C6.8 20.13 4 16.04 4 11.39V6.04c0-.3.18-.57.46-.69l7-3c.16-.07.34-.1.54-.1Zm4.56 7.53a.8.8 0 0 0-1.12-1.14l-4.34 4.22-1.55-1.58a.8.8 0 1 0-1.14 1.12l2.11 2.16a.8.8 0 0 0 1.13.01l4.91-4.79Z',
+    clipboard:
+      'M9 3.25h6c.6 0 1.12.36 1.34.9l.44 1.1H18A2.75 2.75 0 0 1 20.75 8v10A2.75 2.75 0 0 1 18 20.75H6A2.75 2.75 0 0 1 3.25 18V8A2.75 2.75 0 0 1 6 5.25h1.22l.44-1.1c.22-.54.75-.9 1.34-.9Zm-.25 5.5a.75.75 0 0 0 0 1.5h6.5a.75.75 0 0 0 0-1.5h-6.5Zm0 4a.75.75 0 0 0 0 1.5h6.5a.75.75 0 0 0 0-1.5h-6.5Zm0 4a.75.75 0 0 0 0 1.5h4.5a.75.75 0 0 0 0-1.5h-4.5Z',
+    brand:
+      'M6 4.25h12A2.75 2.75 0 0 1 20.75 7v2.25H3.25V7A2.75 2.75 0 0 1 6 4.25Zm-2.75 6.5h17.5V17A2.75 2.75 0 0 1 18 19.75H6A2.75 2.75 0 0 1 3.25 17v-6.25Zm4 2.25a.75.75 0 0 0 0 1.5h4.5a.75.75 0 0 0 0-1.5h-4.5Z',
+    calendar:
+      'M7.5 2.5a.9.9 0 0 1 .9.9v1.1h7.2V3.4a.9.9 0 1 1 1.8 0v1.1H18A2.75 2.75 0 0 1 20.75 7.25v10.5A2.75 2.75 0 0 1 18 20.5H6a2.75 2.75 0 0 1-2.75-2.75V7.25A2.75 2.75 0 0 1 6 4.5h.6V3.4a.9.9 0 0 1 .9-.9Zm-2.45 8.15v7.1c0 .52.43.95.95.95h12c.52 0 .95-.43.95-.95v-7.1H5.05Z',
+    gauge:
+      'M12 4.25a8.75 8.75 0 0 1 8.75 8.75 8.65 8.65 0 0 1-1.35 4.66 2 2 0 0 1-1.7.94H6.3a2 2 0 0 1-1.7-.94A8.65 8.65 0 0 1 3.25 13 8.75 8.75 0 0 1 12 4.25Zm5.28 5.52a.8.8 0 0 0-1.06-1.2l-4.78 4.2a1.75 1.75 0 1 0 1.06 1.2l4.78-4.2Z',
+    cash:
+      'M4.75 6h14.5A2.75 2.75 0 0 1 22 8.75v6.5A2.75 2.75 0 0 1 19.25 18H4.75A2.75 2.75 0 0 1 2 15.25v-6.5A2.75 2.75 0 0 1 4.75 6Zm1 3A1.75 1.75 0 0 1 4 10.75v2.5A1.75 1.75 0 0 1 5.75 15h12.5A1.75 1.75 0 0 1 20 13.25v-2.5A1.75 1.75 0 0 1 18.25 9H5.75ZM12 9.65a2.35 2.35 0 1 0 0 4.7 2.35 2.35 0 0 0 0-4.7Z'
   };
 
   return (
     <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-[#0052CC]">
-      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
-        {pathByType[type]}
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden="true">
+        <path d={pathByType[type]} />
       </svg>
     </span>
   );

@@ -155,6 +155,7 @@ It also stores rating/search fields imported from insurer CSV rows:
 - Search Premium intro card now uses responsive heading sizing and wrapping so long Thai headings do not overflow on small mobile screens.
 - Search Premium header now includes a top `กลับสู่เมนู` LIFF close button, and the intro area uses a car/shield illustration banner with revised quote-request wording.
 - Search Premium header/menu button and intro banner were tightened for small screens, and the main dropdown fields now include left-side icons matching the customer's requested visual direction.
+- Search Premium intro banner was refined again so the quote-request copy is smaller and less 50/50 balanced, and the main dropdown icons now use solid fill-style shapes.
 - LINE Mini App `liff.state` redirects now allow `/cart` as well as tracking/search paths, so a Rich Menu button can open the saved cart directly via the published Mini App URL.
 - Results page supports pagination.
 - Result cards encode uploaded logo URLs before rendering and fall back to company text if the image cannot be loaded.
