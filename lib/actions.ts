@@ -43,7 +43,8 @@ export type PaymentMethod = 'BANK_TRANSFER' | 'CARD_GATEWAY';
 export type TypeOneLeadSalesStatus = 'NEW' | 'CONTACTED' | 'QUOTED' | 'CLOSED';
 
 const ALLOWED_IMAGE_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif']);
-const ALLOWED_DOCUMENT_MIME_TYPES = new Set([...ALLOWED_IMAGE_MIME_TYPES, 'application/pdf']);
+const ALLOWED_DOCUMENT_IMAGE_MIME_TYPES = new Set([...ALLOWED_IMAGE_MIME_TYPES, 'image/heic', 'image/heif']);
+const ALLOWED_DOCUMENT_MIME_TYPES = new Set([...ALLOWED_DOCUMENT_IMAGE_MIME_TYPES, 'application/pdf']);
 const LOGO_MAX_BYTES = 2 * 1024 * 1024;
 const PAYMENT_QR_MAX_BYTES = 3 * 1024 * 1024;
 const SLIP_MAX_BYTES = 8 * 1024 * 1024;
@@ -943,6 +944,18 @@ function detectDocumentMime(buffer: Buffer) {
     return imageMime;
   }
 
+  if (buffer.length >= 12 && buffer.subarray(4, 8).toString('ascii') === 'ftyp') {
+    const brand = buffer.subarray(8, 12).toString('ascii');
+
+    if (['heic', 'heix', 'hevc', 'hevx'].includes(brand)) {
+      return 'image/heic';
+    }
+
+    if (['mif1', 'msf1'].includes(brand)) {
+      return 'image/heif';
+    }
+  }
+
   if (buffer.length >= 4 && buffer.subarray(0, 4).toString('ascii') === '%PDF') {
     return 'application/pdf';
   }
@@ -955,6 +968,8 @@ function getExtensionForMime(mimeType: string) {
   if (mimeType === 'image/jpeg') return '.jpg';
   if (mimeType === 'image/webp') return '.webp';
   if (mimeType === 'image/gif') return '.gif';
+  if (mimeType === 'image/heic') return '.heic';
+  if (mimeType === 'image/heif') return '.heif';
   if (mimeType === 'application/pdf') return '.pdf';
   return '.bin';
 }
@@ -1233,7 +1248,7 @@ async function saveDocumentUploadFile(file: File, options: { directory: string; 
   const buffer = Buffer.from(await file.arrayBuffer());
   const detectedMime = detectDocumentMime(buffer);
 
-  if (!detectedMime || (!hasGenericMime && detectedMime !== declaredMime)) {
+  if (!detectedMime || !ALLOWED_DOCUMENT_MIME_TYPES.has(detectedMime)) {
     throw new Error('Document upload content does not match the selected file type');
   }
 
@@ -1402,7 +1417,8 @@ async function createPolicyDraftOrderData(formData: FormData): Promise<string> {
     deliveryAddressMode === 'other'
       ? normalizeShortText(getRequiredFormValue(formData, 'deliveryAddress'), 1000, 'Delivery address')
       : [customerAddress, subDistrict, district, province, postalCode].filter(Boolean).join(' ');
-  const vehicleDocumentType = normalizeShortText(getRequiredFormValue(formData, 'vehicleDocumentType'), 80, 'Vehicle document type') ?? '';
+  const vehicleDocumentType =
+    normalizeShortText(getOptionalFormValue(formData, 'vehicleDocumentType'), 80, 'Vehicle document type') ?? 'เอกสารรถ';
   const vehicleDocumentFile = formData.get('vehicleDocumentFile');
 
   const selectedPackage = await prisma.insurancePackage.findUnique({

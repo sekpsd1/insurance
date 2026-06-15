@@ -25,7 +25,6 @@ const DRAFT_FIELD_NAMES = [
   'plateNumber',
   'plateProvince',
   'chassisNumber',
-  'vehicleDocumentType',
   'deliveryAddressMode',
   'deliveryRecipientName',
   'deliveryRecipientPhone',

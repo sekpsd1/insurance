@@ -649,7 +649,7 @@ export default function CompareSelection({
       {cartIds.length > 0 || selectedCount > 0 ? (
       <div className="sticky bottom-0 z-20 -mx-4 border-t border-[#d8dcec] bg-white/95 px-4 py-3 shadow-[0_-8px_24px_rgba(4,16,61,0.10)] backdrop-blur">
         {error ? <p className="mb-2 text-center text-xs font-medium text-red-600">{error}</p> : null}
-        <p className="mb-2 text-center text-[11px] font-medium text-[#4b5265]">
+        <p className="mb-2 rounded-xl bg-[#119c5a] px-3 py-2 text-center text-[12px] font-semibold leading-snug text-white shadow-sm">
           ถ้าต้องการเปรียบเทียบ ให้เลือกแผนใส่ตะกร้า
         </p>
         <div className={`grid gap-2 ${cartIds.length > 0 && selectedCount > 0 ? 'grid-cols-2' : 'grid-cols-1'}`}>

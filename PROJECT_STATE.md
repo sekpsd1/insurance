@@ -113,6 +113,7 @@ It also stores rating/search fields imported from insurer CSV rows:
   - Hides the CTP/CMI policy start date when no CTP/CMI was selected.
   - Lets customers choose policy delivery address as same as insured address or another delivery address.
   - Accepts vehicle document uploads as image or PDF.
+  - Vehicle document attachment no longer asks customers to choose the document type; the system records a generic vehicle document label, starts coverage year options from the current year, and accepts valid image/PDF document content even when mobile browsers report a mismatched allowed MIME type.
   - Autosaves the new draft fields where possible; file uploads still require reselecting the file after reopening the form.
 - CTP/CMI policy start date selection now blocks same-day coverage only when the purchase day is after 16:00, Saturday/Sunday, or a configured admin holiday; future coverage dates remain selectable.
 
@@ -168,6 +169,7 @@ It also stores rating/search fields imported from insurer CSV rows:
 - Results plan cards now use tighter padding, smaller detail icons, compact full-width vehicle-title text, and append registration year to the vehicle title to preserve space so more of the selected plan card and payable amount is visible in the first mobile viewport.
 - Cart plan cards now match the compact results-card layout more closely, including the full-width brand/model/year title, smaller icons, tighter spacing, compact cost summary, and compact remaining-payable section. The cart header only shows the number of saved plans and no longer shows a combined remaining-payable total. Opening `/line-app/cart` without query IDs now reads saved cart IDs from localStorage and redirects to the populated cart URL, so Rich Menu cart links can show the customer's saved plans.
 - Cart page now lets customers choose exactly 2 saved plans to compare from the cart. The results page no longer exposes a separate compare-selection button; customers save plans to the cart first, then choose the 2 plans for comparison there.
+- Results page sticky cart helper text now uses a green background with white text so the compare instruction is more visible above the cart/compare action.
 - Customer-facing zero sum-insured display text now says `ไม่คุ้มครอง` instead of `ไม่มีทุนประกัน` across search, results, cart, and compare views.
 - Search Premium no longer shows or requires the sum-insured selector for policy type 3; customers can search type 3 packages after choosing vehicle, repair, year, and engine details.
 - Search Premium now opens the `ไม่มีแคมเปญสำหรับรุ่นนี้ สามารถเลือกแผนอื่นได้` popup when policy type 2+, 3+, or 3 has no premium/campaign for the selected vehicle details.

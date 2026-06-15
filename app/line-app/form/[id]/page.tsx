@@ -97,7 +97,7 @@ const THAI_MONTHS = [
 
 function DatePartsField({ label, name }: { label: string; name: string }) {
   const currentYear = new Date().getFullYear();
-  const years = [currentYear - 1, currentYear, currentYear + 1];
+  const years = [currentYear, currentYear + 1];
   const selectClass =
     'h-11 min-w-0 appearance-none rounded-md border border-slate-200 bg-white px-2 text-center text-[13px] font-semibold text-slate-900 shadow-sm outline-none transition focus:border-[#0b58c6] focus:ring-4 focus:ring-blue-100';
 
@@ -383,33 +383,11 @@ export default async function PackageFormPage({ params, searchParams }: FormPage
             </div>
           </div>
           <Field label="เลขตัวถัง" name="chassisNumber" placeholder="กรอกเลขตัวถังรถ" />
-          <div>
-            <label htmlFor="vehicleDocumentType" className="mb-2 block text-[14px] font-bold text-[#2f3442]">
-              เอกสารรถที่แนบ
-            </label>
-            <div className="relative">
-              <select
-                id="vehicleDocumentType"
-                name="vehicleDocumentType"
-                required
-                defaultValue=""
-                className="h-11 w-full appearance-none rounded-md border border-slate-200 bg-white px-3.5 pr-11 text-[14px] font-semibold text-slate-900 shadow-sm outline-none transition focus:border-[#0b58c6] focus:ring-4 focus:ring-blue-100"
-              >
-                <option value="" disabled>
-                  เลือกเอกสารที่แนบ
-                </option>
-                <option value="สำเนาทะเบียนรถ">สำเนาทะเบียนรถ</option>
-                <option value="กรมธรรม์เดิม">กรมธรรม์เดิม</option>
-              </select>
-              <svg viewBox="0 0 24 24" className="pointer-events-none absolute right-4 top-1/2 h-6 w-6 -translate-y-1/2 text-[#4f5564]" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" d="m6 9 6 6 6-6" />
-              </svg>
-            </div>
-          </div>
+          <input type="hidden" name="vehicleDocumentType" value="เอกสารรถ" />
           <FileField
             label="แนบไฟล์เอกสารรถ"
             name="vehicleDocumentFile"
-            accept="image/png,image/jpeg,image/webp,image/gif,application/pdf"
+            accept="image/png,image/jpeg,image/webp,image/gif,image/heic,image/heif,application/pdf"
             helper="แนบสำเนาทะเบียนรถหรือกรมธรรม์เดิมอย่างใดอย่างหนึ่ง รองรับรูปภาพและ PDF"
           />
         </SectionCard>
