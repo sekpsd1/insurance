@@ -455,12 +455,13 @@ export default async function CartPage({
     .filter((row): row is CartPackageRow => Boolean(row));
   const compareIds: string[] = [];
   const compareCtpIds: string[] = [];
+  const backHref = packages.length > 0 ? resultsHref : '/line-app/search';
 
   return (
     <main className="min-h-screen bg-[#f4f5ff] text-[#12131a]">
       <header className="sticky top-0 z-10 bg-[#0047BA] text-white shadow-[0_4px_16px_rgba(0,0,0,0.12)]">
         <div className="mx-auto flex max-w-md items-center justify-between px-4 py-4">
-          <Link href={resultsHref} aria-label="กลับไปหน้าผลลัพธ์" className="rounded-full p-1.5 transition-colors hover:bg-white/10">
+          <Link href={backHref} aria-label="กลับไปหน้าก่อนหน้า" className="rounded-full p-1.5 transition-colors hover:bg-white/10">
             <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
             </svg>
@@ -471,7 +472,7 @@ export default async function CartPage({
       </header>
 
       <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 py-6">
-        {selectedIds.length === 0 ? <CartStorageHydrator /> : null}
+        <CartStorageHydrator showLoading={selectedIds.length === 0} />
 
         <section className="rounded-3xl bg-white p-5 shadow-[0_10px_30px_rgba(4,16,61,0.08)] ring-1 ring-white/70">
           <div>
@@ -501,7 +502,7 @@ export default async function CartPage({
           <section className="rounded-3xl bg-white p-6 text-center shadow-[0_10px_30px_rgba(4,16,61,0.08)] ring-1 ring-white/70">
             <h2 className="font-[Kanit,sans-serif] text-xl font-bold text-[#0047BA]">ยังไม่มีรายการในตะกร้า</h2>
             <p className="mt-2 text-sm leading-6 text-[#4b5265]">กลับไปหน้าผลลัพธ์แล้วกด “เก็บใส่ตะกร้า” ในแผนที่ต้องการ</p>
-            <Link href={resultsHref} className="mt-5 inline-flex w-full items-center justify-center rounded-2xl bg-[#0047BA] px-4 py-4 font-semibold text-white transition hover:bg-[#003c9d]">
+            <Link href="/line-app/search" className="mt-5 inline-flex w-full items-center justify-center rounded-2xl bg-[#0047BA] px-4 py-4 font-semibold text-white transition hover:bg-[#003c9d]">
               กลับไปเลือกแผน
             </Link>
           </section>
@@ -635,7 +636,7 @@ export default async function CartPage({
         )}
 
         <div className="flex flex-wrap gap-3">
-          <Link href={resultsHref} className="rounded-2xl bg-[#0047BA] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#003c9d]">
+          <Link href={backHref} className="rounded-2xl bg-[#0047BA] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#003c9d]">
             กลับไปเลือกแผน
           </Link>
           {compareIds.length >= 2 ? (
@@ -646,7 +647,7 @@ export default async function CartPage({
               ดูเปรียบเทียบ
             </Link>
           ) : null}
-          {packages.length > 0 ? <ClearCartButton href={resultsHref} /> : null}
+          {packages.length > 0 ? <ClearCartButton /> : null}
         </div>
       </div>
     </main>

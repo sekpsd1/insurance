@@ -348,6 +348,16 @@ function formatSeatText(value: unknown, offset = 0) {
   return ` (จำนวน ${formatCoverageMoney(seatCount)} คน)`;
 }
 
+function getSharedComparisonLabel(labels: string[], fallback: string) {
+  const firstLabel = labels[0];
+
+  if (firstLabel && labels.every((label) => label === firstLabel)) {
+    return firstLabel;
+  }
+
+  return fallback;
+}
+
 function formatSumInsuredRange(min: unknown, max: unknown) {
   const minValue = parseNumber(min);
   const maxValue = parseNumber(max);
@@ -698,6 +708,8 @@ export default async function ComparePage({
       activeCtpIdSet.has(pkg.id) && pkg.sClass ? ctpOptionsBySClass[pkg.sClass] ?? null : null
     ])
   );
+  const passengerCoverageLabels = packages.map((pkg) => `ผู้โดยสาร${formatSeatText(pkg.seats41, 1)}`);
+  const medicalCoverageLabels = packages.map((pkg) => `4.2 ค่ารักษาพยาบาล${formatSeatText(pkg.seats41)}`);
   const comparisonRows = [
     { kind: 'section', icon: 'person', label: 'ความรับผิดต่อบุคคลภายนอก', values: packages.map(() => '') },
     {
@@ -743,12 +755,14 @@ export default async function ComparePage({
     },
     {
       kind: 'row',
-      label: `ผู้โดยสาร${formatSeatText(packages[0]?.seats41, 1)}`,
+      label: getSharedComparisonLabel(passengerCoverageLabels, 'ผู้โดยสาร'),
+      labels: passengerCoverageLabels,
       values: packages.map((pkg) => formatCoverageAmount(pkg.mv412, 'บาท/คน'))
     },
     {
       kind: 'row',
-      label: `4.2 ค่ารักษาพยาบาล${formatSeatText(packages[0]?.seats41)}`,
+      label: getSharedComparisonLabel(medicalCoverageLabels, '4.2 ค่ารักษาพยาบาล'),
+      labels: medicalCoverageLabels,
       values: packages.map((pkg) => formatCoverageAmount(pkg.mv42, 'บาท/คน'))
     },
     {

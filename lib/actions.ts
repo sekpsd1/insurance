@@ -48,7 +48,7 @@ const ALLOWED_DOCUMENT_MIME_TYPES = new Set([...ALLOWED_DOCUMENT_IMAGE_MIME_TYPE
 const LOGO_MAX_BYTES = 2 * 1024 * 1024;
 const PAYMENT_QR_MAX_BYTES = 3 * 1024 * 1024;
 const SLIP_MAX_BYTES = 8 * 1024 * 1024;
-const POLICY_DOCUMENT_MAX_BYTES = 10 * 1024 * 1024;
+const POLICY_DOCUMENT_MAX_BYTES = 20 * 1024 * 1024;
 const CSV_MAX_BYTES = 15 * 1024 * 1024;
 const ALL_ORDER_STATUSES: OrderStatus[] = [
   'DRAFT',
@@ -293,7 +293,7 @@ function getPolicyDraftOrderErrorMessage(error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
 
   if (message.includes('Document upload is too large')) {
-    return 'ไฟล์เอกสารรถมีขนาดใหญ่เกินไป กรุณาแนบไฟล์ไม่เกิน 10MB';
+    return 'ไฟล์เอกสารรถมีขนาดใหญ่เกินไป กรุณาแนบไฟล์ไม่เกิน 20MB';
   }
 
   if (message.includes('Document upload must be') || message.includes('Document upload content does not match')) {

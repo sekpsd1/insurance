@@ -6,15 +6,13 @@ import { useRouter } from 'next/navigation';
 
 const CART_STORAGE_KEY = 'insurance.cartPackageIds';
 const CART_CTP_STORAGE_KEY = 'insurance.cartCtpPackageIds';
+const COMPARE_STORAGE_KEY = 'insurance.comparePackageIds';
+const COMPARE_CTP_STORAGE_KEY = 'insurance.compareCtpPackageIds';
 
 type RemoveCartPackageButtonProps = {
   href: string;
   remainingIds: string[];
   remainingCtpIds: string[];
-};
-
-type ClearCartButtonProps = {
-  href: string;
 };
 
 type CoverageDetailRow = {
@@ -50,20 +48,26 @@ function getStoredStringList(key: string) {
   }
 }
 
-export function CartStorageHydrator() {
+export function CartStorageHydrator({ showLoading = true }: { showLoading?: boolean }) {
   const router = useRouter();
   const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const hasUrlIds = params.has('ids');
+    const hasKnownCartState = window.localStorage.getItem(CART_STORAGE_KEY) !== null;
+    const storedIds = getStoredStringList(CART_STORAGE_KEY);
+    const storedCtpIds = getStoredStringList(CART_CTP_STORAGE_KEY).filter((id) => storedIds.includes(id));
 
-    if (params.has('ids')) {
+    if (hasUrlIds) {
+      if (hasKnownCartState && storedIds.length === 0) {
+        router.replace('/line-app/cart');
+        return;
+      }
+
       setIsChecking(false);
       return;
     }
-
-    const storedIds = getStoredStringList(CART_STORAGE_KEY);
-    const storedCtpIds = getStoredStringList(CART_CTP_STORAGE_KEY).filter((id) => storedIds.includes(id));
 
     if (storedIds.length > 0) {
       storedIds.forEach((id) => params.append('ids', id));
@@ -75,7 +79,7 @@ export function CartStorageHydrator() {
     setIsChecking(false);
   }, [router]);
 
-  if (!isChecking) {
+  if (!showLoading || !isChecking) {
     return null;
   }
 
@@ -107,20 +111,25 @@ export function RemoveCartPackageButton({
   );
 }
 
-export function ClearCartButton({ href }: ClearCartButtonProps) {
+export function ClearCartButton() {
+  const router = useRouter();
+
   function clearCartStorage() {
-    window.localStorage.removeItem(CART_STORAGE_KEY);
-    window.localStorage.removeItem(CART_CTP_STORAGE_KEY);
+    window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify([]));
+    window.localStorage.setItem(CART_CTP_STORAGE_KEY, JSON.stringify([]));
+    window.localStorage.setItem(COMPARE_STORAGE_KEY, JSON.stringify([]));
+    window.localStorage.setItem(COMPARE_CTP_STORAGE_KEY, JSON.stringify([]));
+    router.replace('/line-app/cart');
   }
 
   return (
-    <Link
-      href={href}
+    <button
+      type="button"
       onClick={clearCartStorage}
       className="rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-red-600 shadow-[0_8px_24px_rgba(0,0,0,0.04)] ring-1 ring-red-100 transition hover:bg-red-50"
     >
       ล้างตะกร้า
-    </Link>
+    </button>
   );
 }
 
