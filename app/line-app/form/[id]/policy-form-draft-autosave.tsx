@@ -3,6 +3,10 @@
 import { useEffect } from 'react';
 
 const POLICY_FORM_DRAFT_STORAGE_KEY = 'line-app:policy-form-draft:v1';
+const CART_STORAGE_KEY = 'insurance.cartPackageIds';
+const CART_CTP_STORAGE_KEY = 'insurance.cartCtpPackageIds';
+const COMPARE_STORAGE_KEY = 'insurance.comparePackageIds';
+const COMPARE_CTP_STORAGE_KEY = 'insurance.compareCtpPackageIds';
 
 type PolicyFormDraft = Record<string, string>;
 
@@ -73,10 +77,43 @@ function clearDraft() {
   }
 }
 
-export function ClearPolicyFormDraft() {
+function getStoredStringList(key: string) {
+  try {
+    const rawValue = window.localStorage.getItem(key);
+    const parsed = rawValue ? JSON.parse(rawValue) : [];
+
+    return Array.isArray(parsed) ? parsed.filter((value): value is string => typeof value === 'string') : [];
+  } catch {
+    window.localStorage.removeItem(key);
+    return [];
+  }
+}
+
+function removePackageFromStoredList(key: string, packageId: string) {
+  const nextIds = getStoredStringList(key).filter((id) => id !== packageId);
+  window.localStorage.setItem(key, JSON.stringify(nextIds));
+}
+
+function removeOrderedPackageFromCustomerLists(packageId: string | undefined) {
+  if (!packageId) {
+    return;
+  }
+
+  try {
+    removePackageFromStoredList(CART_STORAGE_KEY, packageId);
+    removePackageFromStoredList(CART_CTP_STORAGE_KEY, packageId);
+    removePackageFromStoredList(COMPARE_STORAGE_KEY, packageId);
+    removePackageFromStoredList(COMPARE_CTP_STORAGE_KEY, packageId);
+  } catch {
+    // Ignore storage failures so checkout remains usable.
+  }
+}
+
+export function ClearPolicyFormDraft({ packageId }: { packageId?: string }) {
   useEffect(() => {
     clearDraft();
-  }, []);
+    removeOrderedPackageFromCustomerLists(packageId);
+  }, [packageId]);
 
   return null;
 }

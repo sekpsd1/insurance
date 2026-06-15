@@ -149,6 +149,7 @@ It also stores rating/search fields imported from insurer CSV rows:
 - Type 1 quote request now hides the editable LINE ID input when LIFF profile data is available, while still submitting the LINE user ID internally.
 - Type 1 quote request email now reads the editable admin sales recipient first, then falls back to `SALES_LEAD_EMAIL`.
 - Customer clarified `prakanpai2026@gmail.com` is an order-copy recipient, not the Type 1 sales lead recipient; successful checkout/payment submission now sends a separate order-copy email with order number, customer, vehicle/package, payment method, and payable amount.
+- Provider notification email now includes both coverage start date and one-year coverage end date for voluntary insurance and, when selected, CTP/CMI.
 - Search Premium sum-insured options now respect the selected repair type so customers do not select a sum insured that only exists under a different repair group.
 - Search Premium no longer shows the blue explanatory filter-info box above the submit button.
 - Search Premium no longer restores saved vehicle/policy filters from localStorage, so a fresh visit to `/line-app/search` starts blank for customers searching another car. Search/result URLs with query parameters still prefill the current search when users navigate back from results. Type 1 lead contact inputs can still be preserved separately.
@@ -445,6 +446,7 @@ Last verified on 2026-05-21 using localhost dev server after the customer search
 - Policy Info submission now accepts customer-entered registration years in either Buddhist Era or Gregorian year format, converting Buddhist years to Gregorian before saving. Vehicle document uploads also tolerate generic mobile MIME values when the actual file content is a supported image or PDF.
 - Policy Info submission now redirects back to the policy form with a clear Thai validation message instead of showing a generic LINE App error for known customer data or vehicle-document upload failures. Server Action upload body limit was increased above the app's 10MB document validation limit so oversized files can surface a friendly form error.
 - Policy Info draft data is no longer cleared immediately on submit. If server-side validation fails, the customer returns to the form with their typed values restored; the draft is cleared only after a successful order reaches checkout. File inputs still require reselecting for browser security.
+- After a successful Policy Info submission creates an order and reaches checkout, the selected package is removed from saved cart/compare localStorage and the policy form draft is cleared, so the plan moves into order history/tracking instead of remaining in the cart. Cart hydration also reconciles stale `ids` query values against the latest saved cart state.
 
 Last verified on 2026-05-17 using localhost production start.
 

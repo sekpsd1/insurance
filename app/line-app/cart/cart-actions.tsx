@@ -48,6 +48,38 @@ function getStoredStringList(key: string) {
   }
 }
 
+function getUrlIdList(params: URLSearchParams, key: string) {
+  return Array.from(
+    new Set(
+      params
+        .getAll(key)
+        .flatMap((entry) => entry.split(','))
+        .map((entry) => entry.trim())
+        .filter(Boolean)
+    )
+  );
+}
+
+function isSameStringList(first: string[], second: string[]) {
+  if (first.length !== second.length) {
+    return false;
+  }
+
+  return first.every((value, index) => value === second[index]);
+}
+
+function buildCartHrefFromStoredIds(params: URLSearchParams, storedIds: string[], storedCtpIds: string[]) {
+  const nextParams = new URLSearchParams(params);
+  nextParams.delete('ids');
+  nextParams.delete('ctpIds');
+
+  storedIds.forEach((id) => nextParams.append('ids', id));
+  storedCtpIds.forEach((id) => nextParams.append('ctpIds', id));
+
+  const query = nextParams.toString();
+  return query ? `/line-app/cart?${query}` : '/line-app/cart';
+}
+
 export function CartStorageHydrator({ showLoading = true }: { showLoading?: boolean }) {
   const router = useRouter();
   const [isChecking, setIsChecking] = useState(true);
@@ -62,6 +94,14 @@ export function CartStorageHydrator({ showLoading = true }: { showLoading?: bool
     if (hasUrlIds) {
       if (hasKnownCartState && storedIds.length === 0) {
         router.replace('/line-app/cart');
+        return;
+      }
+
+      const urlIds = getUrlIdList(params, 'ids');
+      const urlCtpIds = getUrlIdList(params, 'ctpIds').filter((id) => storedIds.includes(id));
+
+      if (hasKnownCartState && (!isSameStringList(urlIds, storedIds) || !isSameStringList(urlCtpIds, storedCtpIds))) {
+        router.replace(buildCartHrefFromStoredIds(params, storedIds, storedCtpIds));
         return;
       }
 

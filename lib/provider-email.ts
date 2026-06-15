@@ -93,6 +93,20 @@ function formatThaiDate(value: Date | null | undefined) {
   return value ? value.toLocaleDateString('th-TH') : '-';
 }
 
+function addOnePolicyYear(value: Date | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  const endDate = new Date(value);
+  endDate.setFullYear(endDate.getFullYear() + 1);
+  return endDate;
+}
+
+function formatPolicyEndDate(value: Date | null | undefined) {
+  return formatThaiDate(addOnePolicyYear(value));
+}
+
 function formatText(value: string | number | null | undefined) {
   if (value === null || value === undefined) {
     return '-';
@@ -181,7 +195,9 @@ export function buildProviderEmail(input: { order: ProviderEmailOrder; magicLink
     `เลขทะเบียน: ${plate}`,
     `ตัวถัง: ${formatText(order.chassisNumber)}`,
     `วันที่คุ้มครอง : ภาคสมัครใจ: ${formatThaiDate(order.policyStartDate)}`,
+    `วันที่สิ้นสุด : ภาคสมัครใจ: ${formatPolicyEndDate(order.policyStartDate)}`,
     `วันที่คุ้มครอง พรบ.: ${order.ctpSelected ? formatThaiDate(order.ctpPolicyStartDate) : 'ไม่ได้ซื้อ พ.ร.บ.'}`,
+    `วันที่สิ้นสุด พรบ.: ${order.ctpSelected ? formatPolicyEndDate(order.ctpPolicyStartDate) : 'ไม่ได้ซื้อ พ.ร.บ.'}`,
     `แผนที่เลือกประกัน: ${order.pkg.name}`,
     `ทุนประกัน: ${formatSumInsured(order)}`,
     `เบี้ยประกัน: ${formatThaiBaht(getPayableAmount(order))}`,
