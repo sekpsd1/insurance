@@ -154,7 +154,8 @@ It also stores rating/search fields imported from insurer CSV rows:
 - Search Premium no longer shows the blue explanatory filter-info box above the submit button.
 - Search Premium no longer restores saved vehicle/policy filters from localStorage, so a fresh visit to `/line-app/search` starts blank for customers searching another car. Search/result URLs with query parameters still prefill the current search when users navigate back from results. Type 1 lead contact inputs can still be preserved separately.
 - Search Premium includes a `กลับเมนู LINE` action that closes the LIFF window when available, giving customers a clear way back to the LINE/Rich Menu context.
-- Search Premium `กลับเมนู LINE` now pre-initializes LIFF with external-browser login disabled and calls `closeWindow`, so the button can close the Mini App after returning from results/cart while avoiding unwanted LINE auth redirects to `access.line.me`.
+- Search Premium `กลับเมนู LINE` initializes LIFF with external-browser login disabled only when the customer taps it, then calls `closeWindow` to close the Mini App without triggering unwanted LINE auth redirects to `access.line.me`.
+- Search Premium no longer auto-initializes LIFF on page load; LIFF is initialized only when customers tap the return-to-menu button, preventing LINE's external-website warning from appearing after navigating back from an empty cart.
 - Search Premium intro card now uses responsive heading sizing and wrapping so long Thai headings do not overflow on small mobile screens.
 - Search Premium header now includes a top `กลับสู่เมนู` LIFF close button, and the intro area uses a car/shield illustration banner with revised quote-request wording.
 - Search Premium header/menu button and intro banner were tightened for small screens, and the main dropdown fields now include left-side icons matching the customer's requested visual direction.
