@@ -461,14 +461,14 @@ export default async function CartPage({
   return (
     <main className="min-h-screen bg-[#f4f5ff] text-[#12131a]">
       <header className="sticky top-0 z-10 bg-[#0047BA] text-white shadow-[0_4px_16px_rgba(0,0,0,0.12)]">
-        <div className="mx-auto grid max-w-md grid-cols-[auto_1fr_auto] items-center gap-2 px-3 py-3">
+        <div className="mx-auto grid max-w-md grid-cols-[auto_auto_minmax(0,1fr)] items-center gap-2 px-2.5 py-3">
           <Link href={backHref} aria-label="กลับไปหน้าก่อนหน้า" className="rounded-full p-1.5 transition-colors hover:bg-white/10">
             <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
             </svg>
           </Link>
-          <h1 className="min-w-0 text-center font-[Kanit,sans-serif] text-xl font-bold tracking-wide">รายการในตะกร้า</h1>
           <CloseLineMenuButton label="กลับไปเมนู" />
+          <h1 className="min-w-0 whitespace-nowrap text-right font-[Kanit,sans-serif] text-[clamp(20px,7vw,30px)] font-bold leading-none tracking-wide">รายการในตะกร้า</h1>
         </div>
       </header>
 
