@@ -72,12 +72,18 @@ export default async function TrackingDetailPage({ params }: TrackingPageProps) 
   const planPayableAmount = Math.max(paymentAmount - ctpTotal, 0);
 
   return (
-    <main className="min-h-screen bg-[#f4f7ff] px-4 py-8 text-[#101828]">
+    <main className="min-h-screen bg-[#f4f7ff] text-[#101828]">
       <RememberTrackingOrder orderNumber={order.orderNumber} />
-      <div className="mx-auto flex max-w-md flex-col gap-4">
-        <div className="flex justify-end">
+      <header className="sticky top-0 z-40 bg-[#0052CC] text-white shadow-[0_4px_16px_rgba(0,0,0,0.16)]">
+        <div className="mx-auto grid max-w-md grid-cols-[auto_1fr] items-center gap-2 px-4 py-3">
           <CloseLineMenuButton label="กลับไปเมนู" />
+          <h1 className="min-w-0 whitespace-nowrap text-right font-[Kanit,sans-serif] text-[clamp(18px,5.4vw,24px)] font-bold leading-none tracking-wide">
+            ติดตามคำสั่งซื้อ
+          </h1>
         </div>
+      </header>
+
+      <div className="mx-auto flex max-w-md flex-col gap-4 px-4 py-6">
         <section className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#0052CC]">Order Tracking</p>
           <h1 className="mt-2 text-2xl font-bold text-slate-950">{order.orderNumber}</h1>

@@ -14,12 +14,18 @@ async function findOrder(formData: FormData) {
 
 export default function TrackingSearchPage() {
   return (
-    <main className="min-h-screen bg-[#f4f7ff] px-4 py-8 text-[#101828]">
-      <div className="mx-auto max-w-md">
+    <main className="min-h-screen bg-[#f4f7ff] text-[#101828]">
+      <header className="sticky top-0 z-40 bg-[#0052CC] text-white shadow-[0_4px_16px_rgba(0,0,0,0.16)]">
+        <div className="mx-auto grid max-w-md grid-cols-[auto_1fr] items-center gap-2 px-4 py-3">
+          <CloseLineMenuButton label="กลับไปเมนู" />
+          <h1 className="min-w-0 whitespace-nowrap text-right font-[Kanit,sans-serif] text-[clamp(18px,5.4vw,24px)] font-bold leading-none tracking-wide">
+            ติดตามคำสั่งซื้อ
+          </h1>
+        </div>
+      </header>
+
+      <div className="mx-auto max-w-md px-4 py-6">
         <section className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-          <div className="mb-4 flex justify-end">
-            <CloseLineMenuButton label="กลับไปเมนู" />
-          </div>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#0052CC]">Order Tracking</p>
           <h1 className="mt-2 text-2xl font-bold text-slate-950">ติดตามสถานะคำสั่งซื้อ</h1>
           <p className="mt-2 text-sm leading-6 text-slate-500">
