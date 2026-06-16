@@ -29,6 +29,10 @@ model TypeOneQuoteLead {
   lineDisplayName String?
   email           String?
   sClass          String?
+  coverageType    String?
+  repairType      String?
+  sumInsured      Int?
+  leadSource      String   @default("TYPE_ONE")
   brand           String
   model           String
   carYear         Int

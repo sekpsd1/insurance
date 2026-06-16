@@ -101,6 +101,14 @@ function formatSumInsured(value: number) {
   return value.toLocaleString('th-TH');
 }
 
+function getCoverageLabel(value: string) {
+  return COVERAGE_OPTIONS.find((option) => option.value === value)?.label ?? value;
+}
+
+function getRepairTypeLabel(value: string) {
+  return REPAIR_TYPE_OPTIONS.find((option) => option.value === value)?.label ?? value;
+}
+
 function formatCubicCapacity(value: number) {
   if (value >= 9999) {
     return 'มากกว่า 3,000 ซีซี';
@@ -314,6 +322,7 @@ export default function SearchPremiumForm({
   const [sumInsured, setSumInsured] = useState(initialSumInsured);
   const [noCampaignModalOpen, setNoCampaignModalOpen] = useState(false);
   const [dismissedNoCampaignKey, setDismissedNoCampaignKey] = useState('');
+  const [manualQuoteMode, setManualQuoteMode] = useState(false);
   const [leadCustomerName, setLeadCustomerName] = useState('');
   const [leadCustomerPhone, setLeadCustomerPhone] = useState('');
   const [leadLineId, setLeadLineId] = useState('');
@@ -327,8 +336,10 @@ export default function SearchPremiumForm({
   const [isSearchSubmitting, setIsSearchSubmitting] = useState(false);
   const [isLeadPending, startLeadTransition] = useTransition();
   const isSubmitting = isSearchSubmitting || isLeadPending;
-  const loadingTitle = coverage === '1' ? 'กำลังส่งคำขอใบเสนอราคา' : 'กำลังค้นหาแผนประกัน';
-  const loadingDescription = coverage === '1' ? 'กรุณารอสักครู่ ระบบกำลังบันทึกข้อมูลให้ทีมขาย' : 'กรุณารอสักครู่ ระบบกำลังตรวจสอบแคมเปญที่ตรงกับข้อมูลรถ';
+  const isQuoteLeadMode = coverage === '1' || manualQuoteMode;
+  const isNoCampaignQuoteMode = manualQuoteMode && coverage !== '1';
+  const loadingTitle = isQuoteLeadMode ? 'กำลังส่งคำขอใบเสนอราคา' : 'กำลังค้นหาแผนประกัน';
+  const loadingDescription = isQuoteLeadMode ? 'กรุณารอสักครู่ ระบบกำลังบันทึกข้อมูลให้ทีมขาย' : 'กรุณารอสักครู่ ระบบกำลังตรวจสอบแคมเปญที่ตรงกับข้อมูลรถ';
   const hasInitialSearch = Boolean(
     initialSClass ||
       initialCoverage ||
@@ -435,7 +446,7 @@ export default function SearchPremiumForm({
       availableRepairTypes.length === 1 &&
       !availableRepairTypes.includes(repairType as RepairType)
   );
-  const noCampaignKey = [sClass, coverage, repairType, brand, model, year, cubicCapacity].join('|');
+  const noCampaignKey = [sClass, coverage, repairType, brand, model, year, cubicCapacity, sumInsured].join('|');
 
   const brands = useMemo(() => uniqueValues(vehicleSelectionRows.map((row) => row.brand)), [vehicleSelectionRows]);
 
@@ -551,7 +562,7 @@ export default function SearchPremiumForm({
   }, [availableRepairTypes, coverage, repairType]);
 
   useEffect(() => {
-    if (coverage !== '1') {
+    if (!isQuoteLeadMode) {
       setHasLiffProfile(false);
       return;
     }
@@ -590,7 +601,7 @@ export default function SearchPremiumForm({
     return () => {
       cancelled = true;
     };
-  }, [coverage]);
+  }, [isQuoteLeadMode]);
 
   useEffect(() => {
     if (coverage === '3' && sumInsured) {
@@ -694,6 +705,9 @@ export default function SearchPremiumForm({
   }, [isRepairAutoSwitchPending, sumInsured, sumInsuredOptions]);
 
   function resetAfterSClass(nextSClass: string) {
+    setManualQuoteMode(false);
+    setLeadSuccessNumber('');
+    setLeadError('');
     setSClass(nextSClass);
     setCoverage('');
     setRepairType('');
@@ -705,6 +719,9 @@ export default function SearchPremiumForm({
   }
 
   function resetAfterCoverage(nextCoverage: string) {
+    setManualQuoteMode(false);
+    setLeadSuccessNumber('');
+    setLeadError('');
     const normalizedCoverage = normalizeCoverage(nextCoverage);
     const nextAvailableRepairTypes = Array.from(
       new Set(
@@ -724,11 +741,17 @@ export default function SearchPremiumForm({
   }
 
   function resetAfterRepairType(nextRepairType: string) {
+    setManualQuoteMode(false);
+    setLeadSuccessNumber('');
+    setLeadError('');
     setRepairType(normalizeRepairType(nextRepairType));
     setSumInsured('');
   }
 
   function resetAfterBrand(nextBrand: string) {
+    setManualQuoteMode(false);
+    setLeadSuccessNumber('');
+    setLeadError('');
     setBrand(nextBrand);
     setModel('');
     setYear('');
@@ -737,6 +760,9 @@ export default function SearchPremiumForm({
   }
 
   function resetAfterModel(nextModel: string) {
+    setManualQuoteMode(false);
+    setLeadSuccessNumber('');
+    setLeadError('');
     setModel(nextModel);
     setYear('');
     setCubicCapacity('');
@@ -744,12 +770,18 @@ export default function SearchPremiumForm({
   }
 
   function resetAfterYear(nextYear: string) {
+    setManualQuoteMode(false);
+    setLeadSuccessNumber('');
+    setLeadError('');
     setYear(nextYear);
     setCubicCapacity('');
     setSumInsured('');
   }
 
   function resetAfterCubicCapacity(nextCubicCapacity: string) {
+    setManualQuoteMode(false);
+    setLeadSuccessNumber('');
+    setLeadError('');
     setCubicCapacity(nextCubicCapacity);
     setSumInsured('');
   }
@@ -757,7 +789,7 @@ export default function SearchPremiumForm({
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (coverage === '1') {
+    if (isQuoteLeadMode) {
       setLeadError('');
       setLeadSuccessNumber('');
 
@@ -770,6 +802,10 @@ export default function SearchPremiumForm({
             lineDisplayName: leadLineDisplayName,
             email: leadEmail,
             sClass,
+            coverageType: coverage || '1',
+            repairType,
+            sumInsured,
+            leadSource: isNoCampaignQuoteMode ? 'NO_CAMPAIGN' : 'TYPE_ONE',
             brand,
             model,
             year,
@@ -1023,7 +1059,12 @@ export default function SearchPremiumForm({
               id="sumInsured"
               name="sumInsured"
               value={sumInsured}
-              onChange={(event) => setSumInsured(event.target.value)}
+              onChange={(event) => {
+                setManualQuoteMode(false);
+                setLeadSuccessNumber('');
+                setLeadError('');
+                setSumInsured(event.target.value);
+              }}
               required
               disabled={!cubicCapacity}
               className="w-full appearance-none rounded-2xl border border-[#d8dcec] bg-[#eaecf7] py-4 pl-12 pr-12 text-[16px] text-[#12131a] outline-none transition disabled:cursor-not-allowed disabled:opacity-60 focus:border-[#0047BA] focus:bg-white focus:ring-4 focus:ring-[#0047BA]/10"
@@ -1040,12 +1081,27 @@ export default function SearchPremiumForm({
         </div>
         ) : null}
 
-        {coverage === '1' ? (
-          <section className="rounded-2xl border border-[#d8dcec] bg-[#f8faff] p-4">
-            <h3 className="font-[Kanit,sans-serif] text-lg font-bold text-[#0047BA]">แผนประกันนี้ เป็นแผนพิเศษนอกแคมเปญ</h3>
+        {isQuoteLeadMode ? (
+          <section id="quote-lead-section" className="rounded-2xl border border-[#d8dcec] bg-[#f8faff] p-4">
+            <h3 className="font-[Kanit,sans-serif] text-lg font-bold text-[#0047BA]">
+              {isNoCampaignQuoteMode ? 'ขอใบเสนอราคานอกแคมเปญ' : 'แผนประกันนี้ เป็นแผนพิเศษนอกแคมเปญ'}
+            </h3>
             <p className="mt-1 text-sm leading-6 text-[#4b5265]">
-              หากท่านสนใจ กรุณากรอกข้อมูลเพื่อให้เจ้าหน้าที่ จัดทำใบเสนอราคาส่งให้อีกครั้ง
+              {isNoCampaignQuoteMode
+                ? 'ไม่พบแคมเปญที่ตรงกับข้อมูลรถนี้ กรุณากรอกข้อมูลเพื่อให้เจ้าหน้าที่ติดต่อกลับทาง LINE OA หรือโทรศัพท์'
+                : 'หากท่านสนใจ กรุณากรอกข้อมูลเพื่อให้เจ้าหน้าที่ จัดทำใบเสนอราคาส่งให้อีกครั้ง'}
             </p>
+            {isNoCampaignQuoteMode ? (
+              <div className="mt-3 rounded-2xl bg-white px-4 py-3 text-sm leading-6 text-[#29324a] ring-1 ring-[#d8dcec]">
+                <p className="font-semibold text-[#071129]">
+                  {getCoverageLabel(coverage)} {repairType ? `/ ${getRepairTypeLabel(repairType)}` : ''}
+                </p>
+                <p>
+                  {brand} {model} ปี {year} / {isSeatBasedSelection ? `${cubicCapacity} ที่นั่ง` : `${cubicCapacity} ซีซี`}
+                </p>
+                {sumInsured ? <p>ทุนประกัน {formatSumInsured(Number(sumInsured))} บาท</p> : null}
+              </div>
+            ) : null}
 
             <div className="mt-4 space-y-4">
               <div>
@@ -1123,8 +1179,8 @@ export default function SearchPremiumForm({
         <button
           type="submit"
           disabled={
-            coverage === '1'
-              ? !sClass || !coverage || !brand || !model || !year || !cubicCapacity || !leadCustomerName || !leadCustomerPhone || isSubmitting
+            isQuoteLeadMode
+              ? !sClass || !coverage || (coverage !== '1' && !repairType) || !brand || !model || !year || !cubicCapacity || !leadCustomerName || !leadCustomerPhone || isSubmitting
               : isSubmitting || !sClass || !coverage || !repairType || !brand || !model || !year || !cubicCapacity || (coverage !== '3' && !sumInsured)
           }
           className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#0047BA] px-4 py-4 text-base font-semibold text-white shadow-[0_12px_30px_rgba(0,71,186,0.28)] transition hover:bg-[#003c9d] disabled:cursor-not-allowed disabled:bg-[#7f9fe0]"
@@ -1133,7 +1189,7 @@ export default function SearchPremiumForm({
             <circle cx="11" cy="11" r="7" />
             <path strokeLinecap="round" strokeLinejoin="round" d="m20 20-3.5-3.5" />
           </svg>
-          {coverage === '1' ? (isLeadPending ? 'กำลังส่งคำขอ...' : 'ขอใบเสนอราคา') : isSearchSubmitting ? 'กำลังค้นหาแผน...' : 'ค้นหาแผนประกัน'}
+          {isQuoteLeadMode ? (isLeadPending ? 'กำลังส่งคำขอ...' : 'ขอใบเสนอราคา') : isSearchSubmitting ? 'กำลังค้นหาแผน...' : 'ค้นหาแผนประกัน'}
         </button>
         {leadSuccessNumber ? (
           <p className="mt-3 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-semibold leading-6 text-emerald-700">
@@ -1188,6 +1244,24 @@ export default function SearchPremiumForm({
           >
             ปรับเงื่อนไขใหม่
           </button>
+          {coverage === '2+' || coverage === '3+' ? (
+            <button
+              type="button"
+              onClick={() => {
+                setDismissedNoCampaignKey(noCampaignKey);
+                setNoCampaignModalOpen(false);
+                setManualQuoteMode(true);
+                setLeadError('');
+                setLeadSuccessNumber('');
+                window.setTimeout(() => {
+                  document.getElementById('quote-lead-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 50);
+              }}
+              className="mt-3 w-full rounded-2xl border border-[#0047BA] bg-white px-4 py-3 text-base font-semibold text-[#0047BA] transition hover:bg-[#f0f6ff]"
+            >
+              ขอใบเสนอราคา
+            </button>
+          ) : null}
         </div>
       </div>
     ) : null}

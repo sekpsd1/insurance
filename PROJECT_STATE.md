@@ -97,9 +97,9 @@ It also stores rating/search fields imported from insurer CSV rows:
 
 `EmailOutbox` stores provider email audit records, including recipient, subject, body, Magic Link path, queue/error status, and sent/error timestamps.
 
-`TypeOneQuoteLead` stores Type 1 quote requests for sales follow-up when customers need a manual quote instead of instant package search.
+`TypeOneQuoteLead` stores manual quote requests for sales follow-up when customers need a manual quote instead of instant package search. It covers Type 1 special quote leads and 2+/3+ no-campaign leads.
 
-`SystemSetting` stores small editable operational settings such as the sales recipient email for Type 1 quote requests. The app reads this DB setting first and falls back to environment variables when unset.
+`SystemSetting` stores small editable operational settings such as the sales recipient email for quote requests. The app reads this DB setting first and falls back to environment variables when unset.
 
 ## Completed Tasks
 
@@ -148,8 +148,9 @@ It also stores rating/search fields imported from insurer CSV rows:
 - Search Premium now supports packages with `MinSI`/`MaxSI` equal to `0`, such as some `ประเภท 3` rows, by showing `ไม่มีทุนประกัน` as a selectable sum-insured option.
 - Search Premium now routes `ประเภท 1` to a quote request form instead of instant package search. It collects customer name, phone, LINE ID/LIFF profile when available, optional email, brand, model, registration year, and cubic capacity, stores a `TypeOneQuoteLead`, and queues an email to `SALES_LEAD_EMAIL` when configured. Because Type 1 packages are not sold from CSV results, the Type 1 form uses broader vehicle option data from the selected SClass so customers can still submit a lead, but its registration-year dropdown is capped to a maximum vehicle age of 30 years.
 - Type 1 quote request now hides the editable LINE ID input when LIFF profile data is available, while still submitting the LINE user ID internally.
-- Type 1 quote request email now reads the editable admin sales recipient first, then falls back to `SALES_LEAD_EMAIL`.
+- Quote request email now reads the editable admin sales recipient first, then falls back to `SALES_LEAD_EMAIL`.
 - Type 1 quote request form copy now explains that the selected insurance plan is a special out-of-campaign plan and asks interested customers to leave contact details for staff to prepare a quote.
+- Search Premium no-campaign popup for policy type 2+ and 3+ now includes a `ขอใบเสนอราคา` action. It switches the search page into a manual quote form that captures customer contact, LINE profile/user ID when available, vehicle details, selected policy type, repair type, and optional sum insured, then stores the lead and emails the sales team for LINE OA follow-up outside the order/payment flow.
 - Customer clarified `prakanpai2026@gmail.com` is an order-copy recipient, not the Type 1 sales lead recipient; successful checkout/payment submission now sends a separate order-copy email with order number, customer, vehicle/package, payment method, and payable amount.
 - Provider notification email now includes both coverage start date and one-year coverage end date for voluntary insurance and, when selected, CTP/CMI.
 - Search Premium sum-insured options now respect the selected repair type so customers do not select a sum insured that only exists under a different repair group.
@@ -239,8 +240,8 @@ It also stores rating/search fields imported from insurer CSV rows:
 - Campaign dashboard supports CSV import.
 - Campaign-level logo upload exists.
 - Package management page exists for package search/edit.
-- Admin now has `/admin/leads` for Type 1 quote requests, including search, email-status filtering, customer/vehicle details, and resend email action.
-- Admin Type 1 Leads now supports sales follow-up status and internal notes, so sales can track whether a Type 1 quote request is new, contacted, quoted, or closed.
+- Admin now has `/admin/leads` for quote requests, including search, email-status filtering, customer/vehicle details, policy type/repair type/sum-insured badges, and resend email action.
+- Admin quote leads support sales follow-up status and internal notes, so sales can track whether a quote request is new, contacted, quoted, or closed.
 - Provider Contact can now be saved per campaign and applied to all packages in that campaign.
 - Email preview page exists for provider Magic Link emails.
 
@@ -293,7 +294,7 @@ It also stores rating/search fields imported from insurer CSV rows:
 - Checkout now attempts to send the provider email automatically after creating the `EmailOutbox` row.
 - Admin Email Outbox send button is now primarily for retry/manual recovery rather than the normal checkout path.
 - Provider email delivery can now use Resend when `EMAIL_PROVIDER=resend`, `RESEND_API_KEY`, `EMAIL_FROM`, and `APP_BASE_URL` are configured. Local development still supports mock email logging; production fails visibly if email delivery is not configured.
-- Admin insurance dashboard includes an editable sales lead email setting for Type 1 quote requests, so operators can change the recipient without editing Plesk environment variables or restarting the app.
+- Admin insurance dashboard includes an editable sales lead email setting for quote requests, so operators can change the recipient without editing Plesk environment variables or restarting the app.
 - Real LINE notifications are intentionally deferred for a later implementation slice.
 
 ### Payment Flow Decision

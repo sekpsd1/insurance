@@ -1583,6 +1583,10 @@ export async function createTypeOneQuoteLead(input: {
   lineDisplayName?: string;
   email?: string;
   sClass?: string;
+  coverageType?: string;
+  repairType?: string;
+  sumInsured?: string;
+  leadSource?: string;
   brand: string;
   model: string;
   year: string;
@@ -1594,18 +1598,36 @@ export async function createTypeOneQuoteLead(input: {
   const lineId = normalizeShortText(input.lineId ?? '', 120, 'LINE ID');
   const lineDisplayName = normalizeShortText(input.lineDisplayName ?? '', 120, 'LINE display name');
   const sClass = normalizeShortText(input.sClass ?? '', 20, 'Vehicle class');
+  const coverageType = normalizeShortText(input.coverageType ?? '1', 20, 'Coverage type') || '1';
+  const repairType = normalizeShortText(input.repairType ?? '', 20, 'Repair type');
+  const leadSource =
+    normalizeShortText(input.leadSource ?? (coverageType === '1' ? 'TYPE_ONE' : 'NO_CAMPAIGN'), 40, 'Lead source') ??
+    (coverageType === '1' ? 'TYPE_ONE' : 'NO_CAMPAIGN');
   const brand = normalizeShortText(input.brand, 120, 'Brand');
   const model = normalizeShortText(input.model, 120, 'Model');
   const cubicCapacity = normalizeShortText(input.cubicCapacity, 80, 'Cubic capacity');
   const carYear = Number.parseInt(input.year, 10);
+  const sumInsured = input.sumInsured ? Number.parseInt(input.sumInsured, 10) : null;
 
   if (!customerName || !customerPhone || !brand || !model || !cubicCapacity) {
     throw new Error('Required quote lead fields are missing');
   }
 
+  if (!['1', '2+', '3+', '3'].includes(coverageType)) {
+    throw new Error('Coverage type is invalid');
+  }
+
+  if (repairType && !['dealer', 'garage'].includes(repairType)) {
+    throw new Error('Repair type is invalid');
+  }
+
   const currentYear = new Date().getFullYear();
   if (!Number.isFinite(carYear) || carYear < 1950 || carYear > currentYear + 1) {
     throw new Error(`Car year must be between 1950 and ${currentYear + 1}`);
+  }
+
+  if (sumInsured !== null && (!Number.isFinite(sumInsured) || sumInsured < 0)) {
+    throw new Error('Sum insured is invalid');
   }
 
   let leadNumber = formatLeadNumber();
@@ -1625,23 +1647,40 @@ export async function createTypeOneQuoteLead(input: {
 
   const configuredSalesEmail = await getSalesLeadEmailSetting();
   const salesEmail = normalizeEmail(configuredSalesEmail ?? process.env.SALES_LEAD_EMAIL ?? null, 'Sales lead email');
-  const subject = `[Type 1 Quote] ${leadNumber} - ${brand} ${model} ${carYear}`;
-  const vehicleSizeLabel = sClass === '210' ? `Seat count: up to ${cubicCapacity}` : `Cubic capacity: ${cubicCapacity} cc`;
+  const coverageLabel =
+    coverageType === '2+'
+      ? 'ประเภท 2 พลัส'
+      : coverageType === '3+'
+        ? 'ประเภท 3 พลัส'
+        : coverageType === '3'
+          ? 'ประเภท 3'
+          : 'ประเภท 1';
+  const repairLabel = repairType === 'dealer' ? 'ซ่อมห้าง' : repairType === 'garage' ? 'ซ่อมอู่' : '-';
+  const sourceLabel = leadSource === 'NO_CAMPAIGN' ? 'นอกแคมเปญ' : 'แผนพิเศษนอกแคมเปญ';
+  const subject = `[Quote Lead] ${leadNumber} - ${coverageLabel} - ${brand} ${model} ${carYear}`;
+  const vehicleSizeLabel = sClass === '210' ? `จำนวนที่นั่ง: ไม่เกิน ${cubicCapacity} ที่นั่ง` : `ขนาดเครื่องยนต์: ${cubicCapacity} ซีซี`;
   const body = [
-    'New Type 1 quote request',
+    'คำขอใบเสนอราคาใหม่',
     '',
-    `Lead number: ${leadNumber}`,
-    `Customer: ${customerName}`,
-    `Phone: ${customerPhone}`,
-    lineId ? `LINE ID: ${lineId}` : null,
+    `เลขที่คำขอ: ${leadNumber}`,
+    `ประเภทคำขอ: ${sourceLabel}`,
+    `ประเภทที่สนใจ: ${coverageLabel}`,
+    repairType ? `ความคุ้มครอง: ${repairLabel}` : null,
+    sumInsured !== null ? `ทุนประกัน: ${sumInsured.toLocaleString('th-TH')} บาท` : null,
+    '',
+    `ลูกค้า: ${customerName}`,
+    `เบอร์โทร: ${customerPhone}`,
+    lineId ? `LINE user id / LINE ID: ${lineId}` : null,
     lineDisplayName ? `LINE display name: ${lineDisplayName}` : null,
-    email ? `Email: ${email}` : null,
+    email ? `อีเมล: ${email}` : null,
     '',
-    `Vehicle class: ${sClass ?? '-'}`,
-    `Brand: ${brand}`,
-    `Model: ${model}`,
-    `Registration year: ${carYear}`,
+    `ประเภทรถ: ${sClass || '-'}`,
+    `ยี่ห้อ: ${brand}`,
+    `รุ่น: ${model}`,
+    `ปีจดทะเบียน: ${carYear}`,
     vehicleSizeLabel,
+    '',
+    'หมายเหตุ: รายการนี้เป็น lead สำหรับให้แอดมินติดต่อกลับทาง LINE OA/โทรศัพท์ จัดทำข้อเสนอและเก็บเงินนอกระบบ',
     '',
     'This is an automated broker system message.'
   ]
@@ -1657,6 +1696,10 @@ export async function createTypeOneQuoteLead(input: {
       lineDisplayName,
       email,
       sClass,
+      coverageType,
+      repairType,
+      sumInsured,
+      leadSource,
       brand,
       model,
       carYear,

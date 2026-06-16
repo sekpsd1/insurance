@@ -56,6 +56,34 @@ function formatLeadVehicleSize(sClass: string | null, cubicCapacity: string) {
   return `${cubicCapacity} ซีซี`;
 }
 
+function getCoverageLabel(coverageType?: string | null) {
+  switch (coverageType) {
+    case '2+':
+      return 'ประเภท 2 พลัส';
+    case '3+':
+      return 'ประเภท 3 พลัส';
+    case '3':
+      return 'ประเภท 3';
+    default:
+      return 'ประเภท 1';
+  }
+}
+
+function getRepairTypeLabel(repairType?: string | null) {
+  switch (repairType) {
+    case 'dealer':
+      return 'ซ่อมห้าง';
+    case 'garage':
+      return 'ซ่อมอู่';
+    default:
+      return '-';
+  }
+}
+
+function getLeadSourceLabel(source?: string | null) {
+  return source === 'NO_CAMPAIGN' ? 'นอกแคมเปญ' : 'แผนพิเศษ';
+}
+
 function getEmailStatusStyles(status?: string | null) {
   switch (status) {
     case 'QUEUED':
@@ -86,6 +114,9 @@ function buildLeadWhere(q?: string): Prisma.TypeOneQuoteLeadWhereInput {
       { lineDisplayName: { contains: query } },
       { email: { contains: query } },
       { sClass: { contains: query } },
+      { coverageType: { contains: query } },
+      { repairType: { contains: query } },
+      { leadSource: { contains: query } },
       { brand: { contains: query } },
       { model: { contains: query } },
       { cubicCapacity: { contains: query } }
@@ -192,10 +223,10 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
       <section className="rounded-[2rem] bg-white p-6 shadow-xl shadow-slate-950/10">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-700">Type 1 Leads</p>
-            <h2 className="mt-2 text-3xl font-black text-slate-950">คำขอใบเสนอราคาประเภท 1</h2>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-700">Quote Leads</p>
+            <h2 className="mt-2 text-3xl font-black text-slate-950">คำขอใบเสนอราคา</h2>
             <p className="mt-2 max-w-3xl text-sm text-slate-600">
-              รายการลูกค้าที่เลือกประเภท 1 แล้วส่งข้อมูลให้เซลติดต่อกลับ ระบบจะแสดงข้อมูลรถ ลูกค้า และสถานะอีเมลที่ส่งถึงทีมขาย
+              รายการลูกค้าที่ส่งข้อมูลให้เซลติดต่อกลับ ทั้งประเภท 1 และกรณี 2+/3+ ที่ไม่พบแคมเปญ ระบบจะแสดงข้อมูลรถ ลูกค้า และสถานะอีเมลที่ส่งถึงทีมขาย
             </p>
           </div>
           <Link
@@ -314,7 +345,22 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
                     <p className="mt-1 text-slate-600">
                       ปี {lead.carYear} / {formatLeadVehicleSize(lead.sClass, lead.cubicCapacity)}
                     </p>
-                    <p className="mt-1 text-xs text-slate-500">SClass {lead.sClass || '-'}</p>
+                    <div className="mt-2 flex flex-wrap gap-1.5 text-xs font-bold">
+                      <span className="rounded-full bg-cyan-50 px-2.5 py-1 text-cyan-700 ring-1 ring-cyan-100">
+                        {getCoverageLabel(lead.coverageType)}
+                      </span>
+                      {lead.repairType ? (
+                        <span className="rounded-full bg-indigo-50 px-2.5 py-1 text-indigo-700 ring-1 ring-indigo-100">
+                          {getRepairTypeLabel(lead.repairType)}
+                        </span>
+                      ) : null}
+                      <span className="rounded-full bg-slate-100 px-2.5 py-1 text-slate-600 ring-1 ring-slate-200">
+                        {getLeadSourceLabel(lead.leadSource)}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-xs text-slate-500">
+                      SClass {lead.sClass || '-'} {lead.sumInsured !== null ? `/ ทุน ${lead.sumInsured.toLocaleString('th-TH')} บาท` : ''}
+                    </p>
                   </div>
                   <div>
                     <p className="break-all text-slate-700">LINE ID: {lead.lineId || '-'}</p>
