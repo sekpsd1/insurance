@@ -42,13 +42,7 @@ export default function LineAppMenuPage() {
         </div>
       </header>
 
-      <div className="mx-auto flex min-h-[calc(100vh-64px)] max-w-md flex-col gap-5 px-4 py-6">
-        <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-white via-[#f4f9ff] to-[#dfeeff] px-5 py-6 shadow-[0_10px_30px_rgba(4,16,61,0.08)] ring-1 ring-white/70">
-          <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#0052CC]">LINE MINI APP</p>
-          <h2 className="mt-2 font-[Kanit,sans-serif] text-2xl font-bold leading-tight text-[#0f172a]">ประกันภัยไร้คอม</h2>
-          <p className="mt-2 text-sm leading-6 text-[#4b5265]">เลือกเมนูที่ต้องการใช้งาน</p>
-        </section>
-
+      <div className="mx-auto flex min-h-[calc(100vh-64px)] max-w-md flex-col px-4 py-5">
         <section className="rounded-3xl bg-white p-4 shadow-[0_10px_30px_rgba(4,16,61,0.08)] ring-1 ring-white/70">
           <div className="flex flex-col gap-3">
             {menuItems.map((item) => (
