@@ -7,7 +7,7 @@ function getFriendlyMessage(message: string) {
   if (message.includes('Customer email')) return 'รูปแบบอีเมลไม่ถูกต้อง';
   if (message.includes('ID card number')) return 'เลขบัตรประชาชนไม่ถูกต้อง';
   if (message.includes('Plate number')) return 'ทะเบียนรถมีรูปแบบไม่ถูกต้อง';
-  if (message.includes('Policy start date')) return 'วันที่เริ่มคุ้มครองต้องไม่ย้อนหลังเกิน 30 วัน และไม่ล่วงหน้าเกิน 1 ปี';
+  if (message.includes('Policy start date')) return 'วันที่คุ้มครองไม่สามารถย้อนหลังได้ และต้องไม่ล่วงหน้าเกิน 1 ปี';
   if (message.includes('Payment slip')) return 'กรุณาแนบสลิปโอนเงินก่อนส่งข้อมูล';
   if (message.includes('Upload file')) return 'ไฟล์ที่อัปโหลดต้องเป็นรูปภาพ PNG, JPG, WebP หรือ GIF และขนาดไม่เกินที่กำหนด';
   if (message.includes('Provider payment URL')) return 'แคมเปญนี้ยังไม่ได้ตั้งค่าลิงก์ชำระเงินของบริษัทประกัน กรุณาติดต่อผู้ดูแลระบบ';

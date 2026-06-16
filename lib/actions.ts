@@ -341,12 +341,11 @@ function parsePolicyStartDate(value: string | null) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const minDate = new Date(today);
-  minDate.setDate(minDate.getDate() - 30);
   const maxDate = new Date(today);
   maxDate.setFullYear(maxDate.getFullYear() + 1);
 
   if (parsed < minDate || parsed > maxDate) {
-    throw new Error('Policy start date must be within 30 days in the past and 1 year in the future');
+    throw new Error('Policy start date cannot be in the past or more than 1 year in the future');
   }
 
   return parsed;

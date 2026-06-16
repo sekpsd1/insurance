@@ -189,6 +189,29 @@ function parseLocalDateKey(value: string) {
   return new Date(year, month - 1, day);
 }
 
+function getPolicyDateRangeValidationMessage(value: string) {
+  const selectedDate = parseLocalDateKey(value);
+
+  if (!selectedDate || Number.isNaN(selectedDate.getTime())) {
+    return '';
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const maxDate = new Date(today);
+  maxDate.setFullYear(maxDate.getFullYear() + 1);
+
+  if (selectedDate < today) {
+    return 'วันที่คุ้มครองไม่สามารถย้อนหลังได้';
+  }
+
+  if (selectedDate > maxDate) {
+    return 'วันที่คุ้มครองต้องไม่ล่วงหน้าเกิน 1 ปี';
+  }
+
+  return '';
+}
+
 function formatThaiDate(value: Date) {
   return new Intl.DateTimeFormat('th-TH', {
     day: '2-digit',
@@ -268,6 +291,7 @@ export function PolicyFormEnhancements({
 
         if (!day || !month || !year) {
           dateField.value = '';
+          dateField.setCustomValidity('');
           setDatePartValidity(fields, '');
         } else {
           const candidate = new Date(Number(year), Number(month) - 1, Number(day));
@@ -278,10 +302,14 @@ export function PolicyFormEnhancements({
 
           if (isValidDate) {
             dateField.value = `${year}-${month}-${day}`;
-            setDatePartValidity(fields, '');
+            const dateRangeMessage = getPolicyDateRangeValidationMessage(dateField.value);
+            dateField.setCustomValidity(dateRangeMessage);
+            setDatePartValidity(fields, dateRangeMessage);
           } else {
             dateField.value = '';
-            setDatePartValidity(fields, 'กรุณาเลือกวันที่ให้ถูกต้อง');
+            const message = 'กรุณาเลือกวันที่ให้ถูกต้อง';
+            dateField.setCustomValidity(message);
+            setDatePartValidity(fields, message);
           }
         }
 
@@ -330,6 +358,14 @@ export function PolicyFormEnhancements({
         }
 
         const selectedDate = new Date(`${selectedValue}T00:00:00`);
+        const dateRangeMessage = getPolicyDateRangeValidationMessage(selectedValue);
+
+        if (dateRangeMessage) {
+          ctpDateField.setCustomValidity(dateRangeMessage);
+          setDatePartValidity(ctpPartFields, dateRangeMessage);
+          return;
+        }
+
         const isSameDay = selectedValue === todayKey;
 
         if (isSameDay) {
