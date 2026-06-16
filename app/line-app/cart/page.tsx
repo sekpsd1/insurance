@@ -468,7 +468,7 @@ export default async function CartPage({
             </svg>
           </Link>
           <CloseLineMenuButton label="กลับไปเมนู" />
-          <h1 className="min-w-0 whitespace-nowrap text-right font-[Kanit,sans-serif] text-[clamp(20px,7vw,30px)] font-bold leading-none tracking-wide">รายการในตะกร้า</h1>
+          <h1 className="min-w-0 whitespace-nowrap text-right font-[Kanit,sans-serif] text-[clamp(16px,5vw,22px)] font-bold leading-none tracking-wide">รายการในตะกร้า</h1>
         </div>
       </header>
 

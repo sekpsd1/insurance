@@ -161,6 +161,7 @@ It also stores rating/search fields imported from insurer CSV rows:
 - Search Premium header/menu button and intro banner were tightened for small screens, and the main dropdown fields now include left-side icons matching the customer's requested visual direction.
 - Search Premium intro banner was refined again so the quote-request copy is smaller and less 50/50 balanced, and the main dropdown icons now use solid fill-style shapes.
 - LINE Mini App `liff.state` redirects now allow `/cart` as well as tracking/search paths, so a Rich Menu button can open the saved cart directly via the published Mini App URL.
+- Added an internal `/line-app/menu` main menu page for customer navigation. The yellow `กลับสู่เมนู` / `กลับไปเมนู` buttons now route to this in-app menu instead of trying to close the LINE webview, avoiding the external-site warning and inconsistent close behavior after cart/search navigation.
 - Results page supports pagination.
 - Result cards encode uploaded logo URLs before rendering and fall back to company text if the image cannot be loaded.
 - Result cards and compare table display repair type from `GarageCd` as `ซ่อมห้าง` or `ซ่อมอู่`.
