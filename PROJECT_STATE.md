@@ -164,6 +164,7 @@ It also stores rating/search fields imported from insurer CSV rows:
 - LINE Mini App `liff.state` redirects now allow `/cart` as well as tracking/search paths, so a Rich Menu button can open the saved cart directly via the published Mini App URL.
 - Added an internal `/line-app/menu` main menu page for customer navigation. The yellow `กลับสู่เมนู` / `กลับไปเมนู` buttons now route to this in-app menu instead of trying to close the LINE webview, avoiding the external-site warning and inconsistent close behavior after cart/search navigation.
 - Main menu page now starts directly with the three customer actions and no longer shows the extra intro/brand card above the menu list.
+- Tracking lookup and tracking detail pages now include a `กลับไปเมนู` action that returns customers to the in-app main menu.
 - Results page supports pagination.
 - Result cards encode uploaded logo URLs before rendering and fall back to company text if the image cannot be loaded.
 - Result cards and compare table display repair type from `GarageCd` as `ซ่อมห้าง` or `ซ่อมอู่`.

@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { TrackingOrdersPanel } from './tracking-orders-panel';
+import CloseLineMenuButton from '@/app/line-app/_components/close-line-menu-button';
 
 async function findOrder(formData: FormData) {
   'use server';
@@ -16,6 +17,9 @@ export default function TrackingSearchPage() {
     <main className="min-h-screen bg-[#f4f7ff] px-4 py-8 text-[#101828]">
       <div className="mx-auto max-w-md">
         <section className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <div className="mb-4 flex justify-end">
+            <CloseLineMenuButton label="กลับไปเมนู" />
+          </div>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#0052CC]">Order Tracking</p>
           <h1 className="mt-2 text-2xl font-bold text-slate-950">ติดตามสถานะคำสั่งซื้อ</h1>
           <p className="mt-2 text-sm leading-6 text-slate-500">
