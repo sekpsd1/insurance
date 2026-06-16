@@ -1042,8 +1042,10 @@ export default function SearchPremiumForm({
 
         {coverage === '1' ? (
           <section className="rounded-2xl border border-[#d8dcec] bg-[#f8faff] p-4">
-            <h3 className="font-[Kanit,sans-serif] text-lg font-bold text-[#0047BA]">ข้อมูลติดต่อกลับ</h3>
-            <p className="mt-1 text-sm leading-6 text-[#4b5265]">ส่งข้อมูลให้ทีมเซลจัดทำใบเสนอราคาประเภท 1</p>
+            <h3 className="font-[Kanit,sans-serif] text-lg font-bold text-[#0047BA]">แผนประกันนี้ เป็นแผนพิเศษนอกแคมเปญ</h3>
+            <p className="mt-1 text-sm leading-6 text-[#4b5265]">
+              หากท่านสนใจ กรุณากรอกข้อมูลเพื่อให้เจ้าหน้าที่ จัดทำใบเสนอราคาส่งให้อีกครั้ง
+            </p>
 
             <div className="mt-4 space-y-4">
               <div>
