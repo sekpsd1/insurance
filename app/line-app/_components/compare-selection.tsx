@@ -47,6 +47,7 @@ type CompareSelectionProps = {
 
 const CART_STORAGE_KEY = 'insurance.cartPackageIds';
 const CART_CTP_STORAGE_KEY = 'insurance.cartCtpPackageIds';
+const CART_SEARCH_PARAMS_STORAGE_KEY = 'insurance.cartSearchParams';
 const MAX_COMPARE_PACKAGES = 2;
 
 function formatMoney(value: number) {
@@ -343,7 +344,13 @@ export default function CompareSelection({
 
     window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartIds));
     window.localStorage.setItem(CART_CTP_STORAGE_KEY, JSON.stringify(ctpPackageIds.filter((id) => cartIds.includes(id))));
-  }, [cartIds, ctpPackageIds, isCartStorageLoaded]);
+
+    if (cartIds.length > 0 && baseQueryString) {
+      window.localStorage.setItem(CART_SEARCH_PARAMS_STORAGE_KEY, baseQueryString);
+    } else if (cartIds.length === 0) {
+      window.localStorage.removeItem(CART_SEARCH_PARAMS_STORAGE_KEY);
+    }
+  }, [baseQueryString, cartIds, ctpPackageIds, isCartStorageLoaded]);
 
   function markLogoFailed(id: string) {
     setFailedLogoIds((current) => (current.includes(id) ? current : [...current, id]));
@@ -391,6 +398,9 @@ export default function CompareSelection({
     const params = new URLSearchParams(baseQueryString);
     cartIds.forEach((id) => params.append('ids', id));
     ctpPackageIds.filter((id) => cartIds.includes(id)).forEach((id) => params.append('ctpIds', id));
+    if (cartIds.length > 0 && baseQueryString) {
+      window.localStorage.setItem(CART_SEARCH_PARAMS_STORAGE_KEY, baseQueryString);
+    }
     router.push(`/line-app/cart?${params.toString()}`);
   }
 

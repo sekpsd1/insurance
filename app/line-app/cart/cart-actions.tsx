@@ -6,8 +6,10 @@ import { useRouter } from 'next/navigation';
 
 const CART_STORAGE_KEY = 'insurance.cartPackageIds';
 const CART_CTP_STORAGE_KEY = 'insurance.cartCtpPackageIds';
+const CART_SEARCH_PARAMS_STORAGE_KEY = 'insurance.cartSearchParams';
 const COMPARE_STORAGE_KEY = 'insurance.comparePackageIds';
 const COMPARE_CTP_STORAGE_KEY = 'insurance.compareCtpPackageIds';
+const SEARCH_CONTEXT_KEYS = ['sClass', 'coverage', 'repairType', 'brand', 'model', 'year', 'cubicCapacity', 'sumInsured'];
 
 type RemoveCartPackageButtonProps = {
   href: string;
@@ -80,12 +82,41 @@ function buildCartHrefFromStoredIds(params: URLSearchParams, storedIds: string[]
   return query ? `/line-app/cart?${query}` : '/line-app/cart';
 }
 
+function hasSearchContext(params: URLSearchParams) {
+  return SEARCH_CONTEXT_KEYS.some((key) => params.has(key));
+}
+
+function getStoredSearchParams() {
+  try {
+    const rawValue = window.localStorage.getItem(CART_SEARCH_PARAMS_STORAGE_KEY);
+
+    if (!rawValue) {
+      return null;
+    }
+
+    const parsed = new URLSearchParams(rawValue);
+    return hasSearchContext(parsed) ? parsed : null;
+  } catch {
+    window.localStorage.removeItem(CART_SEARCH_PARAMS_STORAGE_KEY);
+    return null;
+  }
+}
+
+function getHydrationBaseParams(params: URLSearchParams) {
+  if (hasSearchContext(params)) {
+    return new URLSearchParams(params);
+  }
+
+  return getStoredSearchParams() ?? new URLSearchParams(params);
+}
+
 export function CartStorageHydrator({ showLoading = true }: { showLoading?: boolean }) {
   const router = useRouter();
   const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const baseParams = getHydrationBaseParams(params);
     const hasUrlIds = params.has('ids');
     const hasKnownCartState = window.localStorage.getItem(CART_STORAGE_KEY) !== null;
     const storedIds = getStoredStringList(CART_STORAGE_KEY);
@@ -98,10 +129,15 @@ export function CartStorageHydrator({ showLoading = true }: { showLoading?: bool
       }
 
       const urlIds = getUrlIdList(params, 'ids');
-      const urlCtpIds = getUrlIdList(params, 'ctpIds').filter((id) => storedIds.includes(id));
+      const urlCtpIds = getUrlIdList(params, 'ctpIds').filter((id) => urlIds.includes(id));
 
       if (hasKnownCartState && (!isSameStringList(urlIds, storedIds) || !isSameStringList(urlCtpIds, storedCtpIds))) {
-        router.replace(buildCartHrefFromStoredIds(params, storedIds, storedCtpIds));
+        router.replace(buildCartHrefFromStoredIds(baseParams, storedIds, storedCtpIds));
+        return;
+      }
+
+      if (!hasSearchContext(params) && hasSearchContext(baseParams)) {
+        router.replace(buildCartHrefFromStoredIds(baseParams, urlIds, urlCtpIds));
         return;
       }
 
@@ -110,9 +146,7 @@ export function CartStorageHydrator({ showLoading = true }: { showLoading?: bool
     }
 
     if (storedIds.length > 0) {
-      storedIds.forEach((id) => params.append('ids', id));
-      storedCtpIds.forEach((id) => params.append('ctpIds', id));
-      router.replace(`/line-app/cart?${params.toString()}`);
+      router.replace(buildCartHrefFromStoredIds(baseParams, storedIds, storedCtpIds));
       return;
     }
 
@@ -138,6 +172,10 @@ export function RemoveCartPackageButton({
   function syncCartStorage() {
     window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(remainingIds));
     window.localStorage.setItem(CART_CTP_STORAGE_KEY, JSON.stringify(remainingCtpIds));
+
+    if (remainingIds.length === 0) {
+      window.localStorage.removeItem(CART_SEARCH_PARAMS_STORAGE_KEY);
+    }
   }
 
   return (
@@ -159,6 +197,7 @@ export function ClearCartButton() {
     window.localStorage.setItem(CART_CTP_STORAGE_KEY, JSON.stringify([]));
     window.localStorage.setItem(COMPARE_STORAGE_KEY, JSON.stringify([]));
     window.localStorage.setItem(COMPARE_CTP_STORAGE_KEY, JSON.stringify([]));
+    window.localStorage.removeItem(CART_SEARCH_PARAMS_STORAGE_KEY);
     router.replace('/line-app/cart');
   }
 

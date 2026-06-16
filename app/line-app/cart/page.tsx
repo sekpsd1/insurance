@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getCustomerCtpOptionsBySClass } from '@/lib/ctp-rates';
+import CloseLineMenuButton from '../_components/close-line-menu-button';
 import { CartCompareSelector, CartPlanActions, CartStorageHydrator, ClearCartButton, RemoveCartPackageButton } from './cart-actions';
 
 type CartSearchParams = {
@@ -460,14 +461,14 @@ export default async function CartPage({
   return (
     <main className="min-h-screen bg-[#f4f5ff] text-[#12131a]">
       <header className="sticky top-0 z-10 bg-[#0047BA] text-white shadow-[0_4px_16px_rgba(0,0,0,0.12)]">
-        <div className="mx-auto flex max-w-md items-center justify-between px-4 py-4">
+        <div className="mx-auto grid max-w-md grid-cols-[auto_1fr_auto] items-center gap-2 px-3 py-3">
           <Link href={backHref} aria-label="กลับไปหน้าก่อนหน้า" className="rounded-full p-1.5 transition-colors hover:bg-white/10">
             <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
             </svg>
           </Link>
-          <h1 className="font-[Kanit,sans-serif] text-xl font-bold tracking-wide">รายการในตะกร้า</h1>
-          <div className="h-9 w-9" />
+          <h1 className="min-w-0 text-center font-[Kanit,sans-serif] text-xl font-bold tracking-wide">รายการในตะกร้า</h1>
+          <CloseLineMenuButton label="กลับไปเมนู" />
         </div>
       </header>
 

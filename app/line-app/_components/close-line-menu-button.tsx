@@ -7,6 +7,10 @@ type LineMenuLiffClient = {
   closeWindow?: () => void;
 };
 
+type CloseLineMenuButtonProps = {
+  label?: string;
+};
+
 function loadLiffSdk() {
   const currentWindow = window as unknown as { liff?: LineMenuLiffClient };
 
@@ -31,7 +35,7 @@ function loadLiffSdk() {
   });
 }
 
-export default function CloseLineMenuButton() {
+export default function CloseLineMenuButton({ label = 'กลับสู่เมนู' }: CloseLineMenuButtonProps) {
   const [isClosing, setIsClosing] = useState(false);
 
   async function handleClose() {
@@ -80,7 +84,7 @@ export default function CloseLineMenuButton() {
         <path strokeLinecap="round" strokeLinejoin="round" d="M5.5 10.5V20h13v-9.5" />
         <path strokeLinecap="round" strokeLinejoin="round" d="M9.5 20v-5h5v5" />
       </svg>
-      <span>กลับสู่เมนู</span>
+      <span>{label}</span>
     </button>
   );
 }

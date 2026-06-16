@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import SearchPremiumForm from './search-premium-form';
-import CloseLineMenuButton from './close-line-menu-button';
+import CloseLineMenuButton from '../_components/close-line-menu-button';
 
 type SearchPremiumSearchParams = {
   sClass?: string;
