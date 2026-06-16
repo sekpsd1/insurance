@@ -1106,10 +1106,10 @@ export default async function ComparePage({
 
         <div className="flex flex-wrap gap-3">
           <Link href={searchHref} className="rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-[#0047BA] shadow-[0_8px_24px_rgba(0,0,0,0.04)] ring-1 ring-[#cfd8ff] transition hover:bg-[#eef3ff]">
-            กลับไปค้นหา
+            กลับไปหน้าเมนู
           </Link>
           <Link href={resultsHref} className="rounded-2xl bg-[#0047BA] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#003c9d]">
-            ไปหน้าผลลัพธ์
+            กลับไปเลือกแผนประกัน
           </Link>
         </div>
       </div>
