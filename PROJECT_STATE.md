@@ -224,6 +224,7 @@ It also stores rating/search fields imported from insurer CSV rows:
 - Credit-card checkout now lets customers upload the completed card authorization form and masked card-front file back into the order; admin order detail, provider Magic Link, provider/order-copy emails, and CSV export can open those uploaded documents.
 - Checkout payment summary now keeps a single `คงเหลือชำระ` row with the actual transfer amount, while hiding the extra itemized premium/CTP breakdown rows to reduce customer confusion.
 - Checkout bank-transfer QR/payment image now renders larger on mobile so customers can scan the insurer payment QR more easily.
+- Checkout now disables browser scroll restoration and resets to the top on page load so customers see the payment-method heading instead of returning to a previously scrolled card-payment section.
 - Checkout, success, tracking, admin order detail, provider Magic Link, provider email preview, and provider email body now show selected CTP/CMI details when present.
 - Customer tracking detail now shows the payment breakdown for the main plan remaining payable amount, selected CTP/CMI amount, and combined amount due instead of showing only the CTP/CMI line.
 - Provider Magic Link emails sent through Resend now include an HTML `Update policy status` button while preserving the plain-text fallback link.
