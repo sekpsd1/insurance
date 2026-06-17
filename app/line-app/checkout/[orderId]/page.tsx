@@ -76,7 +76,7 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
                   <img
                     src={order.pkg.paymentQrUrl}
                     alt="QR code สำหรับชำระเงิน"
-                    className="mt-3 max-h-64 w-full rounded-2xl border border-slate-200 bg-white object-contain"
+                    className="mx-auto mt-3 max-h-[520px] w-full rounded-2xl border border-slate-200 bg-white object-contain"
                   />
                 ) : null}
                 {order.pkg.paymentNotes ? (
