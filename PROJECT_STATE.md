@@ -334,7 +334,7 @@ It also stores rating/search fields imported from insurer CSV rows:
 - ESLint config was updated for ESLint 9 flat config compatibility.
 - `.gitignore` excludes local caches and uploaded slip files.
 - `.gitignore` excludes local uploaded logo, payment QR/image, and slip files.
-- Uploads now validate image MIME/content signatures, size limits, and sanitized filenames. Upload storage supports local files for development and S3-compatible object storage through `UPLOAD_STORAGE_DRIVER=s3`; production local uploads are blocked unless `ALLOW_LOCAL_UPLOADS_IN_PRODUCTION=true` is explicitly set.
+- Uploads now validate image content signatures, size limits, and sanitized filenames while tolerating generic or mismatched browser MIME labels for valid image files. Upload storage supports local files for development and S3-compatible object storage through `UPLOAD_STORAGE_DRIVER=s3`; production local uploads are blocked unless `ALLOW_LOCAL_UPLOADS_IN_PRODUCTION=true` is explicitly set.
 - Server-side form validation now covers customer phones/emails, Thai ID checksum, plate number, policy date range, provider contact fields, payment setup fields, admin status values, insurer notes, and CSV upload shape.
 - Customer, admin, and provider error pages now show friendlier Thai validation/recovery messages for common server-action failures.
 - Invalid or expired provider Magic Links now render a provider-facing explanation page instead of a generic 404.

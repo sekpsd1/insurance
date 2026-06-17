@@ -1103,7 +1103,10 @@ async function saveObjectUploadFile(key: string, buffer: Buffer, contentType: st
 }
 
 async function saveUploadFile(file: File, options: { directory: string; publicPath: string; prefix: string; maxBytes: number }) {
-  if (!ALLOWED_IMAGE_MIME_TYPES.has(file.type)) {
+  const declaredMime = normalizeUploadedMimeType(file.type);
+  const hasGenericMime = !declaredMime || declaredMime === 'application/octet-stream' || declaredMime === 'binary/octet-stream';
+
+  if (!hasGenericMime && !ALLOWED_IMAGE_MIME_TYPES.has(declaredMime)) {
     throw new Error('Upload file must be a PNG, JPG, WebP, or GIF image');
   }
 
@@ -1114,7 +1117,7 @@ async function saveUploadFile(file: File, options: { directory: string; publicPa
   const buffer = Buffer.from(await file.arrayBuffer());
   const detectedMime = detectImageMime(buffer);
 
-  if (!detectedMime || detectedMime !== file.type) {
+  if (!detectedMime || !ALLOWED_IMAGE_MIME_TYPES.has(detectedMime)) {
     throw new Error('Upload file content does not match the selected image type');
   }
 
