@@ -21,6 +21,7 @@ export function getPaymentStatusLabel(status: string | null | undefined) {
   const labels: Record<string, string> = {
     UNPAID: 'ยังไม่ชำระเงิน',
     SLIP_SUBMITTED: 'ส่งสลิปแล้ว',
+    CARD_FORM_SUBMITTED: 'ส่งเอกสารตัดบัตรแล้ว',
     AWAITING_TRANSFER: 'รอชำระผ่านช่องทางที่เลือก',
     PAID: 'ชำระเงินแล้ว',
     FAILED: 'ชำระเงินไม่สำเร็จ',
@@ -33,7 +34,7 @@ export function getPaymentStatusLabel(status: string | null | undefined) {
 export function getPaymentMethodLabel(method: string | null | undefined) {
   const labels: Record<string, string> = {
     BANK_TRANSFER: 'โอนเงินแนบสลิป',
-    CARD_GATEWAY: 'ชำระผ่าน Gateway'
+    CARD_GATEWAY: 'จ่ายผ่านบัตร'
   };
 
   return method ? labels[method] ?? method : '-';
@@ -66,7 +67,8 @@ export function getStatusHistoryMessageLabel(message: string | null | undefined)
   const exactLabels: Record<string, string> = {
     'Policy information submitted. Waiting for checkout.': 'กรอกข้อมูลกรมธรรม์แล้ว รอชำระเงิน',
     'Customer submitted a bank transfer slip.': 'ลูกค้าส่งสลิปโอนเงินแล้ว',
-    'Customer selected card/gateway payment.': 'ลูกค้าเลือกชำระเงินผ่าน Gateway',
+    'Customer selected card/gateway payment.': 'ลูกค้าเลือกจ่ายผ่านบัตร',
+    'Customer submitted credit card authorization documents.': 'ลูกค้าส่งเอกสารตัดบัตรเครดิตแล้ว',
     'Provider email was added to the email outbox.': 'เพิ่มอีเมลบริษัทประกันเข้าคิวส่งแล้ว',
     'Provider email preview was added to the email outbox.': 'เพิ่มตัวอย่างอีเมลบริษัทประกันเข้าคิวส่งแล้ว',
     'Provider email outbox item was refreshed.': 'อัปเดตคิวอีเมลบริษัทประกันแล้ว',

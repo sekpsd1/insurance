@@ -1,15 +1,7 @@
-import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
-export async function GET() {
-  const file = await readFile(join(process.cwd(), 'public', 'forms', 'tokio-marine-credit-card-form.pdf'));
+export const dynamic = 'force-static';
 
-  return new NextResponse(new Uint8Array(file), {
-    headers: {
-      'Content-Type': 'application/pdf',
-      'Content-Disposition': 'inline; filename="tokio-marine-credit-card-form.pdf"',
-      'Cache-Control': 'public, max-age=31536000, immutable'
-    }
-  });
+export function GET(request: NextRequest) {
+  return NextResponse.redirect(new URL('/forms/credit-card-authorization.pdf', request.url));
 }

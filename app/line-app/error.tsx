@@ -9,7 +9,9 @@ function getFriendlyMessage(message: string) {
   if (message.includes('Plate number')) return 'ทะเบียนรถมีรูปแบบไม่ถูกต้อง';
   if (message.includes('Policy start date')) return 'วันที่คุ้มครองไม่สามารถย้อนหลังได้ และต้องไม่ล่วงหน้าเกิน 1 ปี';
   if (message.includes('Payment slip')) return 'กรุณาแนบสลิปโอนเงินก่อนส่งข้อมูล';
-  if (message.includes('Upload file')) return 'ไฟล์ที่อัปโหลดต้องเป็นรูปภาพ PNG, JPG, WebP หรือ GIF และขนาดไม่เกินที่กำหนด';
+  if (message.includes('Credit card authorization form')) return 'กรุณาแนบแบบฟอร์มตัดบัตรเครดิตที่กรอกแล้ว';
+  if (message.includes('Credit card front image')) return 'กรุณาแนบรูปหน้าบัตรเครดิต โดยปิดรหัส CVV 3 ตัวก่อนส่ง';
+  if (message.includes('Upload file')) return 'ไฟล์ที่อัปโหลดต้องเป็นรูปภาพหรือ PDF และขนาดไม่เกินที่กำหนด';
   if (message.includes('Provider payment URL')) return 'แคมเปญนี้ยังไม่ได้ตั้งค่าลิงก์ชำระเงินของบริษัทประกัน กรุณาติดต่อผู้ดูแลระบบ';
   return 'กรุณาตรวจสอบข้อมูลอีกครั้ง หากยังพบปัญหาให้ติดต่อผู้ดูแลระบบ';
 }

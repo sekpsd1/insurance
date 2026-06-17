@@ -502,6 +502,8 @@ function buildOrderCopyEmail(input: {
     ctpTotal: number | null;
     slipUrl: string | null;
     gatewayUrl: string | null;
+    cardAuthorizationFormUrl: string | null;
+    cardFrontImageUrl: string | null;
     user: {
       name: string | null;
       phone: string | null;
@@ -522,6 +524,8 @@ function buildOrderCopyEmail(input: {
   const plate = [order.plateNumber, order.plateProvince].filter(Boolean).join(' ') || '-';
   const slipUrl = getAbsoluteAppUrl(order.slipUrl);
   const gatewayUrl = getAbsoluteAppUrl(order.gatewayUrl);
+  const cardAuthorizationFormUrl = getAbsoluteAppUrl(order.cardAuthorizationFormUrl);
+  const cardFrontImageUrl = getAbsoluteAppUrl(order.cardFrontImageUrl);
   const payableAmount =
     order.paymentAmount ??
     (order.pkg.payablePrice ?? order.pkg.netPrice) + (order.ctpSelected ? order.ctpTotal ?? 0 : 0);
@@ -543,6 +547,8 @@ function buildOrderCopyEmail(input: {
     order.ctpSelected ? `พ.ร.บ.: ${order.ctpRateCode ?? '-'} / ${formatThaiBaht(order.ctpTotal)}` : null,
     slipUrl ? `สลิปชำระเงิน: ${slipUrl}` : null,
     gatewayUrl ? `ลิงก์ชำระเงินบริษัทประกัน: ${gatewayUrl}` : null,
+    cardAuthorizationFormUrl ? `แบบฟอร์มตัดบัตรเครดิต: ${cardAuthorizationFormUrl}` : null,
+    cardFrontImageUrl ? `รูปหน้าบัตรเครดิต: ${cardFrontImageUrl}` : null,
     '',
     'อีเมลนี้เป็นสำเนาแจ้งเตือนเพื่อให้ทราบว่ามีรายการสั่งซื้อสำเร็จ'
   ]
@@ -1280,6 +1286,15 @@ async function saveVehicleDocumentFile(file: File, prefix: string): Promise<stri
   });
 }
 
+async function saveCreditCardDocumentFile(file: File, prefix: string, label: string): Promise<string> {
+  return saveDocumentUploadFile(file, {
+    directory: 'card-documents',
+    publicPath: 'card-documents',
+    prefix: `${prefix}-${label}`,
+    maxBytes: POLICY_DOCUMENT_MAX_BYTES
+  });
+}
+
 async function savePolicyPdfFile(file: File, prefix: string): Promise<string> {
   if (file.type !== 'application/pdf') {
     throw new Error('Policy document must be a PDF file');
@@ -1835,6 +1850,8 @@ export async function submitCheckout(formData: FormData): Promise<void> {
   const orderId = getRequiredFormValue(formData, 'orderId');
   const paymentMethod = getRequiredFormValue(formData, 'paymentMethod') as PaymentMethod;
   const slipFile = formData.get('slipFile');
+  const cardAuthorizationFile = formData.get('cardAuthorizationFile');
+  const cardFrontFile = formData.get('cardFrontFile');
 
   const order = await prisma.order.findUnique({
     where: { id: orderId },
@@ -1854,9 +1871,11 @@ export async function submitCheckout(formData: FormData): Promise<void> {
 
   let slipUrl: string | null = null;
   let gatewayUrl: string | null = null;
+  let cardAuthorizationFormUrl: string | null = null;
+  let cardFrontImageUrl: string | null = null;
   let status: OrderStatus = 'PAYMENT_SUBMITTED';
   let paymentStatus = 'SLIP_SUBMITTED';
-  let historyMessage = 'ลูกค้าส่งสลิปโอนเงินแล้ว';
+  let historyMessage = 'Customer submitted a bank transfer slip.';
 
   if (paymentMethod === 'BANK_TRANSFER') {
     if (!(slipFile instanceof File) || slipFile.size === 0) {
@@ -1865,13 +1884,18 @@ export async function submitCheckout(formData: FormData): Promise<void> {
 
     slipUrl = await saveSlipFile(slipFile, order.orderNumber);
   } else {
-    gatewayUrl = order.pkg.paymentUrl;
-    if (!gatewayUrl) {
-      throw new Error('Provider payment URL is not configured for this campaign');
+    if (!(cardAuthorizationFile instanceof File) || cardAuthorizationFile.size === 0) {
+      throw new Error('Credit card authorization form is required');
     }
-    status = 'PENDING_PAYMENT';
-    paymentStatus = 'AWAITING_TRANSFER';
-    historyMessage = 'ลูกค้าเลือกชำระเงินผ่าน Gateway';
+
+    if (!(cardFrontFile instanceof File) || cardFrontFile.size === 0) {
+      throw new Error('Credit card front image is required');
+    }
+
+    cardAuthorizationFormUrl = await saveCreditCardDocumentFile(cardAuthorizationFile, order.orderNumber, 'card-form');
+    cardFrontImageUrl = await saveCreditCardDocumentFile(cardFrontFile, order.orderNumber, 'card-front');
+    paymentStatus = 'CARD_FORM_SUBMITTED';
+    historyMessage = 'Customer submitted credit card authorization documents.';
   }
 
   await prisma.order.update({
@@ -1882,7 +1906,9 @@ export async function submitCheckout(formData: FormData): Promise<void> {
       paymentStatus,
       paymentAmount: order.paymentAmount ?? order.pkg.payablePrice ?? order.pkg.netPrice,
       slipUrl,
-      gatewayUrl
+      gatewayUrl,
+      cardAuthorizationFormUrl,
+      cardFrontImageUrl
     }
   });
 

@@ -31,6 +31,8 @@ type ProviderEmailOrder = {
   paymentAmount: number | null;
   slipUrl: string | null;
   gatewayUrl: string | null;
+  cardAuthorizationFormUrl: string | null;
+  cardFrontImageUrl: string | null;
   ctpSelected: boolean;
   ctpRateCode: string | null;
   ctpTotal: number | null;
@@ -172,11 +174,15 @@ export function buildProviderEmail(input: { order: ProviderEmailOrder; magicLink
   const magicLinkUrl = getAbsoluteAppUrl(magicLinkPath);
   const slipUrl = getAbsoluteAppUrl(order.slipUrl);
   const gatewayUrl = getAbsoluteAppUrl(order.gatewayUrl);
+  const cardAuthorizationFormUrl = getAbsoluteAppUrl(order.cardAuthorizationFormUrl);
+  const cardFrontImageUrl = getAbsoluteAppUrl(order.cardFrontImageUrl);
   const vehicleDocumentUrl = getAbsoluteAppUrl(order.vehicleDocumentUrl);
   const ctpLabel = order.ctpSelected ? 'รวม พ.ร.บ.' : 'ไม่รวม พ.ร.บ.';
   const documentLines = [
     vehicleDocumentUrl ? `- ${order.vehicleDocumentType ?? 'เอกสารรถ'}: ${vehicleDocumentUrl}` : null,
-    slipUrl ? `- สลิปชำระเงิน: ${slipUrl}` : null
+    slipUrl ? `- สลิปชำระเงิน: ${slipUrl}` : null,
+    cardAuthorizationFormUrl ? `- แบบฟอร์มตัดบัตรเครดิต: ${cardAuthorizationFormUrl}` : null,
+    cardFrontImageUrl ? `- รูปหน้าบัตรเครดิต: ${cardFrontImageUrl}` : null
   ].filter((line): line is string => Boolean(line));
   const subject = `แจ้งงาน ${customerName} / ${plate}`;
   const body = [

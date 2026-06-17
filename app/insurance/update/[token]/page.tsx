@@ -245,7 +245,30 @@ export default async function InsurerUpdatePage({ params, searchParams }: Insure
                     เปิดลิงก์ Gateway
                   </a>
                 ) : null}
-                {!order.slipUrl && !order.gatewayUrl ? (
+                {order.cardAuthorizationFormUrl ? (
+                  <a
+                    href={order.cardAuthorizationFormUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex rounded-xl bg-cyan-600 px-4 py-2 text-sm font-semibold text-white"
+                  >
+                    เปิดแบบฟอร์มตัดบัตร
+                  </a>
+                ) : null}
+                {order.cardFrontImageUrl ? (
+                  <a
+                    href={order.cardFrontImageUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex rounded-xl bg-cyan-600 px-4 py-2 text-sm font-semibold text-white"
+                  >
+                    เปิดรูปหน้าบัตรเครดิต
+                  </a>
+                ) : null}
+                {!order.slipUrl &&
+                !order.gatewayUrl &&
+                !order.cardAuthorizationFormUrl &&
+                !order.cardFrontImageUrl ? (
                   <span className="text-sm text-slate-500">ยังไม่มีไฟล์สลิปหรือลิงก์ชำระเงิน</span>
                 ) : null}
               </div>

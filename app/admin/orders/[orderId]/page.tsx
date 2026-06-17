@@ -255,6 +255,26 @@ export default async function AdminOrderDetailPage({ params }: AdminOrderDetailP
                   เปิดลิงก์ชำระเงิน
                 </a>
               ) : null}
+              {order.cardAuthorizationFormUrl ? (
+                <a
+                  href={order.cardAuthorizationFormUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex rounded-xl bg-cyan-600 px-4 py-3 text-sm font-semibold text-white"
+                >
+                  เปิดแบบฟอร์มตัดบัตร
+                </a>
+              ) : null}
+              {order.cardFrontImageUrl ? (
+                <a
+                  href={order.cardFrontImageUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex rounded-xl bg-cyan-600 px-4 py-3 text-sm font-semibold text-white"
+                >
+                  เปิดรูปหน้าบัตรเครดิต
+                </a>
+              ) : null}
             </div>
           </section>
         </div>

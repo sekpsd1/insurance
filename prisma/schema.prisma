@@ -159,19 +159,21 @@ model Order {
   vehicleDocumentUrl     String?
   vehicleDocumentType    String?
 
-  paymentMethod      String?
-  paymentStatus      String    @default("UNPAID")
-  paymentAmount      Float?
-  ctpSelected        Boolean   @default(false)
-  ctpRateCode        String?
-  ctpVehicleTypeCode String?
-  ctpPremium         Float?
-  ctpStamp           Float?
-  ctpVat             Float?
-  ctpTotal           Float?
-  slipUrl            String?
-  gatewayUrl         String?
-  paidAt             DateTime?
+  paymentMethod            String?
+  paymentStatus            String    @default("UNPAID")
+  paymentAmount            Float?
+  ctpSelected              Boolean   @default(false)
+  ctpRateCode              String?
+  ctpVehicleTypeCode       String?
+  ctpPremium               Float?
+  ctpStamp                 Float?
+  ctpVat                   Float?
+  ctpTotal                 Float?
+  slipUrl                  String?
+  gatewayUrl               String?
+  cardAuthorizationFormUrl String?
+  cardFrontImageUrl        String?
+  paidAt                   DateTime?
 
   trackingNumber      String?
   insurerStatus       String?

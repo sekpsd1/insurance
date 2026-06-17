@@ -139,9 +139,47 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
               เปิด/ดาวน์โหลดแบบฟอร์มตัดบัตรเครดิต
             </a>
             <p>
-              หลังกรอกเสร็จ กรุณาส่งไฟล์แบบฟอร์มและรูปหน้าบัตรกลับให้เจ้าหน้าที่ผ่านช่องทางที่แจ้งไว้ หรือ LINE OA
+              หลังกรอกเสร็จ กรุณาแนบไฟล์แบบฟอร์มและรูปหน้าบัตรด้านล่าง ระบบจะส่งเอกสารให้แอดมินตรวจสอบในคำสั่งซื้อนี้
             </p>
           </div>
+
+          <form action={submitCheckout} className="mt-4 space-y-4">
+            <input type="hidden" name="orderId" value={order.id} />
+            <input type="hidden" name="paymentMethod" value="CARD_GATEWAY" />
+            <div>
+              <label htmlFor="cardAuthorizationFile" className="mb-1 block text-sm font-medium text-slate-700">
+                แบบฟอร์มตัดบัตรที่กรอกแล้ว
+              </label>
+              <input
+                id="cardAuthorizationFile"
+                name="cardAuthorizationFile"
+                type="file"
+                accept="image/*,application/pdf"
+                required
+                className="w-full rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-[16px] file:mr-4 file:rounded-xl file:border-0 file:bg-[#0052CC] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
+              />
+            </div>
+            <div>
+              <label htmlFor="cardFrontFile" className="mb-1 block text-sm font-medium text-slate-700">
+                รูปหน้าบัตรเครดิต
+              </label>
+              <input
+                id="cardFrontFile"
+                name="cardFrontFile"
+                type="file"
+                accept="image/*,application/pdf"
+                required
+                className="w-full rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-[16px] file:mr-4 file:rounded-xl file:border-0 file:bg-[#0052CC] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
+              />
+              <p className="mt-2 text-xs leading-5 text-amber-700">กรุณาปิดรหัส CVV 3 ตัวก่อนอัปโหลดทุกครั้ง</p>
+            </div>
+            <button
+              type="submit"
+              className="w-full rounded-2xl bg-slate-950 px-4 py-4 text-base font-semibold text-white shadow-lg shadow-slate-950/10 transition hover:bg-slate-800"
+            >
+              ส่งเอกสารตัดบัตร
+            </button>
+          </form>
         </section>
 
         <Link href={`/line-app/form/${order.packageId}${order.ctpSelected ? '?includeCtp=1' : ''}`} className="rounded-2xl bg-white px-4 py-3 text-center font-semibold text-[#0052CC] ring-1 ring-blue-100">
