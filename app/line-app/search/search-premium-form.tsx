@@ -1065,11 +1065,11 @@ export default function SearchPremiumForm({
                 setLeadError('');
                 setSumInsured(event.target.value);
               }}
-              required
+              required={!isQuoteLeadMode}
               disabled={!cubicCapacity}
               className="w-full appearance-none rounded-2xl border border-[#d8dcec] bg-[#eaecf7] py-4 pl-12 pr-12 text-[16px] text-[#12131a] outline-none transition disabled:cursor-not-allowed disabled:opacity-60 focus:border-[#0047BA] focus:bg-white focus:ring-4 focus:ring-[#0047BA]/10"
             >
-              <option value="">{cubicCapacity ? '-- ทุนประกัน --' : isSeatBasedSelection ? 'กรุณาเลือกจำนวนที่นั่งก่อน' : 'กรุณาเลือกขนาดเครื่องยนต์ก่อน'}</option>
+              <option value="">{cubicCapacity ? (isQuoteLeadMode ? '-- ทุนประกัน (ไม่บังคับ) --' : '-- ทุนประกัน --') : isSeatBasedSelection ? 'กรุณาเลือกจำนวนที่นั่งก่อน' : 'กรุณาเลือกขนาดเครื่องยนต์ก่อน'}</option>
               {sumInsuredOptions.map((item) => (
                 <option key={item} value={item}>
                   {formatSumInsured(item)}
@@ -1149,12 +1149,7 @@ export default function SearchPremiumForm({
                   placeholder="ถ้าเปิดผ่าน LINE ระบบจะพยายามดึงให้อัตโนมัติ"
                 />
                 </div>
-              ) : (
-                <div className="rounded-2xl border border-[#cfe8d8] bg-[#f0fbf5] px-4 py-3 text-sm font-semibold text-[#087443]">
-                  เชื่อมต่อ LINE profile แล้ว
-                  {leadLineDisplayName ? <span className="font-normal text-[#3a4258]"> ({leadLineDisplayName})</span> : null}
-                </div>
-              )}
+              ) : null}
 
               <div>
                 <label htmlFor="leadEmail" className="mb-2 block text-sm font-semibold text-[#12131a]">
