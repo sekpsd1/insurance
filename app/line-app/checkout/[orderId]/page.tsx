@@ -37,7 +37,7 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
     order.pkg.paymentAccountName ? `ชื่อบัญชี: ${order.pkg.paymentAccountName}` : null
   ].filter((detail): detail is string => Boolean(detail));
   const hasBankTransferSetup = bankDetails.length > 0 || Boolean(order.pkg.paymentQrUrl || order.pkg.paymentNotes);
-  const creditCardFormPath = '/forms/tokio-marine-credit-card-form.pdf';
+  const creditCardFormPath = '/api/forms/credit-card-authorization';
 
   return (
     <main className="min-h-screen bg-[#f4f7ff] px-4 py-5 text-[#101828]">
@@ -132,10 +132,11 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
             </div>
             <a
               href={creditCardFormPath}
-              download
+              target="_blank"
+              rel="noopener noreferrer"
               className="block rounded-2xl bg-slate-950 px-4 py-4 text-center text-base font-semibold text-white transition hover:bg-slate-800"
             >
-              ดาวน์โหลดแบบฟอร์มตัดบัตรเครดิต
+              เปิด/ดาวน์โหลดแบบฟอร์มตัดบัตรเครดิต
             </a>
             <p>
               หลังกรอกเสร็จ กรุณาส่งไฟล์แบบฟอร์มและรูปหน้าบัตรกลับให้เจ้าหน้าที่ผ่านช่องทางที่แจ้งไว้ หรือ LINE OA
