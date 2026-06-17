@@ -166,8 +166,8 @@ export default async function OrderSuccessPage({ params }: SuccessPageProps) {
         >
           ติดตามสถานะคำสั่งซื้อ
         </Link>
-        <Link href="/line-app/search" className="rounded-2xl bg-white px-4 py-3 text-center font-semibold text-[#0052CC] ring-1 ring-blue-100">
-          กลับไปค้นหาแพ็กเกจ
+        <Link href="/line-app/menu" className="rounded-2xl bg-white px-4 py-3 text-center font-semibold text-[#0052CC] ring-1 ring-blue-100">
+          กลับไปเมนู
         </Link>
       </div>
     </main>
