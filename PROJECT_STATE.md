@@ -220,7 +220,7 @@ It also stores rating/search fields imported from insurer CSV rows:
 - Selected CTP/CMI add-ons are carried into Policy Info, stored on `Order`, and included in `paymentAmount`.
 - Checkout page supports:
   - Bank transfer with slip upload.
-  - Gateway mock link flow.
+  - Credit-card payment instructions with downloadable insurer authorization PDF; customers fill the form and return it with a credit-card-front photo after masking the 3-digit CVV.
 - Checkout payment summary now keeps a single `คงเหลือชำระ` row with the actual transfer amount, while hiding the extra itemized premium/CTP breakdown rows to reduce customer confusion.
 - Checkout bank-transfer QR/payment image now renders larger on mobile so customers can scan the insurer payment QR more easily.
 - Checkout, success, tracking, admin order detail, provider Magic Link, provider email preview, and provider email body now show selected CTP/CMI details when present.

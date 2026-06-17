@@ -37,7 +37,7 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
     order.pkg.paymentAccountName ? `ชื่อบัญชี: ${order.pkg.paymentAccountName}` : null
   ].filter((detail): detail is string => Boolean(detail));
   const hasBankTransferSetup = bankDetails.length > 0 || Boolean(order.pkg.paymentQrUrl || order.pkg.paymentNotes);
-  const hasGatewaySetup = Boolean(order.pkg.paymentUrl);
+  const creditCardFormPath = '/forms/tokio-marine-credit-card-form.pdf';
 
   return (
     <main className="min-h-screen bg-[#f4f7ff] px-4 py-5 text-[#101828]">
@@ -120,26 +120,27 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
 
         <section className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
           <div className="mb-4">
-            <h2 className="text-lg font-bold text-slate-950">จ่ายผ่านบัตร / Gateway</h2>
-            <p className="mt-1 text-sm leading-6 text-slate-500">ระบบจะพาไปยังลิงก์ชำระเงินของบริษัทประกันที่ตั้งค่าไว้ใน campaign นี้</p>
+            <h2 className="text-lg font-bold text-slate-950">จ่ายผ่านบัตร</h2>
+            <p className="mt-1 text-sm leading-6 text-slate-500">
+              สำหรับลูกค้าที่ต้องการตัดบัตรเครดิต กรุณาดาวน์โหลดแบบฟอร์ม กรอกรายละเอียด แล้วแนบส่งกลับพร้อมรูปถ่ายหน้าบัตรเครดิต
+            </p>
           </div>
 
-          {hasGatewaySetup ? (
-            <form action={submitCheckout}>
-              <input type="hidden" name="orderId" value={order.id} />
-              <input type="hidden" name="paymentMethod" value="CARD_GATEWAY" />
-              <button
-                type="submit"
-                className="w-full rounded-2xl bg-slate-950 px-4 py-4 text-base font-semibold text-white transition hover:bg-slate-800"
-              >
-                ไปที่ลิงก์ชำระเงินของบริษัทประกัน
-              </button>
-            </form>
-          ) : (
-            <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">
-              แคมเปญนี้ยังไม่ได้ตั้งค่าลิงก์ชำระเงินออนไลน์
+          <div className="space-y-3 rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">
+            <div className="rounded-xl bg-amber-50 p-3 font-medium text-amber-900 ring-1 ring-amber-100">
+              กรุณาปิดรหัส CVV 3 ตัวด้านหลังบัตรก่อนส่งเอกสารทุกครั้ง
             </div>
-          )}
+            <a
+              href={creditCardFormPath}
+              download
+              className="block rounded-2xl bg-slate-950 px-4 py-4 text-center text-base font-semibold text-white transition hover:bg-slate-800"
+            >
+              ดาวน์โหลดแบบฟอร์มตัดบัตรเครดิต
+            </a>
+            <p>
+              หลังกรอกเสร็จ กรุณาส่งไฟล์แบบฟอร์มและรูปหน้าบัตรกลับให้เจ้าหน้าที่ผ่านช่องทางที่แจ้งไว้ หรือ LINE OA
+            </p>
+          </div>
         </section>
 
         <Link href={`/line-app/form/${order.packageId}${order.ctpSelected ? '?includeCtp=1' : ''}`} className="rounded-2xl bg-white px-4 py-3 text-center font-semibold text-[#0052CC] ring-1 ring-blue-100">
