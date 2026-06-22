@@ -117,6 +117,7 @@ It also stores rating/search fields imported from insurer CSV rows:
   - Vehicle document attachment no longer asks customers to choose the document type; the system records a generic vehicle document label, starts coverage year options from the current year, and accepts valid image/PDF document content even when mobile browsers report a mismatched allowed MIME type.
   - Autosaves the new draft fields where possible; file uploads still require reselecting the file after reopening the form.
   - Policy Info submit errors now surface more specific Thai validation messages for required fields, phone/email formats, vehicle details, address, dates, and document uploads instead of falling back to a generic failure message.
+  - Policy Info submit failures now write non-sensitive upload diagnostics to server logs, including package ID, selected CTP/CMI flag, vehicle document filename/type/size, and field digit counts, so production logs can distinguish file problems from field validation failures.
 - CTP/CMI policy start date selection now blocks same-day coverage only when the purchase day is after 16:00, Saturday/Sunday, or a configured admin holiday; future coverage dates remain selectable.
 - Voluntary and CTP/CMI policy start dates now cannot be set to a past date on both the mobile form and server action; CTP/CMI same-day cut-off, weekend, and business-holiday rules still apply.
 

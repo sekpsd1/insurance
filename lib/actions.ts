@@ -364,6 +364,16 @@ function getPolicyDraftOrderErrorMessage(error: unknown) {
     return 'ที่อยู่จัดส่งกรมธรรม์ยาวเกินไป กรุณาตรวจสอบอีกครั้ง';
   }
 
+  if (
+    message.includes('Body exceeded') ||
+    message.includes('body size') ||
+    message.includes('Payload Too Large') ||
+    message.includes('Request Entity Too Large') ||
+    message.includes('413')
+  ) {
+    return 'ไฟล์แนบมีขนาดใหญ่เกินไป กรุณาแนบไฟล์ไม่เกิน 20MB หรือถ่าย/บันทึกไฟล์ใหม่ให้ขนาดเล็กลงแล้วลองอีกครั้ง';
+  }
+
   if (message.includes('Document upload is too large')) {
     return 'ไฟล์เอกสารรถมีขนาดใหญ่เกินไป กรุณาแนบไฟล์ไม่เกิน 20MB';
   }
@@ -401,6 +411,46 @@ function getPolicyDraftOrderErrorMessage(error: unknown) {
   }
 
   return 'ส่งข้อมูลไม่สำเร็จ กรุณาตรวจสอบข้อมูลและไฟล์แนบอีกครั้ง';
+}
+
+function getPolicyDraftUploadDiagnostics(formData: FormData) {
+  const file = formData.get('vehicleDocumentFile');
+
+  if (!(file instanceof File)) {
+    return {
+      present: false,
+      valueType: file === null ? 'null' : typeof file
+    };
+  }
+
+  return {
+    present: file.size > 0,
+    name: file.name || '(no name)',
+    type: file.type || '(no type)',
+    sizeBytes: file.size,
+    sizeMb: Number((file.size / 1024 / 1024).toFixed(2))
+  };
+}
+
+function logPolicyDraftOrderFailure(error: unknown, formData: FormData) {
+  try {
+    const customerPhone = String(formData.get('customerPhone') ?? '');
+    const idCardNumber = String(formData.get('idCardNumber') ?? '');
+
+    console.error('[Policy Draft Order Failed]', {
+      packageId: String(formData.get('packageId') ?? '').trim(),
+      includeCtp: isCtpSelected(formData.get('includeCtp')),
+      error: error instanceof Error ? error.message : String(error),
+      vehicleDocument: getPolicyDraftUploadDiagnostics(formData),
+      customerPhoneDigits: customerPhone.replace(/\D/g, '').length,
+      idCardDigits: idCardNumber.replace(/\D/g, '').length
+    });
+  } catch (logError) {
+    console.error('[Policy Draft Order Failed: diagnostics unavailable]', {
+      error: error instanceof Error ? error.message : String(error),
+      diagnosticsError: logError instanceof Error ? logError.message : String(logError)
+    });
+  }
 }
 
 function parsePolicyStartDate(value: string | null) {
@@ -1645,11 +1695,7 @@ export async function createPolicyDraftOrder(formData: FormData): Promise<void> 
   try {
     orderId = await createPolicyDraftOrderData(formData);
   } catch (error) {
-    console.error('[Policy Draft Order Failed]', {
-      packageId,
-      includeCtp,
-      error: error instanceof Error ? error.message : String(error)
-    });
+    logPolicyDraftOrderFailure(error, formData);
 
     const params = new URLSearchParams({
       formError: getPolicyDraftOrderErrorMessage(error)
