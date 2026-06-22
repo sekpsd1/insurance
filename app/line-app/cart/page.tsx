@@ -636,20 +636,22 @@ export default async function CartPage({
           </div>
         )}
 
-        <div className="flex flex-wrap gap-3">
-          <Link href={backHref} className="rounded-2xl bg-[#0047BA] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#003c9d]">
-            กลับไปเลือกแผน
-          </Link>
-          {compareIds.length >= 2 ? (
-            <Link
-              href={buildCompareHrefWithIds(baseParams, compareIds, compareCtpIds)}
-              className="rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-[#0047BA] shadow-[0_8px_24px_rgba(0,0,0,0.04)] ring-1 ring-blue-100 transition hover:bg-[#eef3ff]"
-            >
-              ดูเปรียบเทียบ
+        {packages.length > 0 ? (
+          <div className="flex flex-wrap gap-3">
+            <Link href={backHref} className="rounded-2xl bg-[#0047BA] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#003c9d]">
+              กลับไปเลือกแผน
             </Link>
-          ) : null}
-          {packages.length > 0 ? <ClearCartButton /> : null}
-        </div>
+            {compareIds.length >= 2 ? (
+              <Link
+                href={buildCompareHrefWithIds(baseParams, compareIds, compareCtpIds)}
+                className="rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-[#0047BA] shadow-[0_8px_24px_rgba(0,0,0,0.04)] ring-1 ring-blue-100 transition hover:bg-[#eef3ff]"
+              >
+                ดูเปรียบเทียบ
+              </Link>
+            ) : null}
+            <ClearCartButton />
+          </div>
+        ) : null}
       </div>
     </main>
   );

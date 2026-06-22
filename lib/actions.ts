@@ -291,6 +291,78 @@ function normalizeUploadedMimeType(value: string | null | undefined) {
 
 function getPolicyDraftOrderErrorMessage(error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
+  const requiredFieldMessages: Record<string, string> = {
+    packageId: 'ไม่พบแผนประกันที่เลือก กรุณากลับไปเลือกแผนใหม่',
+    customerName: 'กรุณากรอกชื่อ - นามสกุลผู้เอาประกัน',
+    customerPhone: 'กรุณากรอกเบอร์โทรศัพท์ผู้เอาประกัน',
+    customerAddress: 'กรุณากรอกที่อยู่ผู้เอาประกัน',
+    province: 'กรุณาเลือกจังหวัดของผู้เอาประกัน',
+    district: 'กรุณาเลือกอำเภอของผู้เอาประกัน',
+    subDistrict: 'กรุณาเลือกตำบลของผู้เอาประกัน',
+    postalCode: 'กรุณาเลือกรหัสไปรษณีย์ของผู้เอาประกัน',
+    idCardNumber: 'กรุณากรอกเลขบัตรประชาชน 13 หลัก',
+    carBrand: 'กรุณากรอกยี่ห้อรถ',
+    carModel: 'กรุณากรอกรุ่นรถ',
+    carCubicCapacity: 'กรุณากรอกขนาดรถหรือจำนวนที่นั่ง',
+    carYear: 'กรุณากรอกปีจดทะเบียนรถ',
+    plateNumber: 'กรุณากรอกทะเบียนรถ',
+    chassisNumber: 'กรุณากรอกเลขตัวถังรถ',
+    policyStartDate: 'กรุณาเลือกวันที่คุ้มครองภาคสมัครใจ',
+    ctpPolicyStartDate: 'กรุณาเลือกวันที่คุ้มครอง พ.ร.บ.',
+    deliveryRecipientName: 'กรุณากรอกชื่อผู้รับเอกสาร',
+    deliveryRecipientPhone: 'กรุณากรอกเบอร์โทรผู้รับเอกสาร',
+    deliveryAddress: 'กรุณากรอกที่อยู่จัดส่งกรมธรรม์'
+  };
+
+  const requiredFieldName = message.match(/^([A-Za-z0-9_]+) is required$/)?.[1];
+
+  if (requiredFieldName && requiredFieldMessages[requiredFieldName]) {
+    return requiredFieldMessages[requiredFieldName];
+  }
+
+  if (message.includes('Selected package was not found')) {
+    return 'ไม่พบแผนประกันที่เลือก กรุณากลับไปเลือกแผนใหม่';
+  }
+
+  if (message.includes('Customer phone must contain')) {
+    return 'เบอร์โทรศัพท์ผู้เอาประกันไม่ถูกต้อง กรุณากรอกตัวเลข 9-15 หลัก';
+  }
+
+  if (message.includes('Delivery recipient phone must contain')) {
+    return 'เบอร์โทรผู้รับเอกสารไม่ถูกต้อง กรุณากรอกตัวเลข 9-15 หลัก';
+  }
+
+  if (message.includes('Customer email must be a valid email address')) {
+    return 'อีเมลไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง หรือเว้นว่างได้ถ้าไม่มีอีเมล';
+  }
+
+  if (message.includes('Plate number is required')) {
+    return 'กรุณากรอกทะเบียนรถ';
+  }
+
+  if (message.includes('Plate number contains invalid characters')) {
+    return 'ทะเบียนรถมีตัวอักษรที่ไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง';
+  }
+
+  if (message.includes('Chassis number is required')) {
+    return 'กรุณากรอกเลขตัวถังรถ';
+  }
+
+  if (message.includes('Chassis number contains invalid characters')) {
+    return 'เลขตัวถังรถมีตัวอักษรที่ไม่ถูกต้อง กรุณากรอกเฉพาะตัวอักษรภาษาอังกฤษ ตัวเลข หรือขีดกลาง';
+  }
+
+  if (message.includes('Customer name must be')) {
+    return 'ชื่อ - นามสกุลยาวเกินไป กรุณาตรวจสอบอีกครั้ง';
+  }
+
+  if (message.includes('Customer address must be')) {
+    return 'ที่อยู่ผู้เอาประกันยาวเกินไป กรุณาตรวจสอบอีกครั้ง';
+  }
+
+  if (message.includes('Delivery address must be')) {
+    return 'ที่อยู่จัดส่งกรมธรรม์ยาวเกินไป กรุณาตรวจสอบอีกครั้ง';
+  }
 
   if (message.includes('Document upload is too large')) {
     return 'ไฟล์เอกสารรถมีขนาดใหญ่เกินไป กรุณาแนบไฟล์ไม่เกิน 20MB';
