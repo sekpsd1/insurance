@@ -1,6 +1,6 @@
 # Project State
 
-Last updated: 2026-06-15
+Last updated: 2026-06-23
 
 ## Current Architecture
 
@@ -120,6 +120,7 @@ It also stores rating/search fields imported from insurer CSV rows:
   - Policy Info submit failures now write non-sensitive upload diagnostics to server logs, including package ID, selected CTP/CMI flag, vehicle document filename/type/size, and field digit counts, so production logs can distinguish file problems from field validation failures.
 - CTP/CMI policy start date selection now blocks same-day coverage only when the purchase day is after 16:00, Saturday/Sunday, or a configured admin holiday; future coverage dates remain selectable.
 - Voluntary and CTP/CMI policy start dates now cannot be set to a past date on both the mobile form and server action; CTP/CMI same-day cut-off, weekend, and business-holiday rules still apply.
+- Customer success and order tracking pages now show a `เปิดกรมธรรม์ PDF` card when the insurer has attached an issued policy PDF through the provider Magic Link.
 
 - Search Premium page loads real brand/model/year options from DB.
 - Opening `/line-app` without search query parameters now redirects to `/line-app/search` so customers start from the vehicle search form instead of seeing the unfiltered package list.

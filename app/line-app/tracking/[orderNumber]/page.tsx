@@ -130,6 +130,24 @@ export default async function TrackingDetailPage({ params }: TrackingPageProps) 
           </div>
         </section>
 
+        {order.policyPdfUrl ? (
+          <section className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-emerald-100">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">Policy PDF</p>
+            <h2 className="mt-2 text-xl font-bold text-slate-950">กรมธรรม์ของคุณ</h2>
+            {order.policyNumber ? (
+              <p className="mt-1 text-sm text-slate-600">เลขกรมธรรม์: {order.policyNumber}</p>
+            ) : null}
+            <a
+              href={order.policyPdfUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-4 flex w-full items-center justify-center rounded-2xl bg-emerald-600 px-4 py-3 text-center font-semibold text-white shadow-lg shadow-emerald-600/20"
+            >
+              เปิดกรมธรรม์ PDF
+            </a>
+          </section>
+        ) : null}
+
         <section className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
           <h2 className="font-bold text-slate-950">Timeline</h2>
           <div className="mt-4 space-y-3">
