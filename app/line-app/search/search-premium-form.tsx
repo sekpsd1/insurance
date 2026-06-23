@@ -269,7 +269,9 @@ type LiffProfile = {
 type LiffClient = {
   init: (config: { liffId: string; withLoginOnExternalBrowser?: boolean }) => Promise<void>;
   isLoggedIn: () => boolean;
+  isInClient?: () => boolean;
   getProfile: () => Promise<LiffProfile>;
+  sendMessages?: (messages: Array<{ type: 'text'; text: string }>) => Promise<void>;
   closeWindow?: () => void;
 };
 
@@ -298,6 +300,60 @@ function loadLiffSdk() {
     script.onerror = () => reject(new Error('LIFF SDK failed to load'));
     document.head.appendChild(script);
   });
+}
+
+function buildQuoteLeadLineMessage(input: {
+  leadNumber: string;
+  customerName: string;
+  customerPhone: string;
+  coverageType: string;
+  repairType: string;
+  brand: string;
+  model: string;
+  year: string;
+  vehicleSize: string;
+}) {
+  const repairText = input.repairType ? ` / ${getRepairTypeLabel(input.repairType)}` : '';
+  const vehicleSizeText = input.vehicleSize ? ` / ${input.vehicleSize}` : '';
+
+  return [
+    'ขอใบเสนอราคา',
+    `เลขที่คำขอ: ${input.leadNumber}`,
+    `ชื่อ: ${input.customerName}`,
+    `เบอร์โทร: ${input.customerPhone}`,
+    `ประเภท: ${getCoverageLabel(input.coverageType)}${repairText}`,
+    `รถ: ${input.brand} ${input.model} ปี ${input.year}${vehicleSizeText}`
+  ].join('\n');
+}
+
+async function sendQuoteLeadLineMessage(input: Parameters<typeof buildQuoteLeadLineMessage>[0]) {
+  const liffId = process.env.NEXT_PUBLIC_LIFF_ID?.trim();
+
+  if (!liffId) {
+    return;
+  }
+
+  try {
+    const liff = await loadLiffSdk();
+    await liff.init({ liffId, withLoginOnExternalBrowser: false });
+
+    if (!liff.isLoggedIn() || (typeof liff.isInClient === 'function' && !liff.isInClient()) || typeof liff.sendMessages !== 'function') {
+      return;
+    }
+
+    await liff.sendMessages([{ type: 'text', text: buildQuoteLeadLineMessage(input) }]);
+  } catch (error) {
+    console.warn('[LIFF] quote lead chat message failed', error);
+  }
+}
+
+async function sendQuoteLeadLineMessageWithTimeout(input: Parameters<typeof buildQuoteLeadLineMessage>[0]) {
+  await Promise.race([
+    sendQuoteLeadLineMessage(input),
+    new Promise<void>((resolve) => {
+      window.setTimeout(resolve, 3000);
+    })
+  ]);
 }
 
 export default function SearchPremiumForm({
@@ -812,6 +868,17 @@ export default function SearchPremiumForm({
             cubicCapacity
           });
 
+          await sendQuoteLeadLineMessageWithTimeout({
+            leadNumber: result.leadNumber,
+            customerName: leadCustomerName,
+            customerPhone: leadCustomerPhone,
+            coverageType: coverage || '1',
+            repairType,
+            brand,
+            model,
+            year,
+            vehicleSize: isSeatBasedSelection ? `${cubicCapacity} ที่นั่ง` : `${cubicCapacity} ซีซี`
+          });
           setLeadSuccessNumber(result.leadNumber);
         } catch (error) {
           const message = error instanceof Error ? error.message : 'ส่งคำขอใบเสนอราคาไม่สำเร็จ';
