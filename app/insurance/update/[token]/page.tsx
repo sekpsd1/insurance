@@ -1,5 +1,4 @@
 import { createHash } from 'crypto';
-import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import { updateOrderFromMagicLink } from '@/lib/actions';
 import {
@@ -421,9 +420,6 @@ export default async function InsurerUpdatePage({ params, searchParams }: Insure
               ))
             )}
           </div>
-          <Link href={`/line-app/tracking/${order.orderNumber}`} className="mt-5 inline-flex rounded-xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white">
-            ดูหน้าติดตามสถานะลูกค้า
-          </Link>
         </section>
       </div>
     </main>
