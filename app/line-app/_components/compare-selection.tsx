@@ -571,7 +571,7 @@ export default function CompareSelection({
                     aria-expanded={isDetailsOpen}
                     className="flex items-center justify-center border border-[#0052CC] bg-white py-3 font-[Kanit,sans-serif] text-base font-semibold text-[#0052CC] transition-colors hover:bg-[#eef3ff]"
                   >
-                    ดูความคุ้มครอง
+                    ความคุ้มครอง
                   </button>
                   <a
                     href={buildFormHref(pkg.id, isCtpSelected)}

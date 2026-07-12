@@ -171,6 +171,7 @@ It also stores rating/search fields imported from insurer CSV rows:
 - LINE Mini App `liff.state` redirects now allow `/cart` as well as tracking/search paths, so a Rich Menu button can open the saved cart directly via the published Mini App URL.
 - Added an internal `/line-app/menu` main menu page for customer navigation. The yellow `กลับสู่เมนู` / `กลับไปเมนู` buttons now route to this in-app menu instead of trying to close the LINE webview, avoiding the external-site warning and inconsistent close behavior after cart/search navigation.
 - Main menu page now starts directly with the three customer actions and no longer shows the extra intro/brand card above the menu list.
+- Added `/line-app/other-insurance` as a Rich Menu destination for other insurance types. It currently displays disabled Home, Personal Accident, and Travel Insurance buttons until their final destinations are provided, and accepts both direct Mini App and `liff.state` routes.
 - Tracking lookup and tracking detail pages now include a `กลับไปเมนู` action that returns customers to the in-app main menu.
 - Tracking lookup and tracking detail pages now use the same blue top header pattern as other customer pages, with the return-to-menu action in the header and a plain link fallback for more reliable LINE webview navigation.
 - Success page secondary action now says `กลับไปเมนู` and returns customers to the in-app main menu instead of the package search page.
