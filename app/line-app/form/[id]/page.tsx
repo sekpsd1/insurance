@@ -80,6 +80,17 @@ function Field({
   );
 }
 
+function VehicleDetailValue({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0 rounded-md border border-blue-100 bg-white px-3 py-2.5 shadow-sm">
+      <div className="text-[12px] font-bold text-slate-500">{label}</div>
+      <div className="mt-1 truncate text-[14px] font-black text-slate-900" title={value}>
+        {value || '-'}
+      </div>
+    </div>
+  );
+}
+
 const THAI_MONTHS = [
   'มกราคม',
   'กุมภาพันธ์',
@@ -249,6 +260,40 @@ function toDateKey(value: Date) {
   return value.toISOString().slice(0, 10);
 }
 
+function getVehicleSizeLabel(
+  packageItem: {
+    sClass: string | null;
+    minCubicCapacity: number | null;
+    maxCubicCapacity: number | null;
+  },
+  selectedValue: string
+) {
+  if (selectedValue) {
+    return packageItem.sClass === '210' ? `ไม่เกิน ${selectedValue} ที่นั่ง` : `${Number(selectedValue).toLocaleString('th-TH')} ซีซี`;
+  }
+
+  const minimum = packageItem.minCubicCapacity;
+  const maximum = packageItem.maxCubicCapacity;
+
+  if (packageItem.sClass === '210' && maximum !== null) {
+    return `ไม่เกิน ${maximum} ที่นั่ง`;
+  }
+
+  if (minimum !== null && maximum !== null && minimum === maximum) {
+    return `${minimum.toLocaleString('th-TH')} ซีซี`;
+  }
+
+  if (maximum !== null) {
+    return `ไม่เกิน ${maximum.toLocaleString('th-TH')} ซีซี`;
+  }
+
+  if (minimum !== null) {
+    return `${minimum.toLocaleString('th-TH')} ซีซี ขึ้นไป`;
+  }
+
+  return '-';
+}
+
 export default async function PackageFormPage({ params, searchParams }: FormPageProps) {
   const { id: packageId } = await params;
   const resolvedSearchParams = (await searchParams) ?? {};
@@ -275,6 +320,11 @@ export default async function PackageFormPage({ params, searchParams }: FormPage
   ]);
   const includeCtp = isCtpSelected(resolvedSearchParams.includeCtp) && Boolean(ctpOption);
   const holidayDates = businessHolidays.map((holiday) => toDateKey(holiday.date));
+  const selectedCarBrand = normalizeSearchValue(resolvedSearchParams.brand) || packageItem.brand || '';
+  const selectedCarModel = normalizeSearchValue(resolvedSearchParams.model) || packageItem.model || '';
+  const selectedCarYear = normalizeSearchValue(resolvedSearchParams.year) || (packageItem.year ? String(packageItem.year) : '');
+  const selectedCarCubicCapacity = normalizeSearchValue(resolvedSearchParams.cubicCapacity);
+  const selectedCarSizeLabel = getVehicleSizeLabel(packageItem, selectedCarCubicCapacity);
   return (
     <main className="min-h-screen bg-gradient-to-b from-[#f7f9ff] via-[#f3f6ff] to-white pb-6 text-[#101828]">
       <header className="sticky top-0 z-10 bg-[#0648ad] text-white shadow-[0_10px_30px_rgba(6,72,173,0.18)]">
@@ -333,11 +383,15 @@ export default async function PackageFormPage({ params, searchParams }: FormPage
           <div className="rounded-lg bg-blue-50/80 p-3.5 ring-1 ring-blue-100">
             <div className="mb-3 text-[13px] font-black text-[#0648ad]">รายละเอียดรถยนต์</div>
             <div className="grid grid-cols-2 gap-3">
-              <Field label="ยี่ห้อรถ" name="carBrand" placeholder="เช่น TOYOTA" />
-              <Field label="รุ่นรถ" name="carModel" placeholder="เช่น HILUX REVO" />
-              <Field label="ขนาด" name="carCubicCapacity" placeholder="เช่น 2,001 ซีซี" />
-              <Field label="ปีจดทะเบียน" name="carYear" placeholder="เช่น 2022" inputMode="numeric" />
+              <VehicleDetailValue label="ยี่ห้อรถ" value={selectedCarBrand} />
+              <VehicleDetailValue label="รุ่นรถ" value={selectedCarModel} />
+              <VehicleDetailValue label="ขนาด" value={selectedCarSizeLabel} />
+              <VehicleDetailValue label="ปีจดทะเบียน" value={selectedCarYear} />
             </div>
+            <input type="hidden" name="carBrand" value={selectedCarBrand} />
+            <input type="hidden" name="carModel" value={selectedCarModel} />
+            <input type="hidden" name="carCubicCapacity" value={selectedCarCubicCapacity || selectedCarSizeLabel} />
+            <input type="hidden" name="carYear" value={selectedCarYear} />
           </div>
           <Field label="ทะเบียนรถ" name="plateNumber" placeholder="เช่น กค 1234" />
           <div>
