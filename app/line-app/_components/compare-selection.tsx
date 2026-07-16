@@ -504,7 +504,7 @@ export default function CompareSelection({
                 <div className="mb-2 overflow-hidden rounded-xl bg-[#eef1f4] shadow-[0_8px_22px_rgba(15,32,67,0.08)]">
                   <div className="border-b border-[#d8dde7] px-3 py-1.5">
                     <div className="flex items-center justify-between gap-3">
-                      <h3 className="font-[Kanit,sans-serif] text-sm font-bold text-[#1f2a44]">สรุปค่าใช้จ่าย</h3>
+                      <h3 className="font-[Kanit,sans-serif] text-sm font-bold text-[#1f2a44]">สรุปค่าเบี้ยประกัน</h3>
                       {ctpOption ? (
                         <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-[#1f2a44]">
                           <span>เพิ่ม พ.ร.บ.</span>

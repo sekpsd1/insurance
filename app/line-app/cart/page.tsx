@@ -594,7 +594,7 @@ export default async function CartPage({
 
                   <div className="mb-2.5 overflow-hidden rounded-xl bg-[#eef1f4] shadow-[0_8px_22px_rgba(15,32,67,0.08)]">
                     <div className="border-b border-[#d8dde7] px-3 py-2">
-                      <h3 className="font-[Kanit,sans-serif] text-base font-bold text-[#1f2a44]">สรุปค่าใช้จ่าย</h3>
+                      <h3 className="font-[Kanit,sans-serif] text-base font-bold text-[#1f2a44]">สรุปค่าเบี้ยประกัน</h3>
                     </div>
 
                     <div className="space-y-2 px-3 py-3 text-[13px] text-[#2f3545]">

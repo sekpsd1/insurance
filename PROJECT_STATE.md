@@ -1,6 +1,6 @@
 # Project State
 
-Last updated: 2026-06-23
+Last updated: 2026-07-16
 
 ## Current Architecture
 
@@ -31,6 +31,7 @@ Customer-facing routes live under `/line-app`.
 - `/line-app/success/[orderId]` - order success and recent timeline.
 - `/line-app/tracking` - order tracking lookup.
 - `/line-app/tracking/[orderNumber]` - order tracking detail.
+- `/line-app/claims` - claim contact page with a click-to-call action.
 
 The customer flow currently starts at `/line-app/search`. LINE rich menu and consent are treated as external LINE/LIFF responsibilities, not in-system pages.
 
@@ -102,6 +103,14 @@ It also stores rating/search fields imported from insurer CSV rows:
 `SystemSetting` stores small editable operational settings such as the sales recipient email for quote requests. The app reads this DB setting first and falls back to environment variables when unset.
 
 ## Completed Tasks
+
+### Documentation
+
+- Added draft role-based operation manuals under `docs/manuals/` for:
+  - Customer usage flow.
+  - Sales / lead follow-up flow.
+  - Admin / Orders operations.
+  - Insurance provider Magic Link operations.
 
 ### Customer Flow
 

@@ -138,8 +138,8 @@ function normalizeLiffState(value: string | string[] | undefined) {
 }
 
 function getAllowedLiffRedirectPath(liffState: string) {
-  const allowedLineAppPrefixes = ['/line-app/menu', '/line-app/other-insurance', '/line-app/tracking', '/line-app/cart', '/line-app/search'];
-  const allowedMiniAppPrefixes = ['/menu', '/other-insurance', '/tracking', '/cart', '/search'];
+  const allowedLineAppPrefixes = ['/line-app/menu', '/line-app/other-insurance', '/line-app/claims', '/line-app/tracking', '/line-app/cart', '/line-app/search'];
+  const allowedMiniAppPrefixes = ['/menu', '/other-insurance', '/claims', '/tracking', '/cart', '/search'];
 
   for (const prefix of allowedLineAppPrefixes) {
     if (liffState === prefix || liffState.startsWith(`${prefix}/`) || liffState.startsWith(`${prefix}?`)) {
