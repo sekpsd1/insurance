@@ -270,6 +270,7 @@ It also stores rating/search fields imported from insurer CSV rows:
 - Magic Link token generation exists.
 - Provider update page exists at `/insurance/update/[token]`.
 - Provider Magic Link can now collect policy number and PDF policy attachment; PDF is required before marking an order as `POLICY_ISSUED`.
+- Provider Magic Links are valid for 30 days from creation, unless they are closed earlier after `POLICY_ISSUED` or `REJECTED`.
 - Provider update page shows full order detail before status update:
   - customer contact and address
   - ID card number when present
@@ -541,3 +542,11 @@ Last verified on 2026-05-17 using localhost production start.
    - Consider export/report views for filtered results.
 
 5. Commit/push after each coherent slice.
+
+## 2026-07-22: Multiple policy documents
+
+- Added `OrderDocument` so each order can store multiple PDF documents without replacing earlier files.
+- Provider Magic Link and the Admin order page can attach multiple files at once, categorized as policy, endorsement, or supporting document.
+- Customer success and order-tracking pages display every attached document, while legacy `policyPdfUrl` remains supported for older orders.
+- The insurer still needs to attach at least one document categorized as a policy before setting an order to issued.
+- Deployment requires `npx prisma db push`, followed by `npm run build` and restarting the Node.js app.

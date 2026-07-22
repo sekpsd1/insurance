@@ -29,6 +29,12 @@ function formatDate(value: Date | null | undefined) {
   return value ? value.toLocaleDateString('th-TH') : '-';
 }
 
+function getOrderDocumentLabel(documentType: string) {
+  if (documentType === 'POLICY') return 'กรมธรรม์';
+  if (documentType === 'ENDORSEMENT') return 'เอกสารสลักหลัง';
+  return 'เอกสารประกอบ';
+}
+
 function getFullAddress(order: {
   customerAddress: string | null;
   subDistrict: string | null;
@@ -87,6 +93,11 @@ export default async function InsurerUpdatePage({ params, searchParams }: Insure
               createdAt: 'desc'
             },
             take: 5
+          },
+          documents: {
+            orderBy: {
+              createdAt: 'desc'
+            }
           }
         }
       }
@@ -288,7 +299,19 @@ export default async function InsurerUpdatePage({ params, searchParams }: Insure
                 ) : (
                   <span className="text-sm text-slate-500">ยังไม่มีเอกสารรถ</span>
                 )}
-                {order.policyPdfUrl ? (
+                {order.documents.length > 0 ? (
+                  order.documents.map((document) => (
+                    <a
+                      key={document.id}
+                      href={document.fileUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white"
+                    >
+                      เปิด {getOrderDocumentLabel(document.documentType)}: {document.fileName}
+                    </a>
+                  ))
+                ) : order.policyPdfUrl ? (
                   <a
                     href={order.policyPdfUrl}
                     target="_blank"
@@ -365,14 +388,31 @@ export default async function InsurerUpdatePage({ params, searchParams }: Insure
             </div>
 
             <div>
-              <label htmlFor="policyPdfFile" className="mb-1 block text-sm font-semibold text-slate-700">
+              <label htmlFor="policyDocumentType" className="mb-1 block text-sm font-semibold text-slate-700">
+                ประเภทเอกสาร
+              </label>
+              <select
+                id="policyDocumentType"
+                name="policyDocumentType"
+                defaultValue="POLICY"
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[16px] outline-none focus:border-[#0052CC] focus:bg-white focus:ring-4 focus:ring-blue-100"
+              >
+                <option value="POLICY">กรมธรรม์</option>
+                <option value="ENDORSEMENT">เอกสารสลักหลัง</option>
+                <option value="OTHER">เอกสารประกอบ</option>
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="policyDocumentFiles" className="mb-1 block text-sm font-semibold text-slate-700">
                 แนบ PDF กรมธรรม์
               </label>
               <input
-                id="policyPdfFile"
-                name="policyPdfFile"
+                id="policyDocumentFiles"
+                name="policyDocumentFiles"
                 type="file"
                 accept="application/pdf"
+                multiple
                 className="w-full rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm outline-none file:mr-3 file:rounded-xl file:border-0 file:bg-[#0052CC] file:px-3 file:py-2 file:font-semibold file:text-white focus:border-[#0052CC] focus:bg-white focus:ring-4 focus:ring-blue-100"
               />
               <p className="mt-2 text-xs leading-5 text-slate-500">

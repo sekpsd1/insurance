@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
+import { uploadOrderDocumentsFromAdmin } from '@/lib/actions';
 import {
   getEmailStatusLabel,
   getOrderStatusLabel,
@@ -32,6 +33,12 @@ function formatCurrency(value: number | null | undefined) {
 
 function formatDateTime(value: Date | null | undefined) {
   return value ? value.toLocaleString('th-TH') : '-';
+}
+
+function getOrderDocumentLabel(documentType: string) {
+  if (documentType === 'POLICY') return 'กรมธรรม์';
+  if (documentType === 'ENDORSEMENT') return 'เอกสารสลักหลัง';
+  return 'เอกสารประกอบ';
 }
 
 function getOrderProgressIndex(status: string) {
@@ -87,6 +94,11 @@ export default async function AdminOrderDetailPage({ params }: AdminOrderDetailP
         }
       },
       magicLinks: {
+        orderBy: {
+          createdAt: 'desc'
+        }
+      },
+      documents: {
         orderBy: {
           createdAt: 'desc'
         }
@@ -205,7 +217,19 @@ export default async function AdminOrderDetailPage({ params }: AdminOrderDetailP
                   ) : (
                     <span className="text-sm text-slate-500">ยังไม่มีเอกสารรถ</span>
                   )}
-                  {order.policyPdfUrl ? (
+                  {order.documents.length > 0 ? (
+                    order.documents.map((document) => (
+                      <a
+                        key={document.id}
+                        href={document.fileUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white"
+                      >
+                        เปิด{getOrderDocumentLabel(document.documentType)}: {document.fileName}
+                      </a>
+                    ))
+                  ) : order.policyPdfUrl ? (
                     <a
                       href={order.policyPdfUrl}
                       target="_blank"
@@ -276,6 +300,27 @@ export default async function AdminOrderDetailPage({ params }: AdminOrderDetailP
                 </a>
               ) : null}
             </div>
+          </section>
+
+          <section className="rounded-3xl bg-white p-6 text-slate-950 shadow-2xl shadow-black/10">
+            <h3 className="text-lg font-bold">แนบเอกสารกรมธรรม์</h3>
+            <p className="mt-1 text-sm text-slate-500">แนบได้หลายไฟล์ เช่น กรมธรรม์ เอกสารสลักหลัง และเอกสารประกอบ</p>
+            <form action={uploadOrderDocumentsFromAdmin} className="mt-4 space-y-4">
+              <input type="hidden" name="orderId" value={order.id} />
+              <label className="block text-sm font-semibold text-slate-700">
+                ประเภทเอกสาร
+                <select name="policyDocumentType" defaultValue="POLICY" className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-slate-950">
+                  <option value="POLICY">กรมธรรม์</option>
+                  <option value="ENDORSEMENT">เอกสารสลักหลัง</option>
+                  <option value="OTHER">เอกสารประกอบ</option>
+                </select>
+              </label>
+              <label className="block text-sm font-semibold text-slate-700">
+                ไฟล์ PDF
+                <input name="policyDocumentFiles" type="file" accept="application/pdf" multiple required className="mt-2 block w-full text-sm text-slate-600 file:mr-3 file:rounded-xl file:border-0 file:bg-cyan-600 file:px-4 file:py-2.5 file:font-semibold file:text-white" />
+              </label>
+              <button className="w-full rounded-xl bg-cyan-600 px-4 py-3 font-semibold text-white" type="submit">แนบเอกสาร</button>
+            </form>
           </section>
         </div>
 

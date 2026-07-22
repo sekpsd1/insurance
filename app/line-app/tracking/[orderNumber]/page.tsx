@@ -44,6 +44,12 @@ function formatCurrency(value: number | null | undefined) {
   }).format(value ?? 0);
 }
 
+function getOrderDocumentLabel(documentType: string) {
+  if (documentType === 'POLICY') return 'กรมธรรม์';
+  if (documentType === 'ENDORSEMENT') return 'เอกสารสลักหลัง';
+  return 'เอกสารประกอบ';
+}
+
 export default async function TrackingDetailPage({ params }: TrackingPageProps) {
   const { orderNumber } = await params;
   const order = await prisma.order.findUnique({
@@ -55,6 +61,11 @@ export default async function TrackingDetailPage({ params }: TrackingPageProps) 
       statusHistory: {
         orderBy: {
           createdAt: 'asc'
+        }
+      },
+      documents: {
+        orderBy: {
+          createdAt: 'desc'
         }
       }
     }
@@ -130,21 +141,38 @@ export default async function TrackingDetailPage({ params }: TrackingPageProps) 
           </div>
         </section>
 
-        {order.policyPdfUrl ? (
+        {order.documents.length > 0 || order.policyPdfUrl ? (
           <section className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-emerald-100">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">Policy PDF</p>
             <h2 className="mt-2 text-xl font-bold text-slate-950">กรมธรรม์ของคุณ</h2>
             {order.policyNumber ? (
               <p className="mt-1 text-sm text-slate-600">เลขกรมธรรม์: {order.policyNumber}</p>
             ) : null}
-            <a
-              href={order.policyPdfUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-4 flex w-full items-center justify-center rounded-2xl bg-emerald-600 px-4 py-3 text-center font-semibold text-white shadow-lg shadow-emerald-600/20"
-            >
-              เปิดกรมธรรม์ PDF
-            </a>
+            {order.documents.length > 0 ? (
+              <div className="mt-4 space-y-2">
+                {order.documents.map((document) => (
+                  <a
+                    key={document.id}
+                    href={document.fileUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex w-full items-center justify-between gap-3 rounded-2xl bg-emerald-600 px-4 py-3 text-left font-semibold text-white shadow-lg shadow-emerald-600/20"
+                  >
+                    <span>{getOrderDocumentLabel(document.documentType)}</span>
+                    <span className="truncate text-sm font-medium text-white/85">{document.fileName}</span>
+                  </a>
+                ))}
+              </div>
+            ) : (
+              <a
+                href={order.policyPdfUrl ?? undefined}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-4 flex w-full items-center justify-center rounded-2xl bg-emerald-600 px-4 py-3 text-center font-semibold text-white shadow-lg shadow-emerald-600/20"
+              >
+                เปิดกรมธรรม์ PDF
+              </a>
+            )}
           </section>
         ) : null}
 

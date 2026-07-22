@@ -591,7 +591,7 @@ async function createOrderStatusHistory(input: {
 async function createMagicLinkTokenForOrder(orderId: string) {
   const token = createRawMagicToken();
   const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + 14);
+  expiresAt.setDate(expiresAt.getDate() + 30);
 
   await prisma.magicLinkToken.create({
     data: {
@@ -1430,6 +1430,20 @@ async function savePolicyPdfFile(file: File, prefix: string): Promise<string> {
   });
 }
 
+const ORDER_DOCUMENT_TYPES = ['POLICY', 'ENDORSEMENT', 'OTHER'] as const;
+type OrderDocumentType = (typeof ORDER_DOCUMENT_TYPES)[number];
+
+function getOrderDocumentTypeLabel(documentType: OrderDocumentType): string {
+  switch (documentType) {
+    case 'POLICY':
+      return 'กรมธรรม์';
+    case 'ENDORSEMENT':
+      return 'เอกสารสลักหลัง';
+    default:
+      return 'เอกสารประกอบ';
+  }
+}
+
 export async function updateOrderStatus(formData: FormData): Promise<void> {
   const orderId = String(formData.get('orderId') ?? '').trim();
   const status = String(formData.get('status') ?? '').trim() as OrderStatus;
@@ -1479,6 +1493,82 @@ export async function updateOrderStatus(formData: FormData): Promise<void> {
   });
 
   revalidatePath('/admin');
+}
+
+export async function uploadOrderDocumentsFromAdmin(formData: FormData): Promise<void> {
+  const orderId = getRequiredFormValue(formData, 'orderId');
+  const documentTypeValue = getOptionalFormValue(formData, 'policyDocumentType') ?? 'POLICY';
+  const documentType = documentTypeValue as OrderDocumentType;
+  const policyDocumentFiles = formData
+    .getAll('policyDocumentFiles')
+    .filter((value): value is File => value instanceof File && value.size > 0);
+
+  if (!ORDER_DOCUMENT_TYPES.includes(documentType)) {
+    throw new Error('Invalid policy document type');
+  }
+
+  if (policyDocumentFiles.length === 0) {
+    throw new Error('กรุณาเลือกไฟล์ PDF อย่างน้อย 1 ไฟล์');
+  }
+
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: {
+      id: true,
+      orderNumber: true,
+      status: true
+    }
+  });
+
+  if (!order) {
+    throw new Error('Order not found');
+  }
+
+  const uploadedDocuments = await Promise.all(
+    policyDocumentFiles.map(async (file, index) => ({
+      fileName: file.name,
+      fileUrl: await savePolicyPdfFile(file, `${order.orderNumber}-${documentType.toLowerCase()}-${index + 1}`),
+      documentType
+    }))
+  );
+  const firstPolicyDocument = uploadedDocuments.find((document) => document.documentType === 'POLICY');
+
+  await prisma.$transaction(async (tx) => {
+    await tx.orderDocument.createMany({
+      data: uploadedDocuments.map((document) => ({
+        orderId,
+        fileName: document.fileName,
+        fileUrl: document.fileUrl,
+        documentType: document.documentType,
+        uploadedBy: 'ADMIN'
+      }))
+    });
+
+    if (firstPolicyDocument) {
+      await tx.order.update({
+        where: { id: orderId },
+        data: {
+          policyPdfUrl: firstPolicyDocument.fileUrl,
+          policyPdfUploadedAt: new Date()
+        }
+      });
+    }
+
+    await tx.orderStatusHistory.create({
+      data: {
+        orderId,
+        status: order.status,
+        message: `ผู้ดูแลระบบแนบ${getOrderDocumentTypeLabel(documentType)} ${uploadedDocuments.length} ไฟล์`,
+        actorType: 'ADMIN',
+        actorName: 'Admin'
+      }
+    });
+  });
+
+  revalidatePath('/admin');
+  revalidatePath(`/admin/orders/${orderId}`);
+  revalidatePath(`/line-app/success/${orderId}`);
+  revalidatePath(`/line-app/tracking/${order.orderNumber}`);
 }
 
 export async function sendEmailOutboxItem(formData: FormData): Promise<void> {
@@ -2059,7 +2149,12 @@ export async function updateOrderFromMagicLink(formData: FormData): Promise<void
   const insurerNote = normalizeShortText(getOptionalFormValue(formData, 'insurerNote'), 2000, 'Insurer note');
   const actorName = normalizeShortText(getOptionalFormValue(formData, 'actorName'), 120, 'Actor name') ?? 'Insurance provider';
   const policyNumber = normalizeShortText(getOptionalFormValue(formData, 'policyNumber'), 80, 'Policy number');
-  const policyPdfFile = formData.get('policyPdfFile');
+  const documentTypeValue = getOptionalFormValue(formData, 'policyDocumentType') ?? 'POLICY';
+  const documentType = documentTypeValue as OrderDocumentType;
+  const policyDocumentFiles = [
+    ...formData.getAll('policyDocumentFiles'),
+    formData.get('policyPdfFile')
+  ].filter((value): value is File => value instanceof File && value.size > 0);
 
   const allowedStatuses: OrderStatus[] = [
     'INSURER_REVIEWING',
@@ -2072,6 +2167,10 @@ export async function updateOrderFromMagicLink(formData: FormData): Promise<void
     throw new Error('Invalid insurer status');
   }
 
+  if (!ORDER_DOCUMENT_TYPES.includes(documentType)) {
+    throw new Error('Invalid policy document type');
+  }
+
   const magicToken = await prisma.magicLinkToken.findUnique({
     where: {
       tokenHash: hashMagicToken(token)
@@ -2080,7 +2179,8 @@ export async function updateOrderFromMagicLink(formData: FormData): Promise<void
       order: {
         include: {
           user: true,
-          pkg: true
+          pkg: true,
+          documents: true
         }
       }
     }
@@ -2095,13 +2195,23 @@ export async function updateOrderFromMagicLink(formData: FormData): Promise<void
   }
 
   const isTerminalStatus = status === 'POLICY_ISSUED' || status === 'REJECTED';
-  const hasNewPolicyPdf = policyPdfFile instanceof File && policyPdfFile.size > 0;
+  const hasNewPolicyDocument = documentType === 'POLICY' && policyDocumentFiles.length > 0;
+  const hasExistingPolicyDocument = Boolean(
+    magicToken.order.policyPdfUrl || magicToken.order.documents.some((document) => document.documentType === 'POLICY')
+  );
 
-  if (status === 'POLICY_ISSUED' && !hasNewPolicyPdf && !magicToken.order.policyPdfUrl) {
+  if (status === 'POLICY_ISSUED' && !hasNewPolicyDocument && !hasExistingPolicyDocument) {
     throw new Error('Policy PDF is required before marking the policy as issued');
   }
 
-  const policyPdfUrl = hasNewPolicyPdf ? await savePolicyPdfFile(policyPdfFile, magicToken.order.orderNumber) : null;
+  const uploadedDocuments = await Promise.all(
+    policyDocumentFiles.map(async (file, index) => ({
+      fileName: file.name,
+      fileUrl: await savePolicyPdfFile(file, `${magicToken.order.orderNumber}-${documentType.toLowerCase()}-${index + 1}`),
+      documentType
+    }))
+  );
+  const firstPolicyDocument = uploadedDocuments.find((document) => document.documentType === 'POLICY');
 
   await prisma.$transaction(async (tx) => {
     await tx.order.update({
@@ -2114,14 +2224,26 @@ export async function updateOrderFromMagicLink(formData: FormData): Promise<void
         insurerNote,
         insurerUpdatedAt: new Date(),
         ...(policyNumber ? { policyNumber } : {}),
-        ...(policyPdfUrl
+        ...(firstPolicyDocument
           ? {
-              policyPdfUrl,
+              policyPdfUrl: firstPolicyDocument.fileUrl,
               policyPdfUploadedAt: new Date()
             }
           : {})
       }
     });
+
+    if (uploadedDocuments.length > 0) {
+      await tx.orderDocument.createMany({
+        data: uploadedDocuments.map((document) => ({
+          orderId: magicToken.orderId,
+          fileName: document.fileName,
+          fileUrl: document.fileUrl,
+          documentType: document.documentType,
+          uploadedBy: 'INSURER'
+        }))
+      });
+    }
 
     if (isTerminalStatus) {
       await tx.magicLinkToken.updateMany({
@@ -2139,7 +2261,11 @@ export async function updateOrderFromMagicLink(formData: FormData): Promise<void
   await createOrderStatusHistory({
     orderId: magicToken.orderId,
     status,
-    message: insurerNote || `บริษัทประกันอัปเดตสถานะเป็น ${getOrderStatusLabel(status)}`,
+    message:
+      insurerNote ||
+      (uploadedDocuments.length > 0
+        ? `บริษัทประกันแนบ${getOrderDocumentTypeLabel(documentType)} ${uploadedDocuments.length} ไฟล์ และอัปเดตสถานะเป็น ${getOrderStatusLabel(status)}`
+        : `บริษัทประกันอัปเดตสถานะเป็น ${getOrderStatusLabel(status)}`),
     actorType: 'INSURER',
     actorName
   });
@@ -2155,6 +2281,7 @@ export async function updateOrderFromMagicLink(formData: FormData): Promise<void
   });
 
   revalidatePath('/admin');
+  revalidatePath(`/admin/orders/${magicToken.orderId}`);
   revalidatePath(`/line-app/success/${magicToken.orderId}`);
   revalidatePath(`/line-app/tracking/${magicToken.order.orderNumber}`);
   redirect(`/insurance/update/${encodeURIComponent(token)}?updated=1`);

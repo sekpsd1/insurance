@@ -182,6 +182,7 @@ model Order {
   policyNumber        String?
   policyPdfUrl        String?
   policyPdfUploadedAt DateTime?
+  documents           OrderDocument[]
   statusHistory       OrderStatusHistory[]
   magicLinks          MagicLinkToken[]
   emailOutbox         EmailOutbox[]
@@ -191,6 +192,19 @@ model Order {
   @@index([status])
   @@index([paymentStatus])
   @@index([orderNumber])
+}
+
+model OrderDocument {
+  id           String   @id @default(uuid())
+  orderId      String
+  order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  fileName     String
+  fileUrl      String
+  documentType String   @default("POLICY")
+  uploadedBy   String   @default("INSURER")
+  createdAt    DateTime @default(now())
+
+  @@index([orderId, createdAt])
 }
 
 model OrderStatusHistory {
